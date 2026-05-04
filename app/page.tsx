@@ -17,7 +17,8 @@ export default function HomePage() {
             <span className="italic font-serif">진심으로</span> 씁니다.
           </h1>
           <p className="mt-8 max-w-prose text-lg sm:text-xl text-muted leading-relaxed">
-            사교육 없이 13세 영재 키운 엄마, 한나의 뉴스레터.<br className="hidden sm:block" />
+            사교육 없이 13세 영재 키운 엄마, 한나의 뉴스레터.{" "}
+            <br className="hidden sm:block" />
             아이를 키우며 길어 올린 생각을 가장 솔직한 문장으로 보냅니다.
           </p>
           <div className="mt-10 flex flex-col sm:flex-row gap-4 sm:items-center">
