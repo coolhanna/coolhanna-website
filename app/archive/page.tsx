@@ -21,7 +21,7 @@ export default function ArchivePage() {
             지난 편지를 모두 모았습니다.
           </h1>
           <p className="mt-5 max-w-prose text-base sm:text-lg text-muted leading-relaxed">
-            제목이나 한 줄에서 검색할 수 있어요. 한 편을 누르면 새 탭에서 본문이 열립니다.
+            제목으로 검색할 수 있어요. 한 편을 누르면 새 탭에서 본문이 열립니다.
           </p>
         </div>
       </section>

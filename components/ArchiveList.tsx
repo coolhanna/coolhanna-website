@@ -2,7 +2,7 @@
 
 import { useMemo, useState } from "react";
 import type { Newsletter } from "@/lib/newsletters";
-import { formatKoreanDate } from "@/lib/newsletters";
+import { NewsletterCard } from "@/components/NewsletterCard";
 
 type Props = {
   items: Newsletter[];
@@ -15,18 +15,14 @@ export function ArchiveList({ items }: Props) {
   const filtered = useMemo(() => {
     const q = query.trim().toLowerCase();
     const base = q
-      ? items.filter(
-          (i) =>
-            i.title.toLowerCase().includes(q) ||
-            i.excerpt.toLowerCase().includes(q),
-        )
+      ? items.filter((i) => i.title.toLowerCase().includes(q))
       : items;
-    return [...base].sort((a, b) => (order === "newest" ? b.id - a.id : a.id - b.id));
+    return order === "newest" ? base : [...base].reverse();
   }, [items, query, order]);
 
   return (
     <div>
-      <div className="mx-auto max-w-page px-5 sm:px-8 pb-8 sm:pb-12">
+      <div className="mx-auto max-w-page px-5 sm:px-8 pb-10 sm:pb-14">
         <div className="flex flex-col sm:flex-row sm:items-end gap-4 sm:gap-6">
           <label className="flex-1 group">
             <span className="block text-xs font-mono tracking-widest text-muted uppercase mb-2">
@@ -36,7 +32,7 @@ export function ArchiveList({ items }: Props) {
               type="search"
               value={query}
               onChange={(e) => setQuery(e.target.value)}
-              placeholder="제목 또는 한 줄에서 찾기"
+              placeholder="제목으로 찾기"
               className="w-full bg-transparent border-b border-ink py-2 text-lg sm:text-xl placeholder:text-muted/60 focus:outline-none focus:border-ink"
               aria-label="뉴스레터 검색"
             />
@@ -68,39 +64,12 @@ export function ArchiveList({ items }: Props) {
           <p className="text-xl text-muted">‘{query}’에 해당하는 편지를 찾지 못했습니다.</p>
         </div>
       ) : (
-        <ul>
+        <ul className="mx-auto max-w-page px-5 sm:px-8 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-x-6 gap-y-12 sm:gap-y-14">
           {filtered.map((item) => (
-            <li key={item.id}>
-              <a
-                href={item.url}
-                target="_blank"
-                rel="noreferrer"
-                className="group block border-t border-rule transition-colors hover:bg-ink hover:text-paper"
-              >
-                <div className="mx-auto max-w-page px-5 sm:px-8 py-6 sm:py-8 grid grid-cols-12 gap-4 items-baseline">
-                  <span className="col-span-2 sm:col-span-1 text-xs font-mono tracking-widest text-muted group-hover:text-paper/70">
-                    {String(item.id).padStart(2, "0")}
-                  </span>
-                  <h3 className="col-span-10 sm:col-span-8 text-xl sm:text-2xl font-semibold tracking-tight text-balance">
-                    {item.title}
-                  </h3>
-                  <span className="hidden sm:block sm:col-span-2 text-sm font-mono text-muted group-hover:text-paper/70 text-right">
-                    {formatKoreanDate(item.date)}
-                  </span>
-                  <span className="hidden sm:flex sm:col-span-1 justify-end text-sm">
-                    <span className="opacity-60 group-hover:opacity-100">읽기 →</span>
-                  </span>
-                  <p className="col-span-12 sm:col-span-10 sm:col-start-2 mt-2 text-sm sm:text-base text-muted group-hover:text-paper/80 leading-relaxed">
-                    {item.excerpt}
-                  </p>
-                  <span className="col-span-12 sm:hidden mt-3 text-xs font-mono text-muted group-hover:text-paper/70">
-                    {formatKoreanDate(item.date)}  ·  읽기 →
-                  </span>
-                </div>
-              </a>
+            <li key={item.illustration}>
+              <NewsletterCard item={item} />
             </li>
           ))}
-          <li className="border-t border-rule" aria-hidden />
         </ul>
       )}
     </div>

@@ -1,156 +1,112 @@
 [
   {
-    "id": 22,
     "title": "한 해를 돌아보며, 다시 쓰는 편지",
-    "date": "2026-04-27",
-    "excerpt": "스물두 번의 월요일을 지나오며 알게 된 것들. 변하지 않는 것과 변해야 하는 것에 대하여.",
+    "illustration": "/images/22.png",
     "url": "https://stibee.com/PLACEHOLDER_22"
   },
   {
-    "id": 21,
     "title": "부모의 자기계발이 곧 육아입니다",
-    "date": "2026-04-20",
-    "excerpt": "아이를 위한 책 한 권보다, 내가 읽는 책 한 권이 더 큰 영향을 줍니다.",
+    "illustration": "/images/21.png",
     "url": "https://stibee.com/PLACEHOLDER_21"
   },
   {
-    "id": 20,
     "title": "실패를 두려워하지 않는 아이로 키우기",
-    "date": "2026-04-13",
-    "excerpt": "넘어지는 게 무서운 게 아니라, 다시 일어서지 못할까 봐 무서운 거예요.",
+    "illustration": "/images/20.png",
     "url": "https://stibee.com/PLACEHOLDER_20"
   },
   {
-    "id": 19,
     "title": "진로 이야기, 언제부터 어떻게 할까",
-    "date": "2026-04-06",
-    "excerpt": "13세 영재라고 진로가 정해져 있지 않습니다. 함께 찾아가는 중입니다.",
+    "illustration": "/images/19.png",
     "url": "https://stibee.com/PLACEHOLDER_19"
   },
   {
-    "id": 18,
     "title": "친구 관계, 부모가 개입할 수 있는 선",
-    "date": "2026-03-30",
-    "excerpt": "지켜봐야 할 때와 손을 내밀어야 할 때를 구분하는 것이 가장 어렵습니다.",
+    "illustration": "/images/18.png",
     "url": "https://stibee.com/PLACEHOLDER_18"
   },
   {
-    "id": 17,
     "title": "학교 선택, 무엇을 보고 결정했나",
-    "date": "2026-03-23",
-    "excerpt": "이름값 말고 우리 아이에게 맞는 환경을 보는 기준 다섯 가지.",
+    "illustration": "/images/17.png",
     "url": "https://stibee.com/PLACEHOLDER_17"
   },
   {
-    "id": 16,
     "title": "게임과 유튜브, 우리 집의 규칙",
-    "date": "2026-03-16",
-    "excerpt": "막는다고 막아지지 않습니다. 함께 정한 약속이 가장 오래갑니다.",
+    "illustration": "/images/16.png",
     "url": "https://stibee.com/PLACEHOLDER_16"
   },
   {
-    "id": 15,
     "title": "디지털 시대의 책읽기는 어떻게 다른가",
-    "date": "2026-03-09",
-    "excerpt": "종이책이 좋다고만 할 수 없는 이유, 그리고 우리 집 책장에 변화.",
+    "illustration": "/images/15.png",
     "url": "https://stibee.com/PLACEHOLDER_15"
   },
   {
-    "id": 14,
     "title": "아이의 호기심을 키우는 질문법",
-    "date": "2026-03-02",
-    "excerpt": "정답을 알려주는 부모보다, 질문을 던지는 부모가 됩니다.",
+    "illustration": "/images/14.png",
     "url": "https://stibee.com/PLACEHOLDER_14"
   },
   {
-    "id": 13,
     "title": "비교하지 않는 육아가 가능한가",
-    "date": "2026-02-23",
-    "excerpt": "비교하지 않는 게 아니라, 비교를 멈추는 연습을 매일 합니다.",
+    "illustration": "/images/13.png",
     "url": "https://stibee.com/PLACEHOLDER_13"
   },
   {
-    "id": 12,
     "title": "엄마의 불안을 다루는 법",
-    "date": "2026-02-16",
-    "excerpt": "불안은 사라지지 않습니다. 다만 휘둘리지 않게 됩니다.",
+    "illustration": "/images/12.png",
     "url": "https://stibee.com/PLACEHOLDER_12"
   },
   {
-    "id": 11,
     "title": "영재성은 타고나는가, 만들어지는가",
-    "date": "2026-02-09",
-    "excerpt": "둘 다입니다. 그리고 만들어지는 부분이 생각보다 큽니다.",
+    "illustration": "/images/11.png",
     "url": "https://stibee.com/PLACEHOLDER_11"
   },
   {
-    "id": 10,
     "title": "자기주도 학습은 어떻게 시작되는가",
-    "date": "2026-02-02",
-    "excerpt": "스스로 한다고 다 자기주도가 아닙니다. 핵심은 '왜'에 있습니다.",
+    "illustration": "/images/10.png",
     "url": "https://stibee.com/PLACEHOLDER_10"
   },
   {
-    "id": 9,
     "title": "우리 집 학습 환경, 이렇게 만들었어요",
-    "date": "2026-01-26",
-    "excerpt": "책상보다 중요한 건 식탁이고, 책장보다 중요한 건 대화입니다.",
+    "illustration": "/images/09.png",
     "url": "https://stibee.com/PLACEHOLDER_09"
   },
   {
-    "id": 8,
     "title": "사교육 시장에 휘둘리지 않는 부모가 되는 법",
-    "date": "2026-01-19",
-    "excerpt": "정보를 끊는 게 아니라, 기준을 세우는 것입니다.",
+    "illustration": "/images/08.png",
     "url": "https://stibee.com/PLACEHOLDER_08"
   },
   {
-    "id": 7,
     "title": "책육아, 진짜 효과 있나요",
-    "date": "2026-01-12",
-    "excerpt": "효과 있습니다. 다만 우리가 기대한 효과와 다른 모습으로요.",
+    "illustration": "/images/07.png",
     "url": "https://stibee.com/PLACEHOLDER_07"
   },
   {
-    "id": 6,
     "title": "아이와 진짜로 대화하는 법",
-    "date": "2026-01-05",
-    "excerpt": "말을 많이 하는 게 아니라, 듣기를 잘하는 것이 대화의 시작입니다.",
+    "illustration": "/images/06.png",
     "url": "https://stibee.com/PLACEHOLDER_06"
   },
   {
-    "id": 5,
     "title": "13세 영재 엄마의 평범한 하루",
-    "date": "2025-12-29",
-    "excerpt": "특별한 루틴은 없습니다. 다만 같이 보내는 시간이 단단합니다.",
+    "illustration": "/images/05.png",
     "url": "https://stibee.com/PLACEHOLDER_05"
   },
   {
-    "id": 4,
     "title": "학원 끊고 1년, 무엇이 달라졌나",
-    "date": "2025-12-22",
-    "excerpt": "성적은 떨어지지 않았습니다. 대신 표정이 달라졌습니다.",
+    "illustration": "/images/04.png",
     "url": "https://stibee.com/PLACEHOLDER_04"
   },
   {
-    "id": 3,
     "title": "우리 아이 첫 책읽기, 이것부터 했습니다",
-    "date": "2025-12-15",
-    "excerpt": "글자를 가르친 게 아니라, 책을 좋아하게 만들었습니다.",
+    "illustration": "/images/03.png",
     "url": "https://stibee.com/PLACEHOLDER_03"
   },
   {
-    "id": 2,
     "title": "사교육 없이도 영재로 자랍니다",
-    "date": "2025-12-08",
-    "excerpt": "‘없이’가 아니라, ‘대신 무엇이 있었는가’의 이야기입니다.",
+    "illustration": "/images/02.png",
     "url": "https://stibee.com/PLACEHOLDER_02"
   },
   {
-    "id": 1,
     "title": "첫 편지를 보냅니다",
-    "date": "2025-12-01",
-    "excerpt": "왜 이 뉴스레터를 시작했는지, 무엇을 쓸 것인지에 대해.",
+    "illustration": "/images/01.png",
     "url": "https://stibee.com/PLACEHOLDER_01"
   }
 ]

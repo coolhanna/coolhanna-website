@@ -1,16 +1,17 @@
-import { getRecentNewsletters, formatKoreanDate } from "@/lib/newsletters";
+import { getRecentNewsletters } from "@/lib/newsletters";
 import { SubscribeButton } from "@/components/SubscribeButton";
+import { NewsletterCard } from "@/components/NewsletterCard";
 import Link from "next/link";
 
 export default function HomePage() {
-  const recent = getRecentNewsletters(3);
+  const recent = getRecentNewsletters(6);
 
   return (
     <>
       <section className="border-b border-rule">
         <div className="mx-auto max-w-page px-5 sm:px-8 pt-16 sm:pt-24 pb-16 sm:pb-24">
           <p className="text-xs sm:text-sm font-mono tracking-widest text-muted uppercase mb-6">
-            Newsletter · Every Monday · 8 AM
+            Newsletter · 매주 월요일 아침 8시
           </p>
           <h1 className="text-display font-semibold tracking-tight text-balance leading-[1.4]">
             매주 월요일,<br />
@@ -33,8 +34,8 @@ export default function HomePage() {
         </div>
       </section>
 
-      <section aria-labelledby="recent-heading">
-        <div className="mx-auto max-w-page px-5 sm:px-8 pt-16 sm:pt-20 pb-6 flex items-end justify-between gap-6">
+      <section aria-labelledby="recent-heading" className="pt-16 sm:pt-20">
+        <div className="mx-auto max-w-page px-5 sm:px-8 pb-10 sm:pb-12 flex items-end justify-between gap-6">
           <div>
             <p className="text-xs sm:text-sm font-mono tracking-widest text-muted uppercase mb-3">
               Recent Issues
@@ -48,40 +49,16 @@ export default function HomePage() {
           </Link>
         </div>
 
-        <ul className="mx-auto max-w-page px-5 sm:px-8">
-          {recent.map((item, idx) => (
-            <li key={item.id}>
-              <a
-                href={item.url}
-                target="_blank"
-                rel="noreferrer"
-                className="group block border-t border-rule py-7 sm:py-9"
-              >
-                <div className="grid grid-cols-12 gap-4 items-baseline">
-                  <span className="col-span-2 sm:col-span-1 text-xs font-mono tracking-widest text-muted">
-                    No.{String(item.id).padStart(2, "0")}
-                  </span>
-                  <h3 className="col-span-10 sm:col-span-8 text-2xl sm:text-3xl font-semibold tracking-tight text-balance group-hover:underline-grow">
-                    {item.title}
-                  </h3>
-                  <span className="hidden sm:block sm:col-span-3 text-sm font-mono text-muted text-right">
-                    {formatKoreanDate(item.date)}
-                  </span>
-                  <p className="col-span-12 sm:col-span-10 sm:col-start-2 mt-2 text-base text-muted leading-relaxed">
-                    {item.excerpt}
-                  </p>
-                  <span className="col-span-12 sm:hidden mt-3 text-xs font-mono text-muted">
-                    {formatKoreanDate(item.date)}  ·  읽기 →
-                  </span>
-                </div>
-              </a>
-              {idx === recent.length - 1 && <div className="border-t border-rule" />}
+        <ul className="mx-auto max-w-page px-5 sm:px-8 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-x-6 gap-y-12 sm:gap-y-14">
+          {recent.map((item, i) => (
+            <li key={item.illustration}>
+              <NewsletterCard item={item} priority={i < 3} />
             </li>
           ))}
         </ul>
       </section>
 
-      <section className="mt-20 sm:mt-24">
+      <section className="mt-24 sm:mt-32">
         <div className="mx-auto max-w-page px-5 sm:px-8">
           <div className="bg-ink text-paper px-6 sm:px-12 py-14 sm:py-20 flex flex-col items-start gap-6">
             <p className="text-xs sm:text-sm font-mono tracking-widest text-paper/60 uppercase">
