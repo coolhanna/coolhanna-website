@@ -13,13 +13,14 @@ export default function HomePage() {
           <p className="text-xs sm:text-sm font-mono tracking-widest text-muted uppercase mb-6">
             Newsletter · 매주 월요일 아침 8시
           </p>
-          <h1 className="text-display font-semibold tracking-tight text-balance leading-[1.3]">
-            쿨한나의 <span className="italic font-serif">읽고, 쓰고, 키우는</span> 뉴스레터
+          <h1 className="text-display font-semibold tracking-tight text-balance leading-[1.4]">
+            매주 월요일,<br />
+            <span className="italic font-serif">진심으로</span> 씁니다.
           </h1>
           <p className="mt-8 max-w-prose text-lg sm:text-xl text-muted leading-relaxed">
-            사교육 대신, 책과 대화로 아이를 키워 온 엄마의{" "}
+            사교육 대신 책과 대화로 아이를 키워 온{" "}
             <br className="hidden sm:block" />
-            조금 느리고, 조금 솔직한 기록을 편지처럼 보내드립니다.
+            엄마의 솔직한 기록을 편지처럼 보내드립니다.
           </p>
           <div className="mt-10 flex flex-col sm:flex-row gap-4 sm:items-center">
             <SubscribeButton size="lg">무료로 구독하기</SubscribeButton>
