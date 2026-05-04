@@ -41,7 +41,7 @@ export default function HomePage() {
               Recent Issues
             </p>
             <h2 id="recent-heading" className="text-headline font-semibold tracking-tight">
-              최신 편지
+              최신 뉴스레터
             </h2>
           </div>
           <Link href="/archive" className="text-sm underline-grow whitespace-nowrap pb-2">

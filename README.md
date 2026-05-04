@@ -3,9 +3,8 @@
 매주 월요일 아침 8시에 발송되는 한나 뉴스레터의 공식 아카이브 사이트.
 
 ```
-홈 (/)        — 소개 + 큰 구독 버튼 + 최신 6편 (일러스트 + 제목)
+홈 (/)        — 헤드라인 + 큰 구독 버튼 + 최신 6편 (일러스트 + 제목)
 지난 편 (/archive) — 전체 아카이브 그리드 + 검색
-소개 (/about) — 쿨한나 소개 + 채널 링크
 ```
 
 기술: Next.js 15 (App Router) + TailwindCSS + Pretendard 폰트
@@ -135,7 +134,6 @@ coolhanna-website/
 │  ├─ layout.tsx         ← 공통 레이아웃 (Header / Footer)
 │  ├─ page.tsx           ← 홈 (/)
 │  ├─ archive/page.tsx   ← 지난 편 (/archive)
-│  ├─ about/page.tsx     ← 소개 (/about)
 │  ├─ not-found.tsx      ← 404
 │  └─ globals.css
 ├─ components/

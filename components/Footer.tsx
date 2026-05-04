@@ -1,4 +1,3 @@
-import Link from "next/link";
 import { SOCIAL } from "@/lib/newsletters";
 
 export function Footer() {
@@ -18,7 +17,6 @@ export function Footer() {
             <a href={SOCIAL.youtube} target="_blank" rel="noreferrer" className="underline-grow">
               YouTube
             </a>
-            <Link href="/about" className="underline-grow">소개</Link>
           </div>
           <p className="text-muted">© {year} 쿨한나</p>
         </div>

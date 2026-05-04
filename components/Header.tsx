@@ -8,11 +8,10 @@ export function Header() {
           href="/"
           className="text-[13px] sm:text-base lg:text-lg tracking-tight font-semibold underline-grow whitespace-nowrap"
         >
-          쿨한나의 <span className="italic font-serif">읽고, 쓰고, 키우는</span> 뉴스레터
+          쿨한나의 읽고, 쓰고, 키우는 뉴스레터
         </Link>
         <nav aria-label="Main" className="flex items-center gap-5 sm:gap-6 text-sm shrink-0">
           <Link href="/archive" className="underline-grow whitespace-nowrap">지난 편</Link>
-          <Link href="/about" className="underline-grow whitespace-nowrap">소개</Link>
         </nav>
       </div>
     </header>

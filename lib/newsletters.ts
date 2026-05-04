@@ -9,8 +9,8 @@ export type Newsletter = {
 export const SUBSCRIBE_URL = "https://page.stibee.com/subscriptions/457067";
 
 export const SOCIAL = {
-  instagram: "https://instagram.com/coolhanna",
-  youtube: "https://youtube.com/@coolhanna",
+  instagram: "https://www.instagram.com/readwrite_grow",
+  youtube: "https://www.youtube.com/@collhanna84",
 };
 
 export function getAllNewsletters(): Newsletter[] {
