@@ -6,7 +6,7 @@ export type Newsletter = {
   url: string;
 };
 
-export const SUBSCRIBE_URL = "https://page.stibee.com/subscriptions/PLACEHOLDER";
+export const SUBSCRIBE_URL = "https://page.stibee.com/subscriptions/457067";
 
 export const SOCIAL = {
   instagram: "https://instagram.com/coolhanna",
