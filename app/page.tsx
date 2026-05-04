@@ -10,9 +10,9 @@ export default function HomePage() {
       <section className="border-b border-rule">
         <div className="mx-auto max-w-page px-5 sm:px-8 pt-16 sm:pt-24 pb-16 sm:pb-24">
           <p className="text-xs sm:text-sm font-mono tracking-widest text-muted uppercase mb-6">
-            Newsletter · Every Monday
+            Newsletter · Every Monday · 8 AM
           </p>
-          <h1 className="text-display font-semibold tracking-tight text-balance leading-[1.02]">
+          <h1 className="text-display font-semibold tracking-tight text-balance leading-[1.4]">
             매주 월요일,<br />
             <span className="italic font-serif">진심으로</span> 씁니다.
           </h1>
@@ -87,8 +87,8 @@ export default function HomePage() {
             <p className="text-xs sm:text-sm font-mono tracking-widest text-paper/60 uppercase">
               Subscribe
             </p>
-            <h2 className="text-headline font-semibold tracking-tight text-balance">
-              매주 월요일 아침,<br />
+            <h2 className="text-headline font-semibold tracking-tight text-balance leading-[1.4]">
+              매주 월요일 아침 8시,<br />
               한 통의 편지가 도착합니다.
             </h2>
             <p className="max-w-prose text-paper/75 text-base sm:text-lg leading-relaxed">
