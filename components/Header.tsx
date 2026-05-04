@@ -8,7 +8,7 @@ export function Header() {
           href="/"
           className="text-base sm:text-lg tracking-tight font-semibold underline-grow"
         >
-          쿨한나
+          쿨한나 뉴스레터
         </Link>
         <nav aria-label="Main" className="flex items-center gap-6 text-sm">
           <Link href="/archive" className="underline-grow">지난 편</Link>

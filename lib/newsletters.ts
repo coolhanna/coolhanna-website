@@ -20,3 +20,8 @@ export function getAllNewsletters(): Newsletter[] {
 export function getRecentNewsletters(count = 6): Newsletter[] {
   return getAllNewsletters().slice(0, count);
 }
+
+export function getVolNumber(item: Newsletter): number {
+  const match = item.illustration.match(/(\d+)\.[^.]+$/);
+  return match ? parseInt(match[1], 10) : 0;
+}

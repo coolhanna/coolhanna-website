@@ -1,4 +1,5 @@
 import type { Newsletter } from "@/lib/newsletters";
+import { getVolNumber } from "@/lib/newsletters";
 
 type Props = {
   item: Newsletter;
@@ -6,6 +7,7 @@ type Props = {
 };
 
 export function NewsletterCard({ item, priority = false }: Props) {
+  const vol = getVolNumber(item);
   return (
     <a
       href={item.url}
@@ -23,7 +25,10 @@ export function NewsletterCard({ item, priority = false }: Props) {
         />
       </div>
       <h3 className="mt-4 sm:mt-5 text-lg sm:text-xl font-semibold tracking-tight text-balance leading-snug">
-        <span className="underline-grow">{item.title}</span>
+        <span className="underline-grow">
+          <span className="text-muted font-normal mr-1">[vol.{vol}]</span>
+          {item.title}
+        </span>
       </h3>
     </a>
   );
