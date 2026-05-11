@@ -20,7 +20,7 @@
 ### 1. 일러스트 PNG 업로드
 
 `public/images/` 폴더에 **3:2 비율** PNG 파일을 올립니다.
-파일명은 회차 번호 두 자리(`23.png`, `24.png` ...)로.
+파일명은 회차 번호 두 자리(`24.png`, `25.png` ...)로.
 
 > **권장 크기**: 1200×800 px (또는 1500×1000 px)
 > **포맷**: PNG (투명 배경 가능)
@@ -34,13 +34,13 @@
 [
   {
     "title": "새 편지 제목을 여기에",
-    "illustration": "/images/23.png",
-    "url": "https://stibee.com/여기에-스티비-공개-URL"
+    "illustration": "/images/24.jpg",
+    "url": "https://stib.ee/여기에-스티비-공개-URL"
   },
   {
-    "title": "한 해를 돌아보며, 다시 쓰는 편지",
-    "illustration": "/images/22.png",
-    "url": "https://stibee.com/PLACEHOLDER_22"
+    "title": "저는 노력이 부족한 것 같아요",
+    "illustration": "/images/23.jpg",
+    "url": "https://stib.ee/lVZN"
   },
   ... (이전 편들은 그대로)
 ]
@@ -48,9 +48,9 @@
 
 | 필드 | 설명 | 예시 |
 |------|------|------|
-| `title` | 편지 제목 (사이트에 그대로 노출) | `"한 해를 돌아보며"` |
-| `illustration` | `/images/` 경로 + 파일명 | `"/images/23.png"` |
-| `url` | 스티비 공개 URL (새 탭에서 열림) | `"https://stibee.com/..."` |
+| `title` | 편지 제목 (사이트에 그대로 노출) | `"저는 노력이 부족한 것 같아요"` |
+| `illustration` | `/images/` 경로 + 파일명 | `"/images/24.jpg"` |
+| `url` | 스티비 공개 URL (새 탭에서 열림) | `"https://stib.ee/..."` |
 
 > **JSON 문법 주의**
 > - 모든 따옴표는 `"` (큰따옴표)
@@ -60,8 +60,8 @@
 ### 3. GitHub에 푸시 → 자동 배포
 
 ```bash
-git add public/images/23.png data/newsletters.json
-git commit -m "feat: 23편 추가"
+git add public/images/24.jpg data/newsletters.json
+git commit -m "feat: 24편 추가"
 git push
 ```
 

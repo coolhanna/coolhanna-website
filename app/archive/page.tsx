@@ -2,14 +2,15 @@ import type { Metadata } from "next";
 import { getAllNewsletters } from "@/lib/newsletters";
 import { ArchiveList } from "@/components/ArchiveList";
 
+const items = getAllNewsletters();
+
 export const metadata: Metadata = {
   title: "지난 편",
-  description: "쿨한나 뉴스레터 22편 아카이브.",
+  description: `쿨한나 뉴스레터 ${items.length}편 아카이브.`,
   alternates: { canonical: "/archive" },
 };
 
 export default function ArchivePage() {
-  const items = getAllNewsletters();
   return (
     <>
       <section className="border-b border-rule">

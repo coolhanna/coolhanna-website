@@ -1,10 +1,11 @@
-import { getRecentNewsletters } from "@/lib/newsletters";
+import { getAllNewsletters, getRecentNewsletters } from "@/lib/newsletters";
 import { SubscribeButton } from "@/components/SubscribeButton";
 import { NewsletterCard } from "@/components/NewsletterCard";
 import Link from "next/link";
 
 export default function HomePage() {
   const recent = getRecentNewsletters(6);
+  const total = getAllNewsletters().length;
 
   return (
     <>
@@ -28,7 +29,7 @@ export default function HomePage() {
               href="/archive"
               className="inline-flex items-center gap-2 px-2 py-2 text-base underline-grow"
             >
-              지난 편 22개 보기 <span aria-hidden>↓</span>
+              지난 편 {total}개 보기 <span aria-hidden>↓</span>
             </Link>
           </div>
         </div>

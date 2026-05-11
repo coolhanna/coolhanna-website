@@ -2,6 +2,9 @@ import type { Metadata } from "next";
 import "./globals.css";
 import { Header } from "@/components/Header";
 import { Footer } from "@/components/Footer";
+import { getAllNewsletters } from "@/lib/newsletters";
+
+const totalIssues = getAllNewsletters().length;
 
 export const metadata: Metadata = {
   metadataBase: new URL("https://coolhanna.com"),
@@ -9,8 +12,7 @@ export const metadata: Metadata = {
     default: "쿨한나 — 매주 월요일, 진심으로 씁니다",
     template: "%s — 쿨한나",
   },
-  description:
-    "사교육 없이 13세 영재 키운 엄마, 한나가 매주 월요일 보내는 뉴스레터. 22편 아카이브와 신규 구독.",
+  description: `사교육 없이 13세 영재 키운 엄마, 한나가 매주 월요일 보내는 뉴스레터. ${totalIssues}편 아카이브와 신규 구독.`,
   openGraph: {
     title: "쿨한나 뉴스레터",
     description: "매주 월요일, 진심으로 씁니다.",
