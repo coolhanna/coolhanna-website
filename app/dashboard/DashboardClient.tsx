@@ -326,6 +326,7 @@ type Initial = {
   choresShop: any;
   quickTasks: any;
   ideasRecent: any;
+  scheduleV2: any;
 };
 
 export default function DashboardClient({ initial }: { initial: Initial }) {
@@ -359,20 +360,20 @@ export default function DashboardClient({ initial }: { initial: Initial }) {
         />
 
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-          <TodayPanel
-            schedule={initial.schedule}
-            today={initial.today}
+          <DailyPanel
+            kind="today"
+            initial={initial.scheduleV2?.today}
             incomplete={initial.incomplete}
           />
-          <TomorrowPanel
-            calendar={initial.calendar}
-            active={initial.active}
+          <DailyPanel
+            kind="tomorrow"
+            initial={initial.scheduleV2?.tomorrow}
           />
         </div>
 
-        <TodayMe health={initial.health} />
-
         <QuickTasks initial={initial.quickTasks} />
+
+        <TodayMe health={initial.health} />
 
         <ActiveCards data={initial.active} />
 
@@ -450,7 +451,7 @@ function WeeklyCalendar({
               key={dateStr}
               className="rounded-md p-2 min-h-[80px] text-[11px]"
               style={{
-                backgroundColor: "var(--bg-card-soft)",
+                backgroundColor: "var(--bg-card)",
                 border: isToday
                   ? `2px solid var(--accent)`
                   : `1px solid var(--border)`,
@@ -520,37 +521,132 @@ function fmtShortTime(hhmm: string): string {
 // 오늘 / 내일 패널
 // ─────────────────────────────────────────────────────────────────────
 
-function TodayPanel({
-  schedule,
-  today,
+// ─────────────────────────────────────────────────────────────────────
+// 일별 카드 패널 (오늘 / 내일) — v6
+// scheduleV2 응답을 받아서 캘린더 + 루틴 + 일별 카드 todos + 광고/공구 마감을 한 카드에
+// 오늘 카드만 보더 강조 + "이월" 영역. 내일은 같은 구조에 일반 보더.
+// ─────────────────────────────────────────────────────────────────────
+
+function DailyPanel({
+  kind,
+  initial,
   incomplete,
 }: {
-  schedule: any;
-  today: any;
-  incomplete: any;
+  kind: "today" | "tomorrow";
+  initial: any;
+  incomplete?: any;
 }) {
-  const events = (schedule?.events || []) as any[];
+  const dateStr: string = initial?.date || "";
+  // 옵시디언 초기 카드의 빈 `- [ ]` 항목은 대시보드에선 숨김 (line은 보존 안 함)
+  const [todos, setTodos] = useState<any[]>(
+    (initial?.todos || []).filter((t: any) => (t?.text || "").trim().length > 0)
+  );
+  const [, startTransition] = useTransition();
+
+  async function toggleTodo(line: number) {
+    setTodos((cur) =>
+      cur.map((t) => (t.line === line ? { ...t, done: !t.done } : t))
+    );
+    try {
+      await callApi("PATCH", `daily/${dateStr}/todo/${line}/toggle`);
+    } catch {
+      setTodos((cur) =>
+        cur.map((t) => (t.line === line ? { ...t, done: !t.done } : t))
+      );
+    }
+  }
+  async function addTodo(text: string) {
+    const r = await callApi("POST", `daily/${dateStr}/todo`, { text });
+    setTodos((cur) => [...cur, r.item]);
+  }
+  async function removeTodo(line: number) {
+    const snapshot = todos;
+    setTodos((cur) => cur.filter((t) => t.line !== line));
+    try {
+      await callApi("DELETE", `daily/${dateStr}/todo/${line}`);
+    } catch {
+      setTodos(snapshot);
+    }
+  }
+
+  const calEvents: any[] = initial?.calendar_events || [];
+  const routines: any[] = initial?.routines || [];
+  const ads: any[] = initial?.ad_deadlines || [];
+  const gongus: any[] = initial?.gongu_milestones || [];
+  const headerLabel = kind === "today" ? "오늘" : "내일";
+  const dateHeader = dateStr
+    ? `${headerLabel} ${fmtMonthDayWeekday(dateStr)}`
+    : headerLabel;
+
+  const isToday = kind === "today";
+
+  // 시간순 머지 (일정 = 캘린더 + 루틴)
+  type TimedItem = {
+    time: string | null;
+    label: string;
+    source: "캘린더" | "루틴";
+    all_day: boolean;
+  };
+  const schedule: TimedItem[] = [
+    ...calEvents.map((ev: any) => ({
+      time: ev.all_day ? null : ev.time || null,
+      label: cleanEventSummary(ev.summary),
+      source: "캘린더" as const,
+      all_day: !!ev.all_day,
+    })),
+    ...routines.map((r: any) => ({
+      time: r.time,
+      label: r.name,
+      source: "루틴" as const,
+      all_day: false,
+    })),
+  ].sort((a, b) => {
+    if (a.all_day && !b.all_day) return -1;
+    if (!a.all_day && b.all_day) return 1;
+    return (a.time || "").localeCompare(b.time || "");
+  });
+
+  const deadlines = [
+    ...ads.map((a: any) => ({
+      label: `${a.audience} ${a.title}`,
+      kind: `광고 ${a.kind}`,
+      state: a.state,
+    })),
+    ...gongus.map((g: any) => ({
+      label: `${g.audience} ${g.title}`,
+      kind: `공구 ${g.kind}`,
+      state: g.state,
+    })),
+  ];
+
   return (
     <section
-      className="bg-white rounded-2xl p-5"
-      style={{ border: `1.5px solid var(--accent)` }}
+      className="rounded-2xl p-5"
+      style={{
+        backgroundColor: "var(--bg-card)",
+        border: isToday ? "1.5px solid var(--accent)" : "1px solid var(--border)",
+      }}
     >
-      <h2 className="text-sm font-semibold mb-3" style={{ color: "var(--accent)" }}>
-        오늘
+      <h2
+        className="text-sm font-semibold mb-3"
+        style={{ color: isToday ? "var(--accent)" : "var(--text-secondary)" }}
+      >
+        {dateHeader}
       </h2>
       <div className="space-y-3">
+        {/* 📅 일정 — 캘린더 + 루틴 */}
         <div>
-          <p className="text-xs text-muted mb-1">일정 · 캘린더 + 루틴</p>
-          {events.length ? (
+          <p className="text-xs text-muted mb-1">📅 일정</p>
+          {schedule.length ? (
             <ul className="space-y-1">
-              {events.map((ev: any, i: number) => (
+              {schedule.map((it, i) => (
                 <li key={i} className="text-sm flex items-center gap-2">
                   <span className="text-xs text-muted w-14 shrink-0">
-                    {ev.time_label}
+                    {it.all_day ? "종일" : it.time ? fmtShortTime(it.time) : ""}
                   </span>
                   <span className="flex-1">
-                    {cleanEventSummary(ev.summary)}
-                    {ev.source === "루틴" && (
+                    {it.label}
+                    {it.source === "루틴" && (
                       <span className="ml-1.5 text-[10px] text-muted">루틴</span>
                     )}
                   </span>
@@ -561,24 +657,44 @@ function TodayPanel({
             <p className="text-sm text-muted">없음</p>
           )}
         </div>
-        <div className="border-t border-rule pt-2">
-          <p className="text-xs text-muted mb-1">체크 · 오늘 마감</p>
-          {today?.items?.length ? (
+
+        {/* 마감 — 광고 + 공구 */}
+        {deadlines.length > 0 && (
+          <div className="border-t border-rule pt-2">
+            <p className="text-xs text-muted mb-1">마감</p>
             <ul className="space-y-1">
-              {today.items.map((it: any, i: number) => (
+              {deadlines.map((dl, i) => (
                 <li key={i} className="text-sm flex items-center gap-2">
-                  <Pill color="#C24A20">{it.type}</Pill>
-                  <span>{it.title}</span>
+                  <Pill color="#A85A35">{dl.kind}</Pill>
+                  <span className="flex-1">{dl.label}</span>
+                  <span className="text-[10px] text-muted">{dl.state}</span>
                 </li>
               ))}
             </ul>
-          ) : (
-            <p className="text-sm" style={{ color: "var(--accent)" }}>
-              오늘 마감 없음 ✓
-            </p>
+          </div>
+        )}
+
+        {/* ✓ 할 일 — 일별 카드의 체크박스 */}
+        <div className="border-t border-rule pt-2">
+          <p className="text-xs text-muted mb-1">✓ 할 일</p>
+          {todos.length === 0 && (
+            <p className="text-sm text-muted">없음</p>
           )}
+          <div className="space-y-1">
+            {todos.map((t) => (
+              <DailyTodoRow
+                key={t.line}
+                todo={t}
+                onToggle={() => startTransition(() => toggleTodo(t.line))}
+                onDelete={() => startTransition(() => removeTodo(t.line))}
+              />
+            ))}
+          </div>
+          <AddInline placeholder="할 일 추가" onAdd={addTodo} />
         </div>
-        {incomplete?.items?.length > 0 && (
+
+        {/* 이월 — 오늘만 */}
+        {isToday && incomplete?.items?.length > 0 && (
           <div className="border-t border-rule pt-2">
             <p className="text-xs text-muted mb-1">이월 · 어제 못 끝낸 거</p>
             <ul className="space-y-1">
@@ -595,61 +711,41 @@ function TodayPanel({
   );
 }
 
-function TomorrowPanel({ calendar, active }: { calendar: any; active: any }) {
-  const tomorrow = addDays(new Date(), 1);
-  const tomorrowStr = iso(tomorrow);
-  const evsRaw = (calendar?.events_by_date || {})[tomorrowStr] || [];
-  const dls = (calendar?.deadlines_by_date || {})[tomorrowStr] || [];
-
-  // 시간순 정렬 (종일 → 앞, 그 외 time 오름차순)
-  const evs = [...evsRaw].sort((a: any, b: any) => {
-    if (a.all_day && !b.all_day) return -1;
-    if (!a.all_day && b.all_day) return 1;
-    return (a.time || "").localeCompare(b.time || "");
-  });
-
+function DailyTodoRow({
+  todo,
+  onToggle,
+  onDelete,
+}: {
+  todo: { line: number; text: string; done: boolean };
+  onToggle: () => void;
+  onDelete: () => void;
+}) {
   return (
-    <Card title={`내일 ${fmtShortDateWeekday(tomorrow)}`}>
-      <div className="space-y-3">
-        <div>
-          <p className="text-xs text-muted mb-1">일정 · 캘린더 + 루틴</p>
-          {evs.length ? (
-            <ul className="space-y-1">
-              {evs.map((ev: any, i: number) => (
-                <li key={i} className="text-sm flex items-center gap-2">
-                  <span className="text-xs text-muted w-14 shrink-0">
-                    {ev.all_day ? "종일" : fmtShortTime(ev.time || "")}
-                  </span>
-                  <span className="flex-1">
-                    {cleanEventSummary(ev.summary)}
-                    {ev.source === "루틴" && (
-                      <span className="ml-1.5 text-[10px] text-muted">루틴</span>
-                    )}
-                  </span>
-                </li>
-              ))}
-            </ul>
-          ) : (
-            <p className="text-sm text-muted">없음</p>
-          )}
-        </div>
-        <div className="border-t border-rule pt-2">
-          <p className="text-xs text-muted mb-1">마감</p>
-          {dls.length ? (
-            <ul className="space-y-1">
-              {dls.map((dl: any, i: number) => (
-                <li key={i} className="text-sm flex items-center gap-2">
-                  <Pill color="#C24A20">{dl.type}</Pill>
-                  <span>{dl.title}</span>
-                </li>
-              ))}
-            </ul>
-          ) : (
-            <p className="text-sm text-muted">없음</p>
-          )}
-        </div>
-      </div>
-    </Card>
+    <div className="flex items-start gap-2 group">
+      <input
+        type="checkbox"
+        checked={todo.done}
+        onChange={onToggle}
+        className="mt-[3px] w-4 h-4 rounded border-rule cursor-pointer"
+      />
+      <span
+        className={
+          "text-sm flex-1 cursor-pointer " +
+          (todo.done ? "line-through text-muted" : "text-ink")
+        }
+        onClick={onToggle}
+      >
+        {todo.text}
+      </span>
+      <button
+        onClick={onDelete}
+        className="text-[11px] text-muted opacity-0 group-hover:opacity-100 transition px-1"
+        title="삭제"
+        aria-label="삭제"
+      >
+        ×
+      </button>
+    </div>
   );
 }
 

@@ -53,3 +53,11 @@ export async function GET(
   const { path } = await params;
   return forward(req, path);
 }
+
+export async function DELETE(
+  req: NextRequest,
+  { params }: { params: Promise<{ path: string[] }> },
+) {
+  const { path } = await params;
+  return forward(req, path);
+}
