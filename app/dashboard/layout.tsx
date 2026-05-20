@@ -49,6 +49,17 @@ export default function DashboardLayout({
         .dashboard-root .border-rule { border-color: var(--border) !important; }
         .dashboard-root input[type="checkbox"] { accent-color: var(--accent); }
         .dashboard-root ::selection { background: var(--accent); color: #ffffff; }
+
+        /* v6.3.1 — 모바일에서 본문 폰트 전반 +2px (헤더 텍스트는 그대로) */
+        @media (max-width: 767px) {
+          .dashboard-root .text-\\[10px\\] { font-size: 12px !important; }
+          .dashboard-root .text-\\[11px\\] { font-size: 13px !important; }
+          .dashboard-root .text-\\[12px\\] { font-size: 14px !important; }
+          .dashboard-root .text-xs { font-size: 14px !important; line-height: 1.45 !important; }
+          .dashboard-root .text-sm { font-size: 16px !important; line-height: 1.5 !important; }
+          /* 상단 헤더 (날짜·시간) 는 원래 크기 유지 — 한나 명세 */
+          .dashboard-root > header .text-xs { font-size: 0.75rem !important; line-height: 1rem !important; }
+        }
       `}</style>
       {children}
     </>
