@@ -19,23 +19,26 @@ export default function DashboardLayout({
         body > main { padding: 0 !important; }
 
         .dashboard-root {
-          --bg-page: #FAF7EC;
+          /* F번 — 세이지 + 크림 */
+          --bg-page: #F4F2EC;
           --bg-card: #FFFFFF;
-          --bg-card-soft: #F4F0E0;
-          --border: #E0DBC8;
-          --border-strong: #C8C0A8;
-          --text-main: #1A3322;
-          --text-secondary: #5A6B5A;
+          --bg-card-soft: #ECECE4;
+          --border: #DCDED4;
+          --border-strong: #C0C4B5;
+          --text-main: #2C342C;
+          --text-secondary: #5D6B5A;
           --text-muted-new: #8A9080;
-          --accent: #2A5A3D;
-          --accent-soft: #D8E5DC;
-          --accent-text: #1F4029;
-          --secondary: #F4D67A;
-          --secondary-soft: #F8EDC8;
-          --secondary-text: #6B4A0A;
-          --danger: #C24A20;
-          --danger-soft: #F5DCC8;
-          --danger-text: #7A2A10;
+          --accent: #7A8B6A;
+          --accent-soft: #E3E8DA;
+          --accent-text: #3F4F33;
+          --accent-dark: #5D6E4F;
+          --secondary: #B5A874;
+          --secondary-soft: #F0E8C8;
+          --secondary-text: #6B5A20;
+          --danger: #A85A35;
+          --danger-soft: #F0DCC8;
+          --danger-text: #6B3A1A;
+          --success: #5D6E4F;
           background: var(--bg-page);
           color: var(--text-main);
         }
