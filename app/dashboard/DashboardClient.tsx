@@ -67,6 +67,28 @@ function fmtDateKo(d: Date): string {
   });
 }
 
+// "2026-05-19" → "5월 19일"
+function fmtMonthDay(isoStr: string): string {
+  try {
+    const [, m, dd] = isoStr.split("-");
+    return `${parseInt(m, 10)}월 ${parseInt(dd, 10)}일`;
+  } catch {
+    return isoStr;
+  }
+}
+
+// "✅ 마감 (4): 내일 할 일 4건" / "✅ 마감: 비즈니스PT 준비 영상 보기" 같은
+// 봇 메타 이모지/접두어 제거 — 명시적 키워드만 제거 (다른 제목 안 다침)
+function cleanEventSummary(s: string): string {
+  if (!s) return "";
+  let out = s.replace(/^[✅❌✨⚡⭐\u{1F525}\u{1F389}\u{1F4DD}\u{1F6A8}\u{1F4CC}]+\s*/u, "");
+  out = out.replace(
+    /^(마감|할\s*일|광고|공구|D-?day|투두|TODO|진행중|이월)\s*(?:\(\d+\))?\s*[:：]\s*/i,
+    ""
+  );
+  return out.trim() || s;
+}
+
 async function callApi(method: string, path: string, body?: any) {
   const r = await fetch(`/api/dashboard/proxy/${path}`, {
     method,
@@ -328,8 +350,6 @@ export default function DashboardClient({ initial }: { initial: Initial }) {
 
         <QuickTasks initial={initial.quickTasks} />
 
-        <WeeklyRoutines initial={initial.weeklyRoutines} />
-
         <ActiveCards data={initial.active} />
 
         <IdeasRecent initial={initial.ideasRecent} />
@@ -337,6 +357,8 @@ export default function DashboardClient({ initial }: { initial: Initial }) {
         <Chores initialTodo={initial.choresTodo} initialShop={initial.choresShop} />
 
         <MonthlyCalendar data={initial.calendar} />
+
+        <WeeklyRoutines initial={initial.weeklyRoutines} />
 
         <DetailLinks />
 
@@ -476,6 +498,7 @@ function TodayPanel({
   today: any;
   incomplete: any;
 }) {
+  const events = (schedule?.events || []) as any[];
   return (
     <section
       className="bg-white rounded-2xl p-5"
@@ -486,13 +509,20 @@ function TodayPanel({
       </h2>
       <div className="space-y-3">
         <div>
-          <p className="text-xs text-muted mb-1">일정</p>
-          {schedule?.events?.length ? (
+          <p className="text-xs text-muted mb-1">일정 · 캘린더 + 루틴</p>
+          {events.length ? (
             <ul className="space-y-1">
-              {schedule.events.map((ev: any, i: number) => (
+              {events.map((ev: any, i: number) => (
                 <li key={i} className="text-sm flex items-center gap-2">
-                  <span className="text-xs text-muted w-12">{ev.time_label}</span>
-                  <span>{ev.summary}</span>
+                  <span className="text-xs text-muted w-14 shrink-0">
+                    {ev.time_label}
+                  </span>
+                  <span className="flex-1">
+                    {cleanEventSummary(ev.summary)}
+                    {ev.source === "루틴" && (
+                      <span className="ml-1.5 text-[10px] text-muted">루틴</span>
+                    )}
+                  </span>
                 </li>
               ))}
             </ul>
@@ -501,7 +531,7 @@ function TodayPanel({
           )}
         </div>
         <div className="border-t border-rule pt-2">
-          <p className="text-xs text-muted mb-1">D-day</p>
+          <p className="text-xs text-muted mb-1">체크 · 오늘 마감</p>
           {today?.items?.length ? (
             <ul className="space-y-1">
               {today.items.map((it: any, i: number) => (
@@ -519,7 +549,7 @@ function TodayPanel({
         </div>
         {incomplete?.items?.length > 0 && (
           <div className="border-t border-rule pt-2">
-            <p className="text-xs text-muted mb-1">미완료 (이월)</p>
+            <p className="text-xs text-muted mb-1">이월 · 어제 못 끝낸 거</p>
             <ul className="space-y-1">
               {incomplete.items.slice(0, 3).map((it: any, i: number) => (
                 <li key={i} className="text-sm text-muted">
@@ -537,22 +567,34 @@ function TodayPanel({
 function TomorrowPanel({ calendar, active }: { calendar: any; active: any }) {
   const tomorrow = addDays(new Date(), 1);
   const tomorrowStr = iso(tomorrow);
-  const evs = (calendar?.events_by_date || {})[tomorrowStr] || [];
+  const evsRaw = (calendar?.events_by_date || {})[tomorrowStr] || [];
   const dls = (calendar?.deadlines_by_date || {})[tomorrowStr] || [];
+
+  // 시간순 정렬 (종일 → 앞, 그 외 time 오름차순)
+  const evs = [...evsRaw].sort((a: any, b: any) => {
+    if (a.all_day && !b.all_day) return -1;
+    if (!a.all_day && b.all_day) return 1;
+    return (a.time || "").localeCompare(b.time || "");
+  });
 
   return (
     <Card title={`내일 (${tomorrow.getMonth() + 1}/${tomorrow.getDate()})`}>
       <div className="space-y-3">
         <div>
-          <p className="text-xs text-muted mb-1">일정</p>
+          <p className="text-xs text-muted mb-1">일정 · 캘린더 + 루틴</p>
           {evs.length ? (
             <ul className="space-y-1">
               {evs.map((ev: any, i: number) => (
                 <li key={i} className="text-sm flex items-center gap-2">
-                  <span className="text-xs text-muted w-12">
+                  <span className="text-xs text-muted w-14 shrink-0">
                     {ev.all_day ? "종일" : fmtShortTime(ev.time || "")}
                   </span>
-                  <span>{ev.summary}</span>
+                  <span className="flex-1">
+                    {cleanEventSummary(ev.summary)}
+                    {ev.source === "루틴" && (
+                      <span className="ml-1.5 text-[10px] text-muted">루틴</span>
+                    )}
+                  </span>
                 </li>
               ))}
             </ul>
@@ -586,34 +628,49 @@ function TomorrowPanel({ calendar, active }: { calendar: any; active: any }) {
 
 function TodayMe({ health }: { health: any }) {
   const last = health?.days?.[health.days.length - 1] || {};
-  const sleepHm = last.sleep_min
-    ? `${Math.floor(last.sleep_min / 60)}시간 ${last.sleep_min % 60}분`
-    : "?";
+  const hasAny =
+    last.sleep_min != null ||
+    last.sleep_score != null ||
+    last.condition != null ||
+    last.steps != null;
+  const sleepHm =
+    last.sleep_min != null
+      ? `${Math.floor(last.sleep_min / 60)}시간 ${last.sleep_min % 60}분`
+      : null;
+
   return (
     <Card title="오늘의 나">
       <div className="text-sm space-y-2">
-        <div className="flex flex-wrap gap-x-4 gap-y-1 text-sm">
-          <span>
-            <span className="text-muted">수면</span>{" "}
-            <span className="font-medium">{sleepHm}</span>
-          </span>
-          <span>
-            <span className="text-muted">점수</span>{" "}
-            <span className="font-medium">{last.sleep_score ?? "?"}</span>
-          </span>
-          <span>
-            <span className="text-muted">컨디션</span>{" "}
-            <span className="font-medium">{last.condition ?? "?"}/10</span>
-          </span>
-          <span>
-            <span className="text-muted">걸음</span>{" "}
-            <span className="font-medium">
-              {last.steps != null
-                ? new Intl.NumberFormat("ko-KR").format(last.steps)
-                : "?"}
+        {hasAny ? (
+          <div className="flex flex-wrap gap-x-4 gap-y-1 text-sm">
+            <span>
+              <span className="text-muted">수면</span>{" "}
+              <span className="font-medium">{sleepHm ?? "—"}</span>
             </span>
-          </span>
-        </div>
+            <span>
+              <span className="text-muted">점수</span>{" "}
+              <span className="font-medium">{last.sleep_score ?? "—"}</span>
+            </span>
+            <span>
+              <span className="text-muted">컨디션</span>{" "}
+              <span className="font-medium">
+                {last.condition != null ? `${last.condition}/10` : "—"}
+              </span>
+            </span>
+            <span>
+              <span className="text-muted">걸음</span>{" "}
+              <span className="font-medium">
+                {last.steps != null
+                  ? new Intl.NumberFormat("ko-KR").format(last.steps)
+                  : "—"}
+              </span>
+            </span>
+          </div>
+        ) : (
+          <p className="text-sm text-muted">
+            데이터 없음 — 텔레그램 봇에서 <span className="font-medium text-ink">/건강</span> 명령으로 등록
+          </p>
+        )}
         <div className="border-t border-rule pt-2">
           <p className="text-xs text-muted mb-1">식사</p>
           <div className="grid grid-cols-3 gap-2 text-xs">
@@ -691,6 +748,64 @@ function QuickTasks({ initial }: { initial: any }) {
 // 매주 반복 루틴
 // ─────────────────────────────────────────────────────────────────────
 
+// 루틴 이름 단축 매핑 (한나 v5.1 — 클라이언트 fallback. API가 이미 짧은 이름 줄 수도 있음)
+const ROUTINE_SHORT_NAME: Record<string, string> = {
+  "비즈니스PT": "비즈니스PT",
+  "윤소정_앤드엔_강의": "윤소정 강의",
+  "윤소정 앤드엔 강의": "윤소정 강의",
+  "뉴스레터_작성": "뉴스레터 작성",
+  "줄당번": "줄당번",
+  "시사원정대_자료발송": "시사원정대 자료발송",
+  "혜린_글_메일발송": "혜린 글메일",
+  "공양당번": "공양당번",
+  "혜린_글선생님_줌수업": "혜린 글수업",
+  "윤소정_생각구독_읽기": "생각구독 읽기",
+  "법회": "법회",
+  "혜린_글수업_월결제": "혜린 글수업 월결제",
+  "안놀공": "안놀공",
+};
+
+function shortRoutineName(name: string): string {
+  return ROUTINE_SHORT_NAME[name] ?? name.replace(/_/g, " ");
+}
+
+// "매주 월/화/수", "22:00" → "월화수 오후 10시"
+function shortRoutinePeriod(period: string, time: string): string {
+  let timeLabel = "";
+  const tMatch = time?.match(/(\d{1,2}):(\d{2})/);
+  if (tMatch) {
+    const h = parseInt(tMatch[1], 10);
+    const mm = tMatch[2];
+    if (h === 0) timeLabel = " 자정";
+    else if (h < 12) timeLabel = ` 오전 ${h}시`;
+    else if (h === 12) timeLabel = " 낮 12시";
+    else if (h === 18 && mm === "30") timeLabel = " 오후 6시반";
+    else timeLabel = ` 오후 ${h - 12}시`;
+  }
+  if (period.includes("매주")) {
+    const wds = period.match(/[월화수목금토일]/g) || [];
+    const uniq = Array.from(new Set(wds));
+    if (uniq.length) {
+      const order = "월화수목금토일";
+      const sorted = uniq.sort((a, b) => order.indexOf(a) - order.indexOf(b));
+      return `${sorted.join("")}${timeLabel}`.trim();
+    }
+  }
+  if (period.includes("마지막주")) {
+    const m = period.match(/(월|화|수|목|금|토|일)/);
+    if (m) return `마지막 ${m[1]}${timeLabel}`.trim();
+    return `마지막 주${timeLabel}`.trim();
+  }
+  if (period.includes("말일")) return `월말${timeLabel}`.trim();
+  const md = period.match(/매월\s*(\d{1,2})일/);
+  if (md) return `매월 ${md[1]}일${timeLabel}`.trim();
+  const n = period.match(/매월\s*(\d+)회/);
+  if (n) return `월${n[1]}회`;
+  if (period.includes("매월")) return "월 가변";
+  if (period.includes("2-3개월")) return "2-3개월 1회";
+  return period;
+}
+
 function WeeklyRoutines({ initial }: { initial: any }) {
   const [items, setItems] = useState<any[]>(initial?.items || []);
   const [, startTransition] = useTransition();
@@ -711,21 +826,40 @@ function WeeklyRoutines({ initial }: { initial: any }) {
 
   return (
     <Card
-      title="매주 반복"
+      title="매주 반복 (활성 루틴)"
       rightSlot={
-        <span className="text-xs text-muted">
-          {done}/{items.length} 완료
+        <span className="text-[11px] text-muted">
+          {done}/{items.length} 완료 · 이번 주 메모용
         </span>
       }
     >
-      <div className="grid grid-cols-1 sm:grid-cols-2 gap-x-4 gap-y-1.5">
+      <p className="text-[11px] text-muted mb-2">
+        그날 일정 목록에 자동 노출됨. 여기는 활성 루틴 요약·체크용.
+      </p>
+      <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-x-3 gap-y-1">
         {items.map((it, i) => (
-          <Checkbox
+          <label
             key={it.name}
-            checked={!!it.checked}
-            onChange={() => startTransition(() => toggle(it.name, i))}
-            label={`${it.name} · ${it.period}${it.time ? ` ${it.time}` : ""}`}
-          />
+            className="flex items-start gap-1.5 cursor-pointer group text-[12px]"
+          >
+            <input
+              type="checkbox"
+              checked={!!it.checked}
+              onChange={() => startTransition(() => toggle(it.name, i))}
+              className="mt-[3px] w-3.5 h-3.5 rounded border-rule cursor-pointer"
+            />
+            <span
+              className={
+                "flex-1 leading-snug " +
+                (it.checked ? "line-through text-muted" : "text-ink")
+              }
+            >
+              {shortRoutineName(it.name)}{" "}
+              <span className="text-muted">
+                ({shortRoutinePeriod(it.period || "", it.time || "")})
+              </span>
+            </span>
+          </label>
         ))}
       </div>
     </Card>
@@ -754,19 +888,8 @@ function ActiveCards({ data }: { data: any }) {
               key={i}
               className="border border-rule rounded-lg p-3 hover:border-ink transition"
             >
-              <div className="flex items-center gap-1.5 mb-1.5 flex-wrap">
-                <Pill>{it.audience}</Pill>
-                <Pill
-                  color={
-                    it.type === "광고"
-                      ? TONE.deadline
-                      : it.type === "공구"
-                      ? TONE.schedule
-                      : undefined
-                  }
-                >
-                  {it.type}
-                </Pill>
+              <div className="mb-1.5">
+                <ActiveCardTag audience={it.audience} type={it.type} />
               </div>
               <p className="text-sm font-medium leading-snug">{it.title}</p>
               <p className="text-xs text-muted mt-1">{it.state}</p>
@@ -782,7 +905,8 @@ function ActiveCards({ data }: { data: any }) {
                   className="text-xs mt-1 font-medium"
                   style={{ color: TONE.deadline }}
                 >
-                  {it.deadline}
+                  {it.deadline_label ? `${it.deadline_label} ` : ""}
+                  {fmtMonthDay(it.deadline)}
                 </p>
               )}
             </div>
@@ -791,6 +915,32 @@ function ActiveCards({ data }: { data: any }) {
       )}
       <ActiveAdd />
     </Card>
+  );
+}
+
+function ActiveCardTag({
+  audience,
+  type,
+}: {
+  audience: string;
+  type: string;
+}) {
+  const color =
+    type === "광고"
+      ? TONE.deadline
+      : type === "공구"
+      ? TONE.schedule
+      : "#6b6b6b";
+  return (
+    <span
+      className="inline-block text-[11px] px-2 py-0.5 rounded-md font-semibold tracking-tight"
+      style={{
+        color: "#ffffff",
+        backgroundColor: color,
+      }}
+    >
+      {audience} · {type}
+    </span>
   );
 }
 
@@ -979,12 +1129,13 @@ function MonthlyCalendar({ data }: { data: any }) {
           const ds = iso(d);
           const isToday = ds === todayIso;
           const inThisWeek = d >= thisWeekStart && d <= thisWeekEnd;
-          const evCount = (evMap[ds] || []).length;
-          const dlCount = (dlMap[ds] || []).length;
+          const evs: any[] = evMap[ds] || [];
+          const dls: any[] = dlMap[ds] || [];
+          const hasAny = evs.length + dls.length > 0;
           return (
             <div
               key={i}
-              className="h-14 border border-rule rounded p-1 text-[11px]"
+              className="relative h-14 border border-rule rounded p-1 text-[11px] group"
               style={{
                 borderColor: isToday ? TONE.schedule : undefined,
                 borderWidth: isToday ? 2 : 1,
@@ -993,19 +1144,50 @@ function MonthlyCalendar({ data }: { data: any }) {
             >
               <div className="text-ink">{d.getDate()}</div>
               <div className="flex gap-0.5 mt-0.5">
-                {evCount > 0 && (
+                {evs.length > 0 && (
                   <span
                     className="inline-block w-1.5 h-1.5 rounded-full"
                     style={{ backgroundColor: TONE.schedule }}
                   />
                 )}
-                {dlCount > 0 && (
+                {dls.length > 0 && (
                   <span
                     className="inline-block w-1.5 h-1.5 rounded-full"
                     style={{ backgroundColor: TONE.deadline }}
                   />
                 )}
               </div>
+              {hasAny && (
+                <div
+                  className="hidden group-hover:block absolute z-20 left-1/2 -translate-x-1/2 top-full mt-1 w-52 p-2 rounded-md shadow-lg text-[11px] text-ink"
+                  style={{
+                    backgroundColor: "#ffffff",
+                    border: "1px solid #d1cfc8",
+                    pointerEvents: "none",
+                  }}
+                >
+                  <p className="font-semibold mb-1">
+                    {d.getMonth() + 1}월 {d.getDate()}일 ({KO_WD[(d.getDay() + 6) % 7]})
+                  </p>
+                  {evs.slice(0, 4).map((ev: any, idx: number) => (
+                    <p key={`e${idx}`} className="truncate">
+                      <span className="text-muted mr-1">
+                        {ev.all_day ? "종일" : fmtShortTime(ev.time || "")}
+                      </span>
+                      {cleanEventSummary(ev.summary)}
+                    </p>
+                  ))}
+                  {dls.slice(0, 3).map((dl: any, idx: number) => (
+                    <p key={`d${idx}`} className="truncate" style={{ color: TONE.deadline }}>
+                      <span className="mr-1">·</span>
+                      {dl.type} {dl.title}
+                    </p>
+                  ))}
+                  {evs.length + dls.length > 7 && (
+                    <p className="text-muted mt-1">외 {evs.length + dls.length - 7}건</p>
+                  )}
+                </div>
+              )}
             </div>
           );
         })}
