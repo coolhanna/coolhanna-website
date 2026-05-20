@@ -437,6 +437,18 @@ function WeeklyCalendar({
           >
             오늘
           </button>
+          <button
+            onClick={() => window.open("https://calendar.google.com", "_blank", "noopener,noreferrer")}
+            className="ml-1 px-2 py-0.5 rounded-md transition"
+            style={{
+              backgroundColor: "var(--secondary-soft)",
+              color: "var(--secondary-text)",
+              border: "1px solid var(--secondary)",
+            }}
+            title="구글 캘린더 새 탭으로 열기"
+          >
+            📅 구글 캘린더
+          </button>
         </div>
       }
     >
@@ -693,19 +705,37 @@ function DailyPanel({
           <AddInline placeholder="할 일 추가" onAdd={addTodo} />
         </div>
 
-        {/* 이월 — 오늘만 */}
-        {isToday && incomplete?.items?.length > 0 && (
-          <div className="border-t border-rule pt-2">
-            <p className="text-xs text-muted mb-1">이월 · 어제 못 끝낸 거</p>
-            <ul className="space-y-1">
-              {incomplete.items.slice(0, 3).map((it: any, i: number) => (
-                <li key={i} className="text-sm text-muted">
-                  · {it.title}
-                </li>
-              ))}
-            </ul>
-          </div>
-        )}
+        {/* 이월 — 오늘만 표시. 어제 일별 카드 미완료 + 진행중 할일카드 마감 이월 둘 다 */}
+        {isToday &&
+          ((initial?.incomplete_yesterday?.length || 0) +
+            (incomplete?.items?.length || 0) >
+            0) && (
+            <div className="border-t border-rule pt-2">
+              <p className="text-xs text-muted mb-1">이월 · 어제 못 끝낸 거</p>
+              <ul className="space-y-1">
+                {(initial?.incomplete_yesterday || []).map(
+                  (it: any, i: number) => (
+                    <li
+                      key={`y${i}`}
+                      className="text-sm text-muted flex items-baseline gap-2"
+                    >
+                      <span className="text-[10px] shrink-0">
+                        {it.date
+                          ? `어제(${fmtShortDateWeekday(new Date(it.date))})`
+                          : "어제"}
+                      </span>
+                      <span className="flex-1">· {it.text}</span>
+                    </li>
+                  )
+                )}
+                {(incomplete?.items || []).slice(0, 3).map((it: any, i: number) => (
+                  <li key={`d${i}`} className="text-sm text-muted">
+                    · {it.title}
+                  </li>
+                ))}
+              </ul>
+            </div>
+          )}
       </div>
     </section>
   );
