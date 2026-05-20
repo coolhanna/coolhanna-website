@@ -21,6 +21,7 @@ export default async function DashboardPage() {
     ideasRecent,
     scheduleV2,
     weeklyTodos,
+    todayMe,
   ] = await Promise.all([
     dash.today(),
     dash.recommendation(),
@@ -38,6 +39,7 @@ export default async function DashboardPage() {
     dash.ideasRecent(),
     dash.scheduleV2(),
     dash.weeklyTodos(),
+    dash.todayMe(),
   ]);
 
   return (
@@ -59,6 +61,7 @@ export default async function DashboardPage() {
         ideasRecent,
         scheduleV2,
         weeklyTodos,
+        todayMe,
       }}
     />
   );

@@ -328,6 +328,7 @@ type Initial = {
   ideasRecent: any;
   scheduleV2: any;
   weeklyTodos: any;
+  todayMe: any;
 };
 
 export default function DashboardClient({ initial }: { initial: Initial }) {
@@ -387,7 +388,7 @@ export default function DashboardClient({ initial }: { initial: Initial }) {
 
         <QuickTasks initial={initial.quickTasks} />
 
-        <TodayMe health={initial.health} />
+        <TodayMe data={initial.todayMe} />
 
         <ActiveCards data={initial.active} />
 
@@ -898,7 +899,6 @@ function WeeklyTodos({ initial }: { initial: any }) {
   const todayIso = iso(new Date());
   const [days, setDays] = useState<any[]>(initial?.days || []);
   const [expanded, setExpanded] = useState<Record<string, boolean>>({});
-  const [adding, setAdding] = useState(false);
   const [addText, setAddText] = useState("");
   const [addDate, setAddDate] = useState<string>(todayIso);
   const [busy, setBusy] = useState(false);
@@ -954,7 +954,6 @@ function WeeklyTodos({ initial }: { initial: any }) {
         )
       );
       setAddText("");
-      setAdding(false);
     } catch (e) {
       alert("저장 실패: " + (e as Error).message);
     } finally {
@@ -966,76 +965,57 @@ function WeeklyTodos({ initial }: { initial: any }) {
     <Card
       title="이번 주 할 일"
       rightSlot={
-        !adding ? (
-          <button
-            onClick={() => {
-              setAdding(true);
-              setAddDate(todayIso);
+        <div className="flex items-center gap-1.5 flex-wrap justify-end">
+          <select
+            value={addDate}
+            onChange={(e) => setAddDate(e.target.value)}
+            className="text-xs rounded px-1.5 py-1"
+            style={{
+              border: "1px solid var(--border)",
+              backgroundColor: "var(--bg-card)",
+              color: "var(--text-main)",
             }}
-            className="text-xs transition hover:opacity-70"
-            style={{ color: "var(--accent)" }}
           >
-            + 추가
+            {dayOptions.map((o) => (
+              <option key={o.value} value={o.value}>
+                {o.label}
+              </option>
+            ))}
+          </select>
+          <input
+            value={addText}
+            onChange={(e) => setAddText(e.target.value)}
+            onKeyDown={(e) => {
+              if (e.key === "Enter") submitAdd();
+              if (e.key === "Escape") setAddText("");
+            }}
+            placeholder="할 일"
+            disabled={busy}
+            className="text-xs rounded px-2 py-1 outline-none"
+            style={{
+              border: "1px solid var(--border)",
+              backgroundColor: "var(--bg-card)",
+              color: "var(--text-main)",
+              width: 160,
+            }}
+          />
+          <button
+            onClick={submitAdd}
+            disabled={busy || !addText.trim()}
+            className="text-xs px-2 py-1 rounded disabled:opacity-50"
+            style={{ backgroundColor: "var(--accent)", color: "#ffffff" }}
+          >
+            {busy ? "..." : "Enter"}
           </button>
-        ) : (
-          <div className="flex items-center gap-1.5">
-            <select
-              value={addDate}
-              onChange={(e) => setAddDate(e.target.value)}
-              className="text-xs rounded px-1.5 py-1"
-              style={{
-                border: "1px solid var(--border)",
-                backgroundColor: "var(--bg-card)",
-                color: "var(--text-main)",
-              }}
-            >
-              {dayOptions.map((o) => (
-                <option key={o.value} value={o.value}>
-                  {o.label}
-                </option>
-              ))}
-            </select>
-            <input
-              autoFocus
-              value={addText}
-              onChange={(e) => setAddText(e.target.value)}
-              onKeyDown={(e) => {
-                if (e.key === "Enter") submitAdd();
-                if (e.key === "Escape") {
-                  setAdding(false);
-                  setAddText("");
-                }
-              }}
-              placeholder="할 일"
-              disabled={busy}
-              className="text-xs rounded px-2 py-1 outline-none"
-              style={{
-                border: "1px solid var(--border)",
-                backgroundColor: "var(--bg-card)",
-                color: "var(--text-main)",
-                width: 160,
-              }}
-            />
-            <button
-              onClick={submitAdd}
-              disabled={busy}
-              className="text-xs px-2 py-1 rounded disabled:opacity-50"
-              style={{ backgroundColor: "var(--accent)", color: "#ffffff" }}
-            >
-              {busy ? "..." : "Enter"}
-            </button>
-            <button
-              onClick={() => {
-                setAdding(false);
-                setAddText("");
-              }}
-              className="text-xs px-2 py-1 rounded text-muted"
-              style={{ border: "1px solid var(--border)" }}
-            >
-              취소
-            </button>
-          </div>
-        )
+          <button
+            onClick={() => setAddText("")}
+            disabled={!addText}
+            className="text-xs px-2 py-1 rounded text-muted disabled:opacity-50"
+            style={{ border: "1px solid var(--border)" }}
+          >
+            취소
+          </button>
+        </div>
       }
     >
       <div className="grid grid-cols-7 gap-1">
@@ -1383,17 +1363,23 @@ function DailyTodoRow({
 // "오늘의 나"
 // ─────────────────────────────────────────────────────────────────────
 
-function TodayMe({ health }: { health: any }) {
-  const last = health?.days?.[health.days.length - 1] || {};
+function TodayMe({ data }: { data: any }) {
+  const sleep = data?.sleep || {};
+  const cond = data?.condition || {};
+  const diet = data?.diet || {};
+  const act = data?.activity || {};
+
+  const sleepStr = sleep.duration_str
+    ? sleep.duration_str
+    : sleep.duration_min != null
+    ? `${Math.floor(sleep.duration_min / 60)}:${String(sleep.duration_min % 60).padStart(2, "0")}`
+    : null;
+
   const hasAny =
-    last.sleep_min != null ||
-    last.sleep_score != null ||
-    last.condition != null ||
-    last.steps != null;
-  const sleepHm =
-    last.sleep_min != null
-      ? `${Math.floor(last.sleep_min / 60)}시간 ${last.sleep_min % 60}분`
-      : null;
+    sleep.duration_min != null ||
+    sleep.score != null ||
+    cond.score != null ||
+    act.steps != null;
 
   return (
     <Card title="오늘의 나">
@@ -1402,38 +1388,43 @@ function TodayMe({ health }: { health: any }) {
           <div className="flex flex-wrap gap-x-4 gap-y-1 text-sm">
             <span>
               <span className="text-muted">수면</span>{" "}
-              <span className="font-medium" style={{ color: "var(--accent)" }}>{sleepHm ?? "—"}</span>
+              <span className="font-medium" style={{ color: "var(--accent)" }}>
+                {sleepStr ?? "—"}
+              </span>
             </span>
             <span>
               <span className="text-muted">점수</span>{" "}
-              <span className="font-medium" style={{ color: "var(--accent)" }}>{last.sleep_score ?? "—"}</span>
+              <span className="font-medium" style={{ color: "var(--accent)" }}>
+                {sleep.score ?? "—"}
+              </span>
             </span>
             <span>
               <span className="text-muted">컨디션</span>{" "}
               <span className="font-medium" style={{ color: "var(--danger)" }}>
-                {last.condition != null ? `${last.condition}/10` : "—"}
+                {cond.score != null ? `${cond.score}/10` : "—"}
               </span>
             </span>
             <span>
               <span className="text-muted">걸음</span>{" "}
               <span className="font-medium" style={{ color: "var(--accent)" }}>
-                {last.steps != null
-                  ? new Intl.NumberFormat("ko-KR").format(last.steps)
+                {act.steps != null
+                  ? new Intl.NumberFormat("ko-KR").format(act.steps)
                   : "—"}
               </span>
             </span>
           </div>
         ) : (
           <p className="text-sm text-muted">
-            데이터 없음 — 텔레그램 봇에서 <span className="font-medium text-ink">/건강</span> 명령으로 등록
+            데이터 없음 — 텔레그램 봇에서{" "}
+            <span className="font-medium text-ink">/건강</span> 명령으로 등록
           </p>
         )}
         <div className="border-t border-rule pt-2">
           <p className="text-xs text-muted mb-1">식사</p>
           <div className="grid grid-cols-3 gap-2 text-xs">
-            <MealSlot label="아침" />
-            <MealSlot label="점심" />
-            <MealSlot label="저녁" />
+            <MealSlot label="아침" summary={diet.breakfast} />
+            <MealSlot label="점심" summary={diet.lunch} />
+            <MealSlot label="저녁" summary={diet.dinner} />
           </div>
         </div>
         <p className="text-[11px] text-muted">생리 주기 — 추후 추가</p>
@@ -1442,12 +1433,27 @@ function TodayMe({ health }: { health: any }) {
   );
 }
 
-function MealSlot({ label }: { label: string }) {
-  // 식사 데이터는 health-trend에 없음 — placeholder. (실제 데이터는 추후 API 추가 시 채움)
+function MealSlot({ label, summary }: { label: string; summary?: string | null }) {
+  const recorded = !!(summary && summary.trim());
   return (
-    <div className="border border-rule rounded-md p-2 text-center text-muted">
-      {label}
-      <div className="text-[10px] mt-1">미기록</div>
+    <div
+      className="rounded-md p-2"
+      style={{
+        border: `1px solid var(--border)`,
+        backgroundColor: recorded ? "var(--bg-card-soft)" : undefined,
+      }}
+    >
+      <div className="flex items-center gap-1.5">
+        <span className="font-medium" style={{ color: recorded ? "var(--accent)" : "var(--text-secondary)" }}>
+          {label}
+        </span>
+        <span className="text-[10px] text-muted">{recorded ? "✓" : "─"}</span>
+      </div>
+      {recorded && (
+        <div className="text-[10px] mt-1 leading-snug text-ink break-keep">
+          {summary}
+        </div>
+      )}
     </div>
   );
 }

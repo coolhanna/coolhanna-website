@@ -39,4 +39,6 @@ export const dash = {
   scheduleV2: () => api<any>("/api/dashboard/schedule-v2"),
   // v6.2 — 이번 주(월~일) 일별 카드 todos
   weeklyTodos: () => api<any>("/api/dashboard/weekly-todos"),
+  // v6.2.2 — 오늘의 나 통합 (수면/컨디션/활동/식단 3끼니)
+  todayMe: () => api<any>("/api/dashboard/today-me"),
 };
