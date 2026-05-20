@@ -37,4 +37,6 @@ export const dash = {
   ideasRecent: () => api<any>("/api/dashboard/ideas-recent?limit=3"),
   // v6 — 일별 카드 통합 (오늘 + 내일)
   scheduleV2: () => api<any>("/api/dashboard/schedule-v2"),
+  // v6.2 — 이번 주(월~일) 일별 카드 todos
+  weeklyTodos: () => api<any>("/api/dashboard/weekly-todos"),
 };

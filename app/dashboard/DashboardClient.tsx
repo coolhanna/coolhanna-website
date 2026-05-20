@@ -327,6 +327,7 @@ type Initial = {
   quickTasks: any;
   ideasRecent: any;
   scheduleV2: any;
+  weeklyTodos: any;
 };
 
 export default function DashboardClient({ initial }: { initial: Initial }) {
@@ -358,6 +359,8 @@ export default function DashboardClient({ initial }: { initial: Initial }) {
           initialEvents={initial.calendar}
           initialActive={initial.active}
         />
+
+        <WeeklyTodos initial={initial.weeklyTodos} />
 
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
           <DailyPanel
@@ -527,6 +530,247 @@ function fmtShortTime(hhmm: string): string {
   if (hour < 12) return `오전 ${hour}시`;
   if (hour === 12) return "낮 12시";
   return `오후 ${hour - 12}시`;
+}
+
+// ─────────────────────────────────────────────────────────────────────
+// 이번 주 할 일 — 일별 카드 7일치 가로 펼침 (v6.2)
+// ─────────────────────────────────────────────────────────────────────
+
+const MAX_VISIBLE_TODOS = 5;
+
+function WeeklyTodos({ initial }: { initial: any }) {
+  const todayIso = iso(new Date());
+  const [days, setDays] = useState<any[]>(initial?.days || []);
+  const [expanded, setExpanded] = useState<Record<string, boolean>>({});
+  const [adding, setAdding] = useState(false);
+  const [addText, setAddText] = useState("");
+  const [addDate, setAddDate] = useState<string>(todayIso);
+  const [busy, setBusy] = useState(false);
+  const [, startTransition] = useTransition();
+
+  // 추가 인풋의 날짜 드롭다운 옵션 — 이번 주 7일
+  const dayOptions = days.map((d) => ({
+    value: d.date,
+    label: `${d.weekday} ${parseInt(d.date.split("-")[2], 10)}일`,
+  }));
+
+  async function toggle(dateStr: string, line: number) {
+    setDays((cur) =>
+      cur.map((d) =>
+        d.date !== dateStr
+          ? d
+          : {
+              ...d,
+              todos: d.todos.map((t: any) =>
+                t.line === line ? { ...t, done: !t.done } : t
+              ),
+            }
+      )
+    );
+    try {
+      await callApi("PATCH", `daily/${dateStr}/todo/${line}/toggle`);
+    } catch {
+      // rollback
+      setDays((cur) =>
+        cur.map((d) =>
+          d.date !== dateStr
+            ? d
+            : {
+                ...d,
+                todos: d.todos.map((t: any) =>
+                  t.line === line ? { ...t, done: !t.done } : t
+                ),
+              }
+        )
+      );
+    }
+  }
+
+  async function submitAdd() {
+    const text = addText.trim();
+    if (!text || busy) return;
+    setBusy(true);
+    try {
+      const r = await callApi("POST", `daily/${addDate}/todo`, { text });
+      setDays((cur) =>
+        cur.map((d) =>
+          d.date !== addDate ? d : { ...d, todos: [...d.todos, r.item] }
+        )
+      );
+      setAddText("");
+      setAdding(false);
+    } catch (e) {
+      alert("저장 실패: " + (e as Error).message);
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  return (
+    <Card
+      title="이번 주 할 일"
+      rightSlot={
+        !adding ? (
+          <button
+            onClick={() => {
+              setAdding(true);
+              setAddDate(todayIso);
+            }}
+            className="text-xs transition hover:opacity-70"
+            style={{ color: "var(--accent)" }}
+          >
+            + 추가
+          </button>
+        ) : (
+          <div className="flex items-center gap-1.5">
+            <select
+              value={addDate}
+              onChange={(e) => setAddDate(e.target.value)}
+              className="text-xs rounded px-1.5 py-1"
+              style={{
+                border: "1px solid var(--border)",
+                backgroundColor: "var(--bg-card)",
+                color: "var(--text-main)",
+              }}
+            >
+              {dayOptions.map((o) => (
+                <option key={o.value} value={o.value}>
+                  {o.label}
+                </option>
+              ))}
+            </select>
+            <input
+              autoFocus
+              value={addText}
+              onChange={(e) => setAddText(e.target.value)}
+              onKeyDown={(e) => {
+                if (e.key === "Enter") submitAdd();
+                if (e.key === "Escape") {
+                  setAdding(false);
+                  setAddText("");
+                }
+              }}
+              placeholder="할 일"
+              disabled={busy}
+              className="text-xs rounded px-2 py-1 outline-none"
+              style={{
+                border: "1px solid var(--border)",
+                backgroundColor: "var(--bg-card)",
+                color: "var(--text-main)",
+                width: 160,
+              }}
+            />
+            <button
+              onClick={submitAdd}
+              disabled={busy}
+              className="text-xs px-2 py-1 rounded disabled:opacity-50"
+              style={{ backgroundColor: "var(--accent)", color: "#ffffff" }}
+            >
+              {busy ? "..." : "Enter"}
+            </button>
+            <button
+              onClick={() => {
+                setAdding(false);
+                setAddText("");
+              }}
+              className="text-xs px-2 py-1 rounded text-muted"
+              style={{ border: "1px solid var(--border)" }}
+            >
+              취소
+            </button>
+          </div>
+        )
+      }
+    >
+      <div className="grid grid-cols-7 gap-1">
+        {days.map((d) => {
+          const isToday = d.date === todayIso;
+          const isOpen = !!expanded[d.date];
+          const total = d.todos.length;
+          const visibleTodos: any[] = isOpen
+            ? d.todos
+            : d.todos.slice(0, MAX_VISIBLE_TODOS);
+          const overflow = total - MAX_VISIBLE_TODOS;
+          const dayNum = parseInt(d.date.split("-")[2], 10);
+          return (
+            <div
+              key={d.date}
+              className="rounded-md p-2 text-[11px] min-h-[120px] flex flex-col"
+              style={{
+                backgroundColor: "var(--bg-card-soft)",
+                border: isToday
+                  ? "2px solid var(--accent)"
+                  : "1px solid var(--border)",
+              }}
+            >
+              <div className="flex items-center justify-between mb-1.5">
+                <span
+                  className="font-semibold"
+                  style={{ color: isToday ? "var(--accent)" : undefined }}
+                >
+                  {d.weekday}
+                </span>
+                <span
+                  className="text-muted"
+                  style={{ color: isToday ? "var(--accent)" : undefined }}
+                >
+                  {dayNum}
+                </span>
+              </div>
+              <div className="space-y-1 flex-1">
+                {visibleTodos.map((t: any) => (
+                  <label
+                    key={t.line}
+                    className="flex items-start gap-1.5 cursor-pointer"
+                  >
+                    <input
+                      type="checkbox"
+                      checked={!!t.done}
+                      onChange={() =>
+                        startTransition(() => toggle(d.date, t.line))
+                      }
+                      className="mt-[2px] w-3 h-3 rounded shrink-0 cursor-pointer"
+                    />
+                    <span
+                      className={
+                        "leading-snug break-keep " +
+                        (t.done ? "line-through text-muted" : "")
+                      }
+                    >
+                      {t.text}
+                    </span>
+                  </label>
+                ))}
+                {total === 0 && (
+                  <p className="text-muted">·</p>
+                )}
+              </div>
+              {!isOpen && overflow > 0 && (
+                <button
+                  onClick={() =>
+                    setExpanded((cur) => ({ ...cur, [d.date]: true }))
+                  }
+                  className="text-[10px] text-muted hover:opacity-70 mt-1 self-start"
+                >
+                  + {overflow}개 더 ▼
+                </button>
+              )}
+              {isOpen && overflow > 0 && (
+                <button
+                  onClick={() =>
+                    setExpanded((cur) => ({ ...cur, [d.date]: false }))
+                  }
+                  className="text-[10px] text-muted hover:opacity-70 mt-1 self-start"
+                >
+                  접기 ▲
+                </button>
+              )}
+            </div>
+          );
+        })}
+      </div>
+    </Card>
+  );
 }
 
 // ─────────────────────────────────────────────────────────────────────
