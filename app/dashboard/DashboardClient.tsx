@@ -355,12 +355,23 @@ export default function DashboardClient({ initial }: { initial: Initial }) {
       </header>
 
       <div className="max-w-page mx-auto px-5 sm:px-8 py-6 space-y-4">
-        <WeeklyCalendar
-          initialEvents={initial.calendar}
-          initialActive={initial.active}
-        />
+        {/* 데스크탑(≥md) — 주간달력 + 이번 주 할 일 따로 (7컬럼 가로) */}
+        <div className="hidden md:block space-y-4">
+          <WeeklyCalendar
+            initialEvents={initial.calendar}
+            initialActive={initial.active}
+          />
+          <WeeklyTodos initial={initial.weeklyTodos} />
+        </div>
 
-        <WeeklyTodos initial={initial.weeklyTodos} />
+        {/* 모바일(<md) — 합쳐서 7줄 컴팩트 */}
+        <div className="md:hidden">
+          <WeeklyCompact
+            calendar={initial.calendar}
+            weeklyTodos={initial.weeklyTodos}
+            scheduleV2={initial.scheduleV2}
+          />
+        </div>
 
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
           <DailyPanel
@@ -530,6 +541,351 @@ function fmtShortTime(hhmm: string): string {
   if (hour < 12) return `오전 ${hour}시`;
   if (hour === 12) return "낮 12시";
   return `오후 ${hour - 12}시`;
+}
+
+// ─────────────────────────────────────────────────────────────────────
+// 모바일 컴팩트 — 주간 달력 + 이번 주 할 일 합쳐서 7줄 (v6.3)
+// 각 줄: 요일+날짜 + 요약 + 펼침 토글. 동시 1개 펼침.
+// ─────────────────────────────────────────────────────────────────────
+
+function WeeklyCompact({
+  calendar,
+  weeklyTodos,
+  scheduleV2,
+}: {
+  calendar: any;
+  weeklyTodos: any;
+  scheduleV2: any;
+}) {
+  const todayIso = iso(new Date());
+  const tomorrowIso = iso(addDays(new Date(), 1));
+  const [expanded, setExpanded] = useState<string>(todayIso);
+  const [days, setDays] = useState<any[]>(weeklyTodos?.days || []);
+  const [, startTransition] = useTransition();
+  const [addingDate, setAddingDate] = useState<string | null>(null);
+  const [addText, setAddText] = useState("");
+  const [busy, setBusy] = useState(false);
+
+  const evMap: Record<string, any[]> = calendar?.events_by_date || {};
+  const dlMap: Record<string, any[]> = calendar?.deadlines_by_date || {};
+
+  const weekStart = weeklyTodos?.week_start || "";
+  const weekEnd = weeklyTodos?.week_end || "";
+
+  function shortLabel(dateStr: string): string {
+    const evs = (evMap[dateStr] || []).filter((e: any) => !e?.summary?.startsWith?.("(제목 없음)"));
+    const dayBucket = days.find((d) => d.date === dateStr);
+    const todos = dayBucket?.todos || [];
+
+    // 미리보기 토큰: 일정 → 할일 순으로 1~2개
+    const tokens: string[] = [];
+    for (const ev of evs) {
+      if (tokens.length >= 2) break;
+      const t = cleanEventSummary(ev.summary || "");
+      if (t) tokens.push(t);
+    }
+    if (tokens.length < 2) {
+      for (const t of todos) {
+        if (tokens.length >= 2) break;
+        if (t?.text) tokens.push(t.text);
+      }
+    }
+    const total = evs.length + todos.length;
+    if (total === 0) return "─";
+    const preview = tokens.join(", ");
+    return total > tokens.length ? `${preview} (${total})` : preview;
+  }
+
+  async function toggle(dateStr: string, line: number) {
+    setDays((cur) =>
+      cur.map((d) =>
+        d.date !== dateStr
+          ? d
+          : {
+              ...d,
+              todos: d.todos.map((t: any) =>
+                t.line === line ? { ...t, done: !t.done } : t
+              ),
+            }
+      )
+    );
+    try {
+      await callApi("PATCH", `daily/${dateStr}/todo/${line}/toggle`);
+    } catch {
+      setDays((cur) =>
+        cur.map((d) =>
+          d.date !== dateStr
+            ? d
+            : {
+                ...d,
+                todos: d.todos.map((t: any) =>
+                  t.line === line ? { ...t, done: !t.done } : t
+                ),
+              }
+        )
+      );
+    }
+  }
+
+  async function submitAdd(dateStr: string) {
+    const text = addText.trim();
+    if (!text || busy) return;
+    setBusy(true);
+    try {
+      const r = await callApi("POST", `daily/${dateStr}/todo`, { text });
+      setDays((cur) =>
+        cur.map((d) =>
+          d.date !== dateStr ? d : { ...d, todos: [...d.todos, r.item] }
+        )
+      );
+      setAddText("");
+      setAddingDate(null);
+    } catch (e) {
+      alert("저장 실패: " + (e as Error).message);
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  function renderExpandedBody(dateStr: string) {
+    const evs = evMap[dateStr] || [];
+    const dls = dlMap[dateStr] || [];
+    const dayBucket = days.find((d) => d.date === dateStr);
+    const todos = dayBucket?.todos || [];
+
+    // 시간순 정렬 (종일 → 앞, 그 외 time 오름차순)
+    const sortedEvs = [...evs].sort((a: any, b: any) => {
+      if (a.all_day && !b.all_day) return -1;
+      if (!a.all_day && b.all_day) return 1;
+      return (a.time || "").localeCompare(b.time || "");
+    });
+
+    // 오늘/내일은 scheduleV2의 풍부한 데이터(루틴 source/마감 종류) 활용
+    const richBundle =
+      dateStr === todayIso
+        ? scheduleV2?.today
+        : dateStr === tomorrowIso
+        ? scheduleV2?.tomorrow
+        : null;
+
+    return (
+      <div className="pt-2 space-y-2.5">
+        {/* 📅 일정 */}
+        <div>
+          <p className="text-[11px] text-muted mb-1">📅 일정</p>
+          {sortedEvs.length === 0 ? (
+            <p className="text-xs text-muted">없음</p>
+          ) : (
+            <ul className="space-y-1">
+              {sortedEvs.map((ev: any, i: number) => (
+                <li key={i} className="text-xs flex items-center gap-2">
+                  <span className="text-[10px] text-muted w-12 shrink-0">
+                    {ev.all_day ? "종일" : ev.time ? fmtShortTime(ev.time) : ""}
+                  </span>
+                  <span className="flex-1 leading-snug">
+                    {cleanEventSummary(ev.summary)}
+                    {ev.source === "루틴" && (
+                      <span className="ml-1 text-[9px] text-muted">루틴</span>
+                    )}
+                  </span>
+                </li>
+              ))}
+            </ul>
+          )}
+        </div>
+
+        {/* 마감 (광고/공구) — 오늘/내일만 richBundle 사용, 다른 일자는 calendar의 deadlines */}
+        {richBundle &&
+          (richBundle.ad_deadlines?.length || 0) +
+            (richBundle.gongu_milestones?.length || 0) >
+            0 && (
+            <div className="border-t border-rule pt-2">
+              <p className="text-[11px] text-muted mb-1">마감</p>
+              <ul className="space-y-1">
+                {richBundle.ad_deadlines.map((a: any, i: number) => (
+                  <li key={`a${i}`} className="text-xs flex items-center gap-2">
+                    <Pill color="#A85A35">{`광고 ${a.kind}`}</Pill>
+                    <span className="flex-1">{`${a.audience} ${a.title}`}</span>
+                  </li>
+                ))}
+                {richBundle.gongu_milestones.map((g: any, i: number) => (
+                  <li key={`g${i}`} className="text-xs flex items-center gap-2">
+                    <Pill color="#A85A35">{`공구 ${g.kind}`}</Pill>
+                    <span className="flex-1">{`${g.audience} ${g.title}`}</span>
+                  </li>
+                ))}
+              </ul>
+            </div>
+          )}
+        {!richBundle && dls.length > 0 && (
+          <div className="border-t border-rule pt-2">
+            <p className="text-[11px] text-muted mb-1">마감</p>
+            <ul className="space-y-1">
+              {dls.map((dl: any, i: number) => (
+                <li key={i} className="text-xs flex items-center gap-2">
+                  <Pill color="#A85A35">{dl.type}</Pill>
+                  <span className="flex-1">{dl.title}</span>
+                </li>
+              ))}
+            </ul>
+          </div>
+        )}
+
+        {/* ✓ 할 일 */}
+        <div className="border-t border-rule pt-2">
+          <p className="text-[11px] text-muted mb-1">✓ 할 일</p>
+          {todos.length === 0 && (
+            <p className="text-xs text-muted">없음</p>
+          )}
+          <div className="space-y-1">
+            {todos.map((t: any) => (
+              <label
+                key={t.line}
+                className="flex items-start gap-2 cursor-pointer"
+              >
+                <input
+                  type="checkbox"
+                  checked={!!t.done}
+                  onChange={() => startTransition(() => toggle(dateStr, t.line))}
+                  className="mt-[3px] w-3.5 h-3.5 rounded shrink-0 cursor-pointer"
+                />
+                <span
+                  className={
+                    "text-xs flex-1 leading-snug " +
+                    (t.done ? "line-through text-muted" : "")
+                  }
+                >
+                  {t.text}
+                </span>
+              </label>
+            ))}
+          </div>
+
+          {addingDate === dateStr ? (
+            <div className="flex gap-1.5 mt-2">
+              <input
+                autoFocus
+                value={addText}
+                onChange={(e) => setAddText(e.target.value)}
+                onKeyDown={(e) => {
+                  if (e.key === "Enter") submitAdd(dateStr);
+                  if (e.key === "Escape") {
+                    setAddingDate(null);
+                    setAddText("");
+                  }
+                }}
+                placeholder="할 일"
+                disabled={busy}
+                className="flex-1 text-xs rounded px-2 py-1 outline-none"
+                style={{
+                  border: "1px solid var(--border)",
+                  backgroundColor: "var(--bg-card)",
+                  color: "var(--text-main)",
+                }}
+              />
+              <button
+                onClick={() => submitAdd(dateStr)}
+                disabled={busy}
+                className="text-xs px-2 py-1 rounded disabled:opacity-50"
+                style={{ backgroundColor: "var(--accent)", color: "#ffffff" }}
+              >
+                {busy ? "..." : "Enter"}
+              </button>
+              <button
+                onClick={() => {
+                  setAddingDate(null);
+                  setAddText("");
+                }}
+                className="text-xs px-2 py-1 rounded text-muted"
+                style={{ border: "1px solid var(--border)" }}
+              >
+                취소
+              </button>
+            </div>
+          ) : (
+            <button
+              onClick={() => {
+                setAddingDate(dateStr);
+                setAddText("");
+              }}
+              className="text-[11px] mt-1.5 transition hover:opacity-70"
+              style={{ color: "var(--accent)" }}
+            >
+              + 추가
+            </button>
+          )}
+        </div>
+      </div>
+    );
+  }
+
+  function fmtShortRange(s: string): string {
+    const [, m, d] = s.split("-");
+    return `${parseInt(m, 10)}/${parseInt(d, 10)}`;
+  }
+
+  return (
+    <Card
+      title={
+        weekStart && weekEnd
+          ? `이번 주 (${fmtShortRange(weekStart)} - ${fmtShortRange(weekEnd)})`
+          : "이번 주"
+      }
+      rightSlot={
+        <button
+          onClick={() =>
+            window.open(
+              "https://calendar.google.com",
+              "_blank",
+              "noopener,noreferrer"
+            )
+          }
+          className="px-2 py-0.5 text-xs rounded-md transition"
+          style={{
+            backgroundColor: "var(--secondary-soft)",
+            color: "var(--secondary-text)",
+            border: "1px solid var(--secondary)",
+          }}
+          title="구글 캘린더 새 탭으로 열기"
+        >
+          📅 캘린더
+        </button>
+      }
+    >
+      <ul className="divide-y" style={{ borderColor: "var(--border)" }}>
+        {days.map((d) => {
+          const isOpen = expanded === d.date;
+          const isToday = d.date === todayIso;
+          const dayNum = parseInt(d.date.split("-")[2], 10);
+          return (
+            <li key={d.date}>
+              <button
+                onClick={() => setExpanded(isOpen ? "" : d.date)}
+                className="w-full text-left py-2 flex items-center gap-2"
+              >
+                <span
+                  className="text-xs font-semibold shrink-0 w-14"
+                  style={{ color: isToday ? "var(--accent)" : undefined }}
+                >
+                  {d.weekday} {dayNum}
+                  {isToday && (
+                    <span className="ml-1 text-[10px] font-normal">(오늘)</span>
+                  )}
+                </span>
+                <span className="text-xs text-muted flex-1 truncate">
+                  {shortLabel(d.date)}
+                </span>
+                <span className="text-xs text-muted shrink-0">
+                  {isOpen ? "▼" : "▸"}
+                </span>
+              </button>
+              {isOpen && renderExpandedBody(d.date)}
+            </li>
+          );
+        })}
+      </ul>
+    </Card>
+  );
 }
 
 // ─────────────────────────────────────────────────────────────────────
