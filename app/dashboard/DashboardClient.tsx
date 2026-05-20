@@ -329,6 +329,7 @@ type Initial = {
   scheduleV2: any;
   weeklyTodos: any;
   todayMe: any;
+  memosRecent: any;
 };
 
 export default function DashboardClient({ initial }: { initial: Initial }) {
@@ -387,6 +388,8 @@ export default function DashboardClient({ initial }: { initial: Initial }) {
         </div>
 
         <QuickTasks initial={initial.quickTasks} />
+
+        <MemoPanel initial={initial.memosRecent} />
 
         <TodayMe data={initial.todayMe} />
 
@@ -1363,6 +1366,150 @@ function DailyTodoRow({
 // "오늘의 나"
 // ─────────────────────────────────────────────────────────────────────
 
+// ─────────────────────────────────────────────────────────────────────
+// 메모 패널 — 오늘 + 어제 미완료 메모. 체크하면 옵시디언 [x] + 화면 사라짐.
+// 추가 폼은 항상 헤더 우측에 노출 (WeeklyTodos와 같은 패턴). 오늘 카드에 추가.
+// ─────────────────────────────────────────────────────────────────────
+
+function MemoPanel({ initial }: { initial: any }) {
+  const todayIso = iso(new Date());
+  const [items, setItems] = useState<any[]>(initial?.items || []);
+  const [addText, setAddText] = useState("");
+  const [busy, setBusy] = useState(false);
+  const [, startTransition] = useTransition();
+
+  async function toggle(dateStr: string, line: number) {
+    // 낙관: 즉시 화면에서 제거 (체크 = 사라짐)
+    const snapshot = items;
+    setItems((cur) =>
+      cur.filter((it) => !(it.date === dateStr && it.line === line))
+    );
+    try {
+      await callApi("PATCH", `memo/${dateStr}/todo/${line}/toggle`);
+    } catch {
+      setItems(snapshot);
+    }
+  }
+
+  async function remove(dateStr: string, line: number) {
+    const snapshot = items;
+    setItems((cur) =>
+      cur.filter((it) => !(it.date === dateStr && it.line === line))
+    );
+    try {
+      await callApi("DELETE", `memo/${dateStr}/todo/${line}`);
+    } catch {
+      setItems(snapshot);
+    }
+  }
+
+  async function submitAdd() {
+    const text = addText.trim();
+    if (!text || busy) return;
+    setBusy(true);
+    try {
+      const r = await callApi("POST", `memo/${todayIso}/todo`, { text });
+      // 응답 line은 새 줄 번호. 오늘 weekday는 클라이언트에서 계산.
+      const wd = ["월", "화", "수", "목", "금", "토", "일"][
+        (new Date().getDay() + 6) % 7
+      ];
+      setItems((cur) => [
+        { date: todayIso, weekday: wd, line: r.item.line, text: r.item.text, done: false },
+        ...cur,
+      ]);
+      setAddText("");
+    } catch (e) {
+      alert("저장 실패: " + (e as Error).message);
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  function dateLabel(it: any): string {
+    if (it.date === todayIso) return "오늘";
+    const m = it.date.match(/^\d{4}-(\d{2})-(\d{2})$/);
+    if (m) return `${it.weekday || ""} ${parseInt(m[1], 10)}/${parseInt(m[2], 10)}`;
+    return it.date;
+  }
+
+  return (
+    <Card
+      title="📝 메모"
+      rightSlot={
+        <div className="flex items-center gap-1.5 flex-wrap justify-end">
+          <input
+            value={addText}
+            onChange={(e) => setAddText(e.target.value)}
+            onKeyDown={(e) => {
+              if (e.key === "Enter") submitAdd();
+              if (e.key === "Escape") setAddText("");
+            }}
+            placeholder="메모"
+            disabled={busy}
+            className="text-xs rounded px-2 py-1 outline-none"
+            style={{
+              border: "1px solid var(--border)",
+              backgroundColor: "var(--bg-card)",
+              color: "var(--text-main)",
+              width: 200,
+            }}
+          />
+          <button
+            onClick={submitAdd}
+            disabled={busy || !addText.trim()}
+            className="text-xs px-2 py-1 rounded disabled:opacity-50"
+            style={{ backgroundColor: "var(--accent)", color: "#ffffff" }}
+          >
+            {busy ? "..." : "Enter"}
+          </button>
+          <button
+            onClick={() => setAddText("")}
+            disabled={!addText}
+            className="text-xs px-2 py-1 rounded text-muted disabled:opacity-50"
+            style={{ border: "1px solid var(--border)" }}
+          >
+            취소
+          </button>
+        </div>
+      }
+    >
+      {items.length === 0 ? (
+        <p className="text-sm text-muted">없음</p>
+      ) : (
+        <ul className="space-y-1">
+          {items.map((it) => (
+            <li
+              key={`${it.date}-${it.line}`}
+              className="flex items-start gap-2 group text-sm"
+            >
+              <input
+                type="checkbox"
+                checked={!!it.done}
+                onChange={() =>
+                  startTransition(() => toggle(it.date, it.line))
+                }
+                className="mt-[3px] w-4 h-4 rounded shrink-0 cursor-pointer"
+              />
+              <span className="flex-1 leading-snug">{it.text}</span>
+              <span className="text-[10px] text-muted shrink-0 mt-0.5">
+                {dateLabel(it)}
+              </span>
+              <button
+                onClick={() => startTransition(() => remove(it.date, it.line))}
+                className="text-[11px] text-muted opacity-0 group-hover:opacity-100 transition px-1"
+                title="삭제"
+                aria-label="삭제"
+              >
+                ×
+              </button>
+            </li>
+          ))}
+        </ul>
+      )}
+    </Card>
+  );
+}
+
 function TodayMe({ data }: { data: any }) {
   const sleep = data?.sleep || {};
   const cond = data?.condition || {};
@@ -1863,13 +2010,21 @@ function DetailLinks() {
     "건강",
     "매출",
     "식단",
+    "📔 일기",
     "루틴 설정",
   ];
 
   function onClickDisabled(e: React.MouseEvent<HTMLButtonElement>) {
     e.preventDefault();
     if (typeof window !== "undefined") {
-      window.alert("준비 중 — 곧 만들 예정");
+      const label = e.currentTarget.textContent || "";
+      if (label.includes("일기")) {
+        window.alert(
+          "일기는 옵시디언에서 직접 확인:\n03_본질/일기/YYYY-MM-DD.md\n(전용 페이지는 추후)"
+        );
+      } else {
+        window.alert("준비 중 — 곧 만들 예정");
+      }
     }
   }
 

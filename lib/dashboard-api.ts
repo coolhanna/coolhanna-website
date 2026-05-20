@@ -41,4 +41,6 @@ export const dash = {
   weeklyTodos: () => api<any>("/api/dashboard/weekly-todos"),
   // v6.2.2 — 오늘의 나 통합 (수면/컨디션/활동/식단 3끼니)
   todayMe: () => api<any>("/api/dashboard/today-me"),
+  // v6.4 — 최근 메모 (오늘 + 어제, 미완료만)
+  memosRecent: () => api<any>("/api/dashboard/memos-recent"),
 };
