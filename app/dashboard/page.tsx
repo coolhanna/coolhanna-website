@@ -18,7 +18,6 @@ export default async function DashboardPage() {
     choresTodo,
     choresShop,
     quickTasks,
-    weeklyRoutines,
     ideasRecent,
   ] = await Promise.all([
     dash.today(),
@@ -34,7 +33,6 @@ export default async function DashboardPage() {
     dash.choresTodo(),
     dash.choresShop(),
     dash.quickTasks(),
-    dash.weeklyRoutines(),
     dash.ideasRecent(),
   ]);
 
@@ -54,7 +52,6 @@ export default async function DashboardPage() {
         choresTodo,
         choresShop,
         quickTasks,
-        weeklyRoutines,
         ideasRecent,
       }}
     />

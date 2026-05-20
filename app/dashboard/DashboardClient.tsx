@@ -2,17 +2,8 @@
 
 import { useEffect, useState, useTransition } from "react";
 
-const TONE = {
-  schedule: "#5D7EE0",
-  deadline: "#D85A30",
-  done: "#2D7A4F",
-  warn: "#B8553A",
-  pt: "#FFE8DB",
-  lecture: "#E8F0FF",
-  due: "#FFE0DB",
-  content: "#E0F0E5",
-} as const;
-
+// 컬러 시스템은 dashboard/layout.tsx의 CSS 변수에서 관리.
+// Pill 컴포넌트 alpha 합성 등에서만 hex 직접 사용 (var(...)는 +"44" 안 됨).
 const KO_WD = ["월", "화", "수", "목", "금", "토", "일"]; // Mon=0
 
 // ─────────────────────────────────────────────────────────────────────
@@ -77,6 +68,24 @@ function fmtMonthDay(isoStr: string): string {
   }
 }
 
+// "2026-05-19" → "5월 19일 (월)"
+function fmtMonthDayWeekday(isoStr: string): string {
+  try {
+    const [y, m, dd] = isoStr.split("-");
+    const d = new Date(parseInt(y, 10), parseInt(m, 10) - 1, parseInt(dd, 10));
+    const wd = KO_WD[(d.getDay() + 6) % 7]; // Mon=0
+    return `${parseInt(m, 10)}월 ${parseInt(dd, 10)}일 (${wd})`;
+  } catch {
+    return isoStr;
+  }
+}
+
+// Date → "5/18(월)"
+function fmtShortDateWeekday(d: Date): string {
+  const wd = KO_WD[(d.getDay() + 6) % 7];
+  return `${d.getMonth() + 1}/${d.getDate()}(${wd})`;
+}
+
 // "✅ 마감 (4): 내일 할 일 4건" / "✅ 마감: 비즈니스PT 준비 영상 보기" 같은
 // 봇 메타 이모지/접두어 제거 — 명시적 키워드만 제거 (다른 제목 안 다침)
 function cleanEventSummary(s: string): string {
@@ -108,26 +117,32 @@ function Card({
   children,
   accent,
   bg,
+  borderColor,
   rightSlot,
 }: {
   title?: string;
   children: React.ReactNode;
   accent?: string;
   bg?: string;
+  borderColor?: string;
   rightSlot?: React.ReactNode;
 }) {
   return (
     <section
-      className="border border-rule rounded-2xl p-5"
+      className="rounded-2xl p-5"
       style={{
-        backgroundColor: bg || "#ffffff",
+        backgroundColor: bg || "var(--bg-card)",
+        border: `1px solid ${borderColor || "var(--border)"}`,
         ...(accent ? { borderTopColor: accent, borderTopWidth: 3 } : {}),
       }}
     >
       {(title || rightSlot) && (
         <div className="flex items-center justify-between mb-3">
           {title && (
-            <h2 className="text-sm font-semibold text-muted tracking-tight">
+            <h2
+              className="text-sm font-semibold tracking-tight"
+              style={{ color: "var(--text-secondary)" }}
+            >
               {title}
             </h2>
           )}
@@ -157,9 +172,9 @@ function Pill({
               backgroundColor: color + "0a",
             }
           : {
-              color: "#6b6b6b",
-              borderColor: "#e5e5e0",
-              backgroundColor: "#fafaf7",
+              color: "var(--text-secondary)",
+              borderColor: "var(--border)",
+              backgroundColor: "var(--bg-card-soft)",
             }
       }
     >
@@ -231,7 +246,8 @@ function AddInline({
     return (
       <button
         onClick={() => setOpen(true)}
-        className="text-xs text-muted hover:text-ink mt-3 transition"
+        className="text-xs mt-3 transition hover:opacity-70"
+        style={{ color: "var(--accent)" }}
       >
         + 추가
       </button>
@@ -252,12 +268,18 @@ function AddInline({
         }}
         placeholder={placeholder}
         disabled={busy}
-        className="flex-1 border border-rule rounded-md px-2.5 py-1.5 text-sm outline-none focus:border-ink"
+        className="flex-1 rounded-md px-2.5 py-1.5 text-sm outline-none"
+        style={{
+          border: "1px solid var(--border)",
+          backgroundColor: "var(--bg-card)",
+          color: "var(--text-main)",
+        }}
       />
       <button
         onClick={submit}
         disabled={busy}
-        className="text-xs px-2.5 py-1 bg-ink text-white rounded-md disabled:opacity-50"
+        className="text-xs px-2.5 py-1 rounded-md disabled:opacity-50"
+        style={{ backgroundColor: "var(--accent)", color: "#ffffff" }}
       >
         {busy ? "..." : "Enter"}
       </button>
@@ -276,7 +298,10 @@ function AddInline({
 
 function ErrorBox({ msg }: { msg: string }) {
   return (
-    <p className="text-xs text-[#B8553A] bg-[#B8553A0a] px-2 py-1 rounded">
+    <p
+      className="text-xs px-2 py-1 rounded"
+      style={{ color: "var(--danger-text)", backgroundColor: "var(--danger-soft)" }}
+    >
       {msg}
     </p>
   );
@@ -300,7 +325,6 @@ type Initial = {
   choresTodo: any;
   choresShop: any;
   quickTasks: any;
-  weeklyRoutines: any;
   ideasRecent: any;
 };
 
@@ -312,7 +336,7 @@ export default function DashboardClient({ initial }: { initial: Initial }) {
   }, []);
 
   return (
-    <main className="min-h-screen bg-paper text-ink">
+    <main className="dashboard-root min-h-screen bg-paper text-ink">
       <header className="max-w-page mx-auto px-5 sm:px-8 py-6 border-b border-rule">
         <p className="text-xs text-muted">{fmtDateKo(now)}</p>
         <div className="flex items-baseline justify-between flex-wrap gap-2 mt-1">
@@ -321,7 +345,7 @@ export default function DashboardClient({ initial }: { initial: Initial }) {
           </h1>
           <span
             className="text-lg font-medium"
-            style={{ color: TONE.schedule }}
+            style={{ color: "var(--accent)" }}
           >
             {fmtTimeKo(now)}
           </span>
@@ -358,8 +382,6 @@ export default function DashboardClient({ initial }: { initial: Initial }) {
 
         <MonthlyCalendar data={initial.calendar} />
 
-        <WeeklyRoutines initial={initial.weeklyRoutines} />
-
         <DetailLinks />
 
         <p className="text-[11px] text-muted text-center pt-4">
@@ -382,8 +404,9 @@ function WeeklyCalendar({
   initialActive: any;
 }) {
   const [weekStart, setWeekStart] = useState<Date>(() => startOfWeek(new Date()));
-  const today = startOfWeek(new Date());
+  const todayIso = iso(new Date()); // ★ 실제 오늘 — 버그 수정 (이전: 이번 주 월요일과 비교)
   const days = Array.from({ length: 7 }, (_, i) => addDays(weekStart, i));
+  const weekEnd = addDays(weekStart, 6);
   const eventsByDate: Record<string, any[]> = initialEvents?.events_by_date || {};
   const deadlinesByDate: Record<string, any[]> = initialEvents?.deadlines_by_date || {};
 
@@ -399,8 +422,7 @@ function WeeklyCalendar({
             ‹ 지난주
           </button>
           <span>
-            {weekStart.getMonth() + 1}/{weekStart.getDate()} ~{" "}
-            {addDays(weekStart, 6).getMonth() + 1}/{addDays(weekStart, 6).getDate()}
+            {fmtShortDateWeekday(weekStart)} - {fmtShortDateWeekday(weekEnd)}
           </span>
           <button
             onClick={() => setWeekStart(addDays(weekStart, 7))}
@@ -420,18 +442,19 @@ function WeeklyCalendar({
       <div className="grid grid-cols-7 gap-1">
         {days.map((d, i) => {
           const dateStr = iso(d);
-          const isToday = iso(d) === iso(today);
+          const isToday = dateStr === todayIso;
           const evs = eventsByDate[dateStr] || [];
           const dls = deadlinesByDate[dateStr] || [];
           return (
             <div
               key={dateStr}
-              className="border border-rule rounded-md p-2 min-h-[80px] text-[11px]"
-              style={
-                isToday
-                  ? { borderColor: TONE.schedule, borderWidth: 2 }
-                  : undefined
-              }
+              className="rounded-md p-2 min-h-[80px] text-[11px]"
+              style={{
+                backgroundColor: "var(--bg-card-soft)",
+                border: isToday
+                  ? `2px solid var(--accent)`
+                  : `1px solid var(--border)`,
+              }}
             >
               <div className="flex items-center justify-between mb-1">
                 <span className="font-semibold text-ink">{KO_WD[i]}</span>
@@ -443,21 +466,29 @@ function WeeklyCalendar({
                     key={`e${idx}`}
                     className="truncate px-1 py-0.5 rounded"
                     style={{
-                      backgroundColor: ev.all_day ? TONE.content : TONE.lecture,
+                      backgroundColor: ev.all_day
+                        ? "var(--secondary-soft)"
+                        : "var(--accent-soft)",
+                      color: ev.all_day
+                        ? "var(--secondary-text)"
+                        : "var(--accent-text)",
                     }}
-                    title={ev.summary}
+                    title={cleanEventSummary(ev.summary)}
                   >
                     {!ev.all_day && ev.time && (
-                      <span className="text-muted mr-1">{fmtShortTime(ev.time)}</span>
+                      <span className="mr-1 opacity-70">{fmtShortTime(ev.time)}</span>
                     )}
-                    {ev.summary}
+                    {cleanEventSummary(ev.summary)}
                   </div>
                 ))}
                 {dls.slice(0, 2).map((dl: any, idx: number) => (
                   <div
                     key={`d${idx}`}
                     className="truncate px-1 py-0.5 rounded"
-                    style={{ backgroundColor: TONE.due }}
+                    style={{
+                      backgroundColor: "var(--danger-soft)",
+                      color: "var(--danger-text)",
+                    }}
                     title={`${dl.type}: ${dl.title}`}
                   >
                     {dl.title}
@@ -502,9 +533,9 @@ function TodayPanel({
   return (
     <section
       className="bg-white rounded-2xl p-5"
-      style={{ border: `1.5px solid ${TONE.schedule}` }}
+      style={{ border: `1.5px solid var(--accent)` }}
     >
-      <h2 className="text-sm font-semibold mb-3" style={{ color: TONE.schedule }}>
+      <h2 className="text-sm font-semibold mb-3" style={{ color: "var(--accent)" }}>
         오늘
       </h2>
       <div className="space-y-3">
@@ -536,13 +567,13 @@ function TodayPanel({
             <ul className="space-y-1">
               {today.items.map((it: any, i: number) => (
                 <li key={i} className="text-sm flex items-center gap-2">
-                  <Pill color={TONE.deadline}>{it.type}</Pill>
+                  <Pill color="#C24A20">{it.type}</Pill>
                   <span>{it.title}</span>
                 </li>
               ))}
             </ul>
           ) : (
-            <p className="text-sm" style={{ color: TONE.done }}>
+            <p className="text-sm" style={{ color: "var(--accent)" }}>
               오늘 마감 없음 ✓
             </p>
           )}
@@ -578,7 +609,7 @@ function TomorrowPanel({ calendar, active }: { calendar: any; active: any }) {
   });
 
   return (
-    <Card title={`내일 (${tomorrow.getMonth() + 1}/${tomorrow.getDate()})`}>
+    <Card title={`내일 ${fmtShortDateWeekday(tomorrow)}`}>
       <div className="space-y-3">
         <div>
           <p className="text-xs text-muted mb-1">일정 · 캘린더 + 루틴</p>
@@ -608,7 +639,7 @@ function TomorrowPanel({ calendar, active }: { calendar: any; active: any }) {
             <ul className="space-y-1">
               {dls.map((dl: any, i: number) => (
                 <li key={i} className="text-sm flex items-center gap-2">
-                  <Pill color={TONE.deadline}>{dl.type}</Pill>
+                  <Pill color="#C24A20">{dl.type}</Pill>
                   <span>{dl.title}</span>
                 </li>
               ))}
@@ -645,21 +676,21 @@ function TodayMe({ health }: { health: any }) {
           <div className="flex flex-wrap gap-x-4 gap-y-1 text-sm">
             <span>
               <span className="text-muted">수면</span>{" "}
-              <span className="font-medium">{sleepHm ?? "—"}</span>
+              <span className="font-medium" style={{ color: "var(--accent)" }}>{sleepHm ?? "—"}</span>
             </span>
             <span>
               <span className="text-muted">점수</span>{" "}
-              <span className="font-medium">{last.sleep_score ?? "—"}</span>
+              <span className="font-medium" style={{ color: "var(--accent)" }}>{last.sleep_score ?? "—"}</span>
             </span>
             <span>
               <span className="text-muted">컨디션</span>{" "}
-              <span className="font-medium">
+              <span className="font-medium" style={{ color: "var(--danger)" }}>
                 {last.condition != null ? `${last.condition}/10` : "—"}
               </span>
             </span>
             <span>
               <span className="text-muted">걸음</span>{" "}
-              <span className="font-medium">
+              <span className="font-medium" style={{ color: "var(--accent)" }}>
                 {last.steps != null
                   ? new Intl.NumberFormat("ko-KR").format(last.steps)
                   : "—"}
@@ -724,7 +755,11 @@ function QuickTasks({ initial }: { initial: any }) {
   }
 
   return (
-    <Card title="빠른 처리" bg="#FFF8E8">
+    <Card
+      title="빠른 처리"
+      bg="var(--secondary-soft)"
+      borderColor="var(--secondary)"
+    >
       {items.length === 0 && (
         <p className="text-sm text-muted">없음</p>
       )}
@@ -740,128 +775,6 @@ function QuickTasks({ initial }: { initial: any }) {
         ))}
       </div>
       <AddInline placeholder="메시지/연락/잡일" onAdd={add} />
-    </Card>
-  );
-}
-
-// ─────────────────────────────────────────────────────────────────────
-// 매주 반복 루틴
-// ─────────────────────────────────────────────────────────────────────
-
-// 루틴 이름 단축 매핑 (한나 v5.1 — 클라이언트 fallback. API가 이미 짧은 이름 줄 수도 있음)
-const ROUTINE_SHORT_NAME: Record<string, string> = {
-  "비즈니스PT": "비즈니스PT",
-  "윤소정_앤드엔_강의": "윤소정 강의",
-  "윤소정 앤드엔 강의": "윤소정 강의",
-  "뉴스레터_작성": "뉴스레터 작성",
-  "줄당번": "줄당번",
-  "시사원정대_자료발송": "시사원정대 자료발송",
-  "혜린_글_메일발송": "혜린 글메일",
-  "공양당번": "공양당번",
-  "혜린_글선생님_줌수업": "혜린 글수업",
-  "윤소정_생각구독_읽기": "생각구독 읽기",
-  "법회": "법회",
-  "혜린_글수업_월결제": "혜린 글수업 월결제",
-  "안놀공": "안놀공",
-};
-
-function shortRoutineName(name: string): string {
-  return ROUTINE_SHORT_NAME[name] ?? name.replace(/_/g, " ");
-}
-
-// "매주 월/화/수", "22:00" → "월화수 오후 10시"
-function shortRoutinePeriod(period: string, time: string): string {
-  let timeLabel = "";
-  const tMatch = time?.match(/(\d{1,2}):(\d{2})/);
-  if (tMatch) {
-    const h = parseInt(tMatch[1], 10);
-    const mm = tMatch[2];
-    if (h === 0) timeLabel = " 자정";
-    else if (h < 12) timeLabel = ` 오전 ${h}시`;
-    else if (h === 12) timeLabel = " 낮 12시";
-    else if (h === 18 && mm === "30") timeLabel = " 오후 6시반";
-    else timeLabel = ` 오후 ${h - 12}시`;
-  }
-  if (period.includes("매주")) {
-    const wds = period.match(/[월화수목금토일]/g) || [];
-    const uniq = Array.from(new Set(wds));
-    if (uniq.length) {
-      const order = "월화수목금토일";
-      const sorted = uniq.sort((a, b) => order.indexOf(a) - order.indexOf(b));
-      return `${sorted.join("")}${timeLabel}`.trim();
-    }
-  }
-  if (period.includes("마지막주")) {
-    const m = period.match(/(월|화|수|목|금|토|일)/);
-    if (m) return `마지막 ${m[1]}${timeLabel}`.trim();
-    return `마지막 주${timeLabel}`.trim();
-  }
-  if (period.includes("말일")) return `월말${timeLabel}`.trim();
-  const md = period.match(/매월\s*(\d{1,2})일/);
-  if (md) return `매월 ${md[1]}일${timeLabel}`.trim();
-  const n = period.match(/매월\s*(\d+)회/);
-  if (n) return `월${n[1]}회`;
-  if (period.includes("매월")) return "월 가변";
-  if (period.includes("2-3개월")) return "2-3개월 1회";
-  return period;
-}
-
-function WeeklyRoutines({ initial }: { initial: any }) {
-  const [items, setItems] = useState<any[]>(initial?.items || []);
-  const [, startTransition] = useTransition();
-  const done = items.filter((it) => it.checked).length;
-
-  async function toggle(name: string, idx: number) {
-    setItems((cur) =>
-      cur.map((it, i) => (i === idx ? { ...it, checked: !it.checked } : it))
-    );
-    try {
-      await callApi("PATCH", "routine/toggle", { name });
-    } catch {
-      setItems((cur) =>
-        cur.map((it, i) => (i === idx ? { ...it, checked: !it.checked } : it))
-      );
-    }
-  }
-
-  return (
-    <Card
-      title="매주 반복 (활성 루틴)"
-      rightSlot={
-        <span className="text-[11px] text-muted">
-          {done}/{items.length} 완료 · 이번 주 메모용
-        </span>
-      }
-    >
-      <p className="text-[11px] text-muted mb-2">
-        그날 일정 목록에 자동 노출됨. 여기는 활성 루틴 요약·체크용.
-      </p>
-      <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-x-3 gap-y-1">
-        {items.map((it, i) => (
-          <label
-            key={it.name}
-            className="flex items-start gap-1.5 cursor-pointer group text-[12px]"
-          >
-            <input
-              type="checkbox"
-              checked={!!it.checked}
-              onChange={() => startTransition(() => toggle(it.name, i))}
-              className="mt-[3px] w-3.5 h-3.5 rounded border-rule cursor-pointer"
-            />
-            <span
-              className={
-                "flex-1 leading-snug " +
-                (it.checked ? "line-through text-muted" : "text-ink")
-              }
-            >
-              {shortRoutineName(it.name)}{" "}
-              <span className="text-muted">
-                ({shortRoutinePeriod(it.period || "", it.time || "")})
-              </span>
-            </span>
-          </label>
-        ))}
-      </div>
     </Card>
   );
 }
@@ -886,7 +799,14 @@ function ActiveCards({ data }: { data: any }) {
           {items.map((it: any, i: number) => (
             <div
               key={i}
-              className="border border-rule rounded-lg p-3 hover:border-ink transition"
+              className="rounded-lg p-3 transition"
+              style={{ border: "1px solid var(--border)" }}
+              onMouseEnter={(e) => {
+                e.currentTarget.style.borderColor = "var(--border-strong)";
+              }}
+              onMouseLeave={(e) => {
+                e.currentTarget.style.borderColor = "var(--border)";
+              }}
             >
               <div className="mb-1.5">
                 <ActiveCardTag audience={it.audience} type={it.type} />
@@ -903,10 +823,10 @@ function ActiveCards({ data }: { data: any }) {
               {it.deadline && (
                 <p
                   className="text-xs mt-1 font-medium"
-                  style={{ color: TONE.deadline }}
+                  style={{ color: "var(--accent)" }}
                 >
                   {it.deadline_label ? `${it.deadline_label} ` : ""}
-                  {fmtMonthDay(it.deadline)}
+                  {fmtMonthDayWeekday(it.deadline)}
                 </p>
               )}
             </div>
@@ -925,18 +845,14 @@ function ActiveCardTag({
   audience: string;
   type: string;
 }) {
-  const color =
-    type === "광고"
-      ? TONE.deadline
-      : type === "공구"
-      ? TONE.schedule
-      : "#6b6b6b";
+  // 한나 → accent (그린), 혜린 → secondary (버터). type은 텍스트로만 구분.
+  const isHanna = audience === "한나";
   return (
     <span
       className="inline-block text-[11px] px-2 py-0.5 rounded-md font-semibold tracking-tight"
       style={{
-        color: "#ffffff",
-        backgroundColor: color,
+        color: isHanna ? "var(--accent-text)" : "var(--secondary-text)",
+        backgroundColor: isHanna ? "var(--accent-soft)" : "var(--secondary-soft)",
       }}
     >
       {audience} · {type}
@@ -989,7 +905,11 @@ function IdeasRecent({ initial }: { initial: any }) {
             <li key={i} className="text-sm flex items-center gap-2">
               <Pill>{it.category}</Pill>
               <span>{it.title}</span>
-              <span className="text-[10px] text-muted">{it.created}</span>
+              <span className="text-[10px] text-muted">
+                {/^\d{4}-\d{2}-\d{2}/.test(it.created)
+                  ? fmtMonthDayWeekday(it.created.slice(0, 10))
+                  : it.created}
+              </span>
             </li>
           ))}
         </ul>
@@ -1135,11 +1055,13 @@ function MonthlyCalendar({ data }: { data: any }) {
           return (
             <div
               key={i}
-              className="relative h-14 border border-rule rounded p-1 text-[11px] group"
+              className="relative h-14 rounded p-1 text-[11px] group"
               style={{
-                borderColor: isToday ? TONE.schedule : undefined,
-                borderWidth: isToday ? 2 : 1,
-                backgroundColor: inThisWeek && !isToday ? "#FAF5ED" : undefined,
+                border: isToday
+                  ? `2px solid var(--accent)`
+                  : `1px solid var(--border)`,
+                backgroundColor:
+                  inThisWeek && !isToday ? "var(--bg-card-soft)" : undefined,
               }}
             >
               <div className="text-ink">{d.getDate()}</div>
@@ -1147,13 +1069,13 @@ function MonthlyCalendar({ data }: { data: any }) {
                 {evs.length > 0 && (
                   <span
                     className="inline-block w-1.5 h-1.5 rounded-full"
-                    style={{ backgroundColor: TONE.schedule }}
+                    style={{ backgroundColor: "var(--accent)" }}
                   />
                 )}
                 {dls.length > 0 && (
                   <span
                     className="inline-block w-1.5 h-1.5 rounded-full"
-                    style={{ backgroundColor: TONE.deadline }}
+                    style={{ backgroundColor: "var(--danger)" }}
                   />
                 )}
               </div>
@@ -1161,13 +1083,13 @@ function MonthlyCalendar({ data }: { data: any }) {
                 <div
                   className="hidden group-hover:block absolute z-20 left-1/2 -translate-x-1/2 top-full mt-1 w-52 p-2 rounded-md shadow-lg text-[11px] text-ink"
                   style={{
-                    backgroundColor: "#ffffff",
-                    border: "1px solid #d1cfc8",
+                    backgroundColor: "var(--bg-card)",
+                    border: "1px solid var(--border-strong)",
                     pointerEvents: "none",
                   }}
                 >
                   <p className="font-semibold mb-1">
-                    {d.getMonth() + 1}월 {d.getDate()}일 ({KO_WD[(d.getDay() + 6) % 7]})
+                    {fmtMonthDayWeekday(iso(d))}
                   </p>
                   {evs.slice(0, 4).map((ev: any, idx: number) => (
                     <p key={`e${idx}`} className="truncate">
@@ -1178,7 +1100,7 @@ function MonthlyCalendar({ data }: { data: any }) {
                     </p>
                   ))}
                   {dls.slice(0, 3).map((dl: any, idx: number) => (
-                    <p key={`d${idx}`} className="truncate" style={{ color: TONE.deadline }}>
+                    <p key={`d${idx}`} className="truncate" style={{ color: "var(--danger)" }}>
                       <span className="mr-1">·</span>
                       {dl.type} {dl.title}
                     </p>
@@ -1202,26 +1124,45 @@ function MonthlyCalendar({ data }: { data: any }) {
 
 function DetailLinks() {
   const links = [
-    { label: "할일", href: "/dashboard/할일" },
-    { label: "광고", href: "/dashboard/광고" },
-    { label: "공구", href: "/dashboard/공구" },
-    { label: "아이디어", href: "/dashboard/아이디어" },
-    { label: "건강", href: "/dashboard/건강" },
-    { label: "매출", href: "/dashboard/매출" },
-    { label: "식단", href: "/dashboard/식단" },
-    { label: "루틴 설정", href: "/dashboard/루틴설정" },
+    "할일",
+    "광고",
+    "공구",
+    "아이디어",
+    "건강",
+    "매출",
+    "식단",
+    "루틴 설정",
   ];
+
+  function onClickDisabled(e: React.MouseEvent<HTMLButtonElement>) {
+    e.preventDefault();
+    if (typeof window !== "undefined") {
+      window.alert("준비 중 — 곧 만들 예정");
+    }
+  }
+
   return (
     <Card title="상세 보기">
       <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
-        {links.map((l) => (
-          <a
-            key={l.href}
-            href={l.href}
-            className="border border-rule rounded-md py-2 text-center text-sm hover:border-ink transition"
+        {links.map((label) => (
+          <button
+            key={label}
+            onClick={onClickDisabled}
+            className="rounded-md py-2 text-center text-sm transition cursor-pointer"
+            style={{
+              backgroundColor: "var(--bg-card-soft)",
+              color: "var(--text-main)",
+              border: "1px solid var(--border)",
+            }}
+            onMouseEnter={(e) => {
+              e.currentTarget.style.backgroundColor = "var(--accent-soft)";
+            }}
+            onMouseLeave={(e) => {
+              e.currentTarget.style.backgroundColor = "var(--bg-card-soft)";
+            }}
           >
-            {l.label} →
-          </a>
+            {label} →
+          </button>
         ))}
       </div>
       <p className="text-[11px] text-muted mt-2">
