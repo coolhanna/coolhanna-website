@@ -387,9 +387,11 @@ export default function DashboardClient({ initial }: { initial: Initial }) {
           />
         </div>
 
-        <QuickTasks initial={initial.quickTasks} />
-
-        <MemoPanel initial={initial.memosRecent} />
+        {/* v6.4.10 — PC(≥md)에서 빠른처리 + 메모 좌우 2단, 모바일은 세로 */}
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <QuickTasks initial={initial.quickTasks} />
+          <MemoPanel initial={initial.memosRecent} />
+        </div>
 
         <TodayMe data={initial.todayMe} />
 
@@ -1610,26 +1612,23 @@ function MealSlot({ label, summary }: { label: string; summary?: string | null }
 // ─────────────────────────────────────────────────────────────────────
 
 function QuickTasks({ initial }: { initial: any }) {
-  const [items, setItems] = useState<any[]>(initial?.items || []);
+  // v6.4.10 — done 항목 즉시 hide. backend index 보존(it.index).
+  const [items, setItems] = useState<any[]>(
+    (initial?.items || []).filter((it: any) => !it.done)
+  );
   const [, startTransition] = useTransition();
 
   async function add(text: string) {
-    const optimistic = { index: items.length, text, done: false };
-    setItems([...items, optimistic]);
     const r = await callApi("POST", "quick-task", { text });
-    setItems((cur) => cur.map((it, i) => (i === optimistic.index ? r.item : it)));
+    setItems((cur) => [...cur, r.item]);
   }
-  async function toggle(idx: number) {
-    setItems((cur) =>
-      cur.map((it, i) => (i === idx ? { ...it, done: !it.done } : it))
-    );
+  async function toggle(backendIdx: number) {
+    const snapshot = items;
+    setItems((cur) => cur.filter((it) => it.index !== backendIdx));
     try {
-      await callApi("PATCH", "quick-task/toggle", { index: idx });
+      await callApi("PATCH", "quick-task/toggle", { index: backendIdx });
     } catch {
-      // rollback
-      setItems((cur) =>
-        cur.map((it, i) => (i === idx ? { ...it, done: !it.done } : it))
-      );
+      setItems(snapshot);
     }
   }
 
@@ -1643,13 +1642,12 @@ function QuickTasks({ initial }: { initial: any }) {
         <p className="text-sm text-muted">없음</p>
       )}
       <div className="space-y-1.5">
-        {items.map((it, i) => (
+        {items.map((it) => (
           <Checkbox
-            key={i}
-            checked={!!it.done}
-            onChange={() => startTransition(() => toggle(i))}
+            key={it.index}
+            checked={false}
+            onChange={() => startTransition(() => toggle(it.index))}
             label={it.text}
-            doneDate={it.done_date}
           />
         ))}
       </div>
@@ -1842,44 +1840,38 @@ function CheckList({
   initial: any;
   placeholder: string;
 }) {
-  const [items, setItems] = useState<any[]>(initial?.items || []);
+  // v6.4.10 — done 항목 hide. backend index(it.index) 보존.
+  const [items, setItems] = useState<any[]>(
+    (initial?.items || []).filter((it: any) => !it.done)
+  );
   const [, startTransition] = useTransition();
-  const pending = items.filter((it) => !it.done).length;
 
   async function add(text: string) {
-    const optimistic = { index: items.length, text, done: false };
-    setItems([...items, optimistic]);
     const r = await callApi("POST", endpointAdd, { text });
-    setItems((cur) =>
-      cur.map((it, i) => (i === optimistic.index ? r.item : it))
-    );
+    setItems((cur) => [...cur, r.item]);
   }
-  async function toggle(idx: number) {
-    setItems((cur) =>
-      cur.map((it, i) => (i === idx ? { ...it, done: !it.done } : it))
-    );
+  async function toggle(backendIdx: number) {
+    const snapshot = items;
+    setItems((cur) => cur.filter((it) => it.index !== backendIdx));
     try {
-      await callApi("PATCH", endpointToggle, { index: idx });
+      await callApi("PATCH", endpointToggle, { index: backendIdx });
     } catch {
-      setItems((cur) =>
-        cur.map((it, i) => (i === idx ? { ...it, done: !it.done } : it))
-      );
+      setItems(snapshot);
     }
   }
   return (
     <Card
       title={title}
-      rightSlot={<span className="text-xs text-muted">{pending}건</span>}
+      rightSlot={<span className="text-xs text-muted">{items.length}건</span>}
     >
       {items.length === 0 && <p className="text-sm text-muted">없음</p>}
       <div className="space-y-1.5">
-        {items.map((it, i) => (
+        {items.map((it) => (
           <Checkbox
-            key={i}
-            checked={!!it.done}
-            onChange={() => startTransition(() => toggle(i))}
+            key={it.index}
+            checked={false}
+            onChange={() => startTransition(() => toggle(it.index))}
             label={it.text}
-            doneDate={it.done_date}
           />
         ))}
       </div>

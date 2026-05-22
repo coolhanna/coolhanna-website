@@ -43,4 +43,71 @@ export const dash = {
   todayMe: () => api<any>("/api/dashboard/today-me"),
   // v6.4 — 최근 메모 (오늘 + 어제, 미완료만)
   memosRecent: () => api<any>("/api/dashboard/memos-recent"),
+  // 혜린 학습 대시보드 — 일별 스냅샷 카드 기반
+  hyerinToday: () => api<HyerinTodayResponse>("/api/dashboard/hyerin/today"),
+  hyerinWeek: () => api<HyerinWeekResponse>("/api/dashboard/hyerin/week"),
+  hyerin30Days: () => api<HyerinMonthResponse>("/api/dashboard/hyerin/30days"),
+  hyerinTrainingDetail: (folder: string, date: string) =>
+    api<HyerinTrainingDetailResponse>(
+      `/api/dashboard/hyerin/training/${encodeURIComponent(folder)}/${date}`,
+    ),
 };
+
+// ─────────────────────────────────────────────────────────────────────
+// 혜린 학습 대시보드 타입 (일별 스냅샷 카드 기반)
+// ─────────────────────────────────────────────────────────────────────
+
+export interface HyerinTodayResponse {
+  date: string;
+  exists: boolean;
+  요일?: string;
+  message?: string;
+  summary?: {
+    글자수_오늘: number;
+    평균_점수: number;
+    훈련_완료: number;
+    훈련_전체: number;
+    연속_일수: number;
+  };
+  한줄평?: Record<string, string>;
+  한나용_코멘트?: string;
+  혜린용_코멘트?: string;
+  누적_지표?: Record<string, string>;
+}
+
+export interface HyerinWeekDay {
+  date: string;
+  요일: string;
+  글자수: number;
+  평균점수: number;
+  훈련완료: number;
+  exists: boolean;
+}
+
+export interface HyerinWeekResponse {
+  days: HyerinWeekDay[];
+  표시일: string;
+}
+
+export interface HyerinMonthDay {
+  date: string;
+  글자수: number;
+  평균점수: number;
+}
+
+export interface HyerinMonthResponse {
+  days: HyerinMonthDay[];
+  표시일: string;
+}
+
+export interface HyerinTrainingCard {
+  filename: string;
+  frontmatter: Record<string, string>;
+  content: string;
+}
+
+export interface HyerinTrainingDetailResponse {
+  folder: string;
+  date: string;
+  cards: HyerinTrainingCard[];
+}
