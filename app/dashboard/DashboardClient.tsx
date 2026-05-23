@@ -653,6 +653,37 @@ function WeeklyCompact({
     }
   }
 
+  // v6.5 — 한 일 추가/삭제
+  async function addDoneCompact(dateStr: string, text: string) {
+    try {
+      const r = await callApi("POST", `daily/${dateStr}/done`, { text });
+      setDays((cur) =>
+        cur.map((d) =>
+          d.date !== dateStr
+            ? d
+            : { ...d, dones: [...(d.dones || []), r.item] }
+        )
+      );
+    } catch (e) {
+      alert("저장 실패: " + (e as Error).message);
+    }
+  }
+  async function removeDoneCompact(dateStr: string, line: number) {
+    const snapshot = days;
+    setDays((cur) =>
+      cur.map((d) =>
+        d.date !== dateStr
+          ? d
+          : { ...d, dones: (d.dones || []).filter((x: any) => x.line !== line) }
+      )
+    );
+    try {
+      await callApi("DELETE", `daily/${dateStr}/done/${line}`);
+    } catch {
+      setDays(snapshot);
+    }
+  }
+
   function renderExpandedBody(dateStr: string) {
     const evs = evMap[dateStr] || [];
     const dls = dlMap[dateStr] || [];
@@ -821,6 +852,16 @@ function WeeklyCompact({
             </button>
           )}
         </div>
+
+        {/* ✅ 한 일 (v6.5) */}
+        <CompactDoneSection
+          dateStr={dateStr}
+          dones={dayBucket?.dones || []}
+          onAdd={(t) => addDoneCompact(dateStr, t)}
+          onRemove={(line) =>
+            startTransition(() => removeDoneCompact(dateStr, line))
+          }
+        />
       </div>
     );
   }
@@ -891,6 +932,115 @@ function WeeklyCompact({
         })}
       </ul>
     </Card>
+  );
+}
+
+// ─────────────────────────────────────────────────────────────────────
+// 모바일 컴팩트 — ✅ 한 일 섹션 (v6.5)
+// ─────────────────────────────────────────────────────────────────────
+
+function CompactDoneSection({
+  dateStr,
+  dones,
+  onAdd,
+  onRemove,
+}: {
+  dateStr: string;
+  dones: { line: number; text: string }[];
+  onAdd: (text: string) => void | Promise<void>;
+  onRemove: (line: number) => void;
+}) {
+  const [adding, setAdding] = useState(false);
+  const [text, setText] = useState("");
+  const [busy, setBusy] = useState(false);
+
+  async function submit() {
+    const t = text.trim();
+    if (!t || busy) return;
+    setBusy(true);
+    try {
+      await onAdd(t);
+      setText("");
+      setAdding(false);
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  return (
+    <div className="border-t border-rule pt-2">
+      <p className="text-[11px] text-muted mb-1">✅ 한 일</p>
+      {dones.length === 0 && <p className="text-xs text-muted">없음</p>}
+      <ul className="space-y-1">
+        {dones.map((d) => (
+          <li
+            key={d.line}
+            className="text-xs flex items-start gap-2 group leading-snug"
+          >
+            <span className="shrink-0 mt-0.5" style={{ color: "var(--accent)" }}>·</span>
+            <span className="flex-1">{d.text}</span>
+            <button
+              onClick={() => onRemove(d.line)}
+              className="text-[10px] text-muted opacity-0 group-hover:opacity-100 px-1"
+              aria-label="삭제"
+              title="삭제"
+            >
+              ×
+            </button>
+          </li>
+        ))}
+      </ul>
+      {adding ? (
+        <div className="flex gap-1.5 mt-2">
+          <input
+            autoFocus
+            value={text}
+            onChange={(e) => setText(e.target.value)}
+            onKeyDown={(e) => {
+              if (e.key === "Enter") submit();
+              if (e.key === "Escape") {
+                setAdding(false);
+                setText("");
+              }
+            }}
+            placeholder="한 일 (시간 적고 싶으면 앞에)"
+            disabled={busy}
+            className="flex-1 text-xs rounded px-2 py-1 outline-none"
+            style={{
+              border: "1px solid var(--border)",
+              backgroundColor: "var(--bg-card)",
+              color: "var(--text-main)",
+            }}
+          />
+          <button
+            onClick={submit}
+            disabled={busy || !text.trim()}
+            className="text-xs px-2 py-1 rounded disabled:opacity-50"
+            style={{ backgroundColor: "var(--accent)", color: "#ffffff" }}
+          >
+            {busy ? "..." : "Enter"}
+          </button>
+          <button
+            onClick={() => {
+              setAdding(false);
+              setText("");
+            }}
+            className="text-xs px-2 py-1 rounded text-muted"
+            style={{ border: "1px solid var(--border)" }}
+          >
+            취소
+          </button>
+        </div>
+      ) : (
+        <button
+          onClick={() => setAdding(true)}
+          className="text-[11px] mt-1.5 transition hover:opacity-70"
+          style={{ color: "var(--accent)" }}
+        >
+          + 추가
+        </button>
+      )}
+    </div>
   );
 }
 
@@ -1138,6 +1288,7 @@ function DailyPanel({
   const [todos, setTodos] = useState<any[]>(
     (initial?.todos || []).filter((t: any) => (t?.text || "").trim().length > 0)
   );
+  const [dones, setDones] = useState<any[]>(initial?.dones || []);
   const [, startTransition] = useTransition();
 
   async function toggleTodo(line: number) {
@@ -1163,6 +1314,21 @@ function DailyPanel({
       await callApi("DELETE", `daily/${dateStr}/todo/${line}`);
     } catch {
       setTodos(snapshot);
+    }
+  }
+
+  // v6.5 — 한 일 (사후 활동 기록)
+  async function addDone(text: string) {
+    const r = await callApi("POST", `daily/${dateStr}/done`, { text });
+    setDones((cur) => [...cur, r.item]);
+  }
+  async function removeDone(line: number) {
+    const snapshot = dones;
+    setDones((cur) => cur.filter((d) => d.line !== line));
+    try {
+      await callApi("DELETE", `daily/${dateStr}/done/${line}`);
+    } catch {
+      setDones(snapshot);
     }
   }
 
@@ -1288,6 +1454,39 @@ function DailyPanel({
             ))}
           </div>
           <AddInline placeholder="할 일 추가" onAdd={addTodo} />
+        </div>
+
+        {/* ✅ 한 일 — 사후 활동 기록 (v6.5). 체크박스 X. 시간은 한나가 적은 그대로. */}
+        <div className="border-t border-rule pt-2">
+          <p className="text-xs text-muted mb-1">✅ 한 일</p>
+          {dones.length === 0 && (
+            <p className="text-sm text-muted">없음</p>
+          )}
+          <ul className="space-y-1">
+            {dones.map((d) => (
+              <li
+                key={d.line}
+                className="text-sm flex items-start gap-2 group"
+              >
+                <span
+                  className="shrink-0 mt-0.5"
+                  style={{ color: "var(--accent)" }}
+                >
+                  ·
+                </span>
+                <span className="flex-1 leading-snug">{d.text}</span>
+                <button
+                  onClick={() => startTransition(() => removeDone(d.line))}
+                  className="text-[11px] text-muted opacity-0 group-hover:opacity-100 transition px-1"
+                  title="삭제"
+                  aria-label="삭제"
+                >
+                  ×
+                </button>
+              </li>
+            ))}
+          </ul>
+          <AddInline placeholder="한 일 (시간 적고 싶으면 앞에)" onAdd={addDone} />
         </div>
 
         {/* 이월 — 오늘만 표시. 어제 일별 카드 미완료 + 진행중 할일카드 마감 이월 둘 다 */}
