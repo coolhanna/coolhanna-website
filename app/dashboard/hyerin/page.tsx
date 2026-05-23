@@ -1,3 +1,4 @@
+import type { Metadata } from "next";
 import {
   dash,
   type HyerinTodayResponse,
@@ -5,6 +6,11 @@ import {
   type HyerinMonthResponse,
 } from "@/lib/dashboard-api";
 import TrainingsRow from "./TrainingsRow";
+
+export const metadata: Metadata = {
+  title: "혜린의 학습 일지 — 쿨한나",
+  robots: { index: false, follow: false },
+};
 
 export const dynamic = "force-dynamic";
 
