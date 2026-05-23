@@ -547,31 +547,48 @@ function WeeklyCalendar({
     <Card
       title="이번 주"
       rightSlot={
-        <div className="flex items-center gap-2 text-xs text-muted">
+        <div className="flex items-center gap-1 flex-wrap justify-end text-xs">
           <button
             onClick={() => setWeekStart(addDays(weekStart, -7))}
-            className="hover:text-ink"
+            className="px-2.5 py-1.5 rounded-md transition"
+            style={{
+              border: "1px solid var(--border)",
+              backgroundColor: "var(--bg-card)",
+              color: "var(--text-main)",
+            }}
           >
             ‹ 지난주
           </button>
-          <span>
+          <span className="text-muted px-1">
             {fmtShortDateWeekday(weekStart)} - {fmtShortDateWeekday(weekEnd)}
           </span>
           <button
             onClick={() => setWeekStart(addDays(weekStart, 7))}
-            className="hover:text-ink"
+            className="px-2.5 py-1.5 rounded-md transition"
+            style={{
+              border: "1px solid var(--border)",
+              backgroundColor: "var(--bg-card)",
+              color: "var(--text-main)",
+            }}
           >
             다음주 ›
           </button>
-          <button
-            onClick={() => setWeekStart(startOfWeek(new Date()))}
-            className="hover:text-ink underline"
-          >
-            오늘
-          </button>
+          {iso(weekStart) !== iso(startOfWeek(new Date())) && (
+            <button
+              onClick={() => setWeekStart(startOfWeek(new Date()))}
+              className="px-2.5 py-1.5 rounded-md transition"
+              style={{
+                backgroundColor: "var(--accent-soft)",
+                color: "var(--accent-text)",
+                border: "1px solid var(--accent)",
+              }}
+            >
+              이번 주로
+            </button>
+          )}
           <button
             onClick={() => window.open("https://calendar.google.com", "_blank", "noopener,noreferrer")}
-            className="ml-1 px-2 py-0.5 rounded-md transition"
+            className="px-2.5 py-1.5 rounded-md transition"
             style={{
               backgroundColor: "var(--secondary-soft)",
               color: "var(--secondary-text)",
@@ -1022,33 +1039,45 @@ function WeeklyCompact({
           : weekLabelMobile
       }
       rightSlot={
-        <div className="flex items-center gap-1">
-          {/* v6.6.3 — 모바일 주 페이지네이션 */}
+        <div className="flex items-center gap-1 flex-wrap justify-end">
+          {/* v6.6.4 — 모바일 주 페이지네이션 (큰 터치 영역) */}
           <button
             onClick={() => loadWeekMobile(weekOffset - 1)}
             disabled={loadingWeek}
-            className="px-1.5 py-0.5 text-xs disabled:opacity-50"
-            title="지난 주"
+            className="px-2.5 py-1.5 text-xs rounded-md disabled:opacity-50"
+            style={{
+              border: "1px solid var(--border)",
+              backgroundColor: "var(--bg-card)",
+              color: "var(--text-main)",
+            }}
           >
-            ‹
+            ‹ 지난주
           </button>
           {weekOffset !== 0 && (
             <button
               onClick={() => loadWeekMobile(0)}
               disabled={loadingWeek}
-              className="px-1 text-xs underline"
-              style={{ color: "var(--accent)" }}
+              className="px-2.5 py-1.5 text-xs rounded-md disabled:opacity-50"
+              style={{
+                backgroundColor: "var(--accent-soft)",
+                color: "var(--accent-text)",
+                border: "1px solid var(--accent)",
+              }}
             >
-              오늘
+              이번 주로
             </button>
           )}
           <button
             onClick={() => loadWeekMobile(weekOffset + 1)}
             disabled={loadingWeek}
-            className="px-1.5 py-0.5 text-xs disabled:opacity-50"
-            title="다음 주"
+            className="px-2.5 py-1.5 text-xs rounded-md disabled:opacity-50"
+            style={{
+              border: "1px solid var(--border)",
+              backgroundColor: "var(--bg-card)",
+              color: "var(--text-main)",
+            }}
           >
-            ›
+            다음주 ›
           </button>
           <button
             onClick={() =>
@@ -1058,7 +1087,7 @@ function WeeklyCompact({
                 "noopener,noreferrer"
               )
             }
-            className="ml-1 px-2 py-0.5 text-xs rounded-md transition"
+            className="px-2.5 py-1.5 text-xs rounded-md transition"
             style={{
               backgroundColor: "var(--secondary-soft)",
               color: "var(--secondary-text)",
@@ -1331,33 +1360,47 @@ function WeeklyTodos({ initial }: { initial: any }) {
       title={`${weekLabel} (${fmtRange(weekStart, weekEnd)})`}
       rightSlot={
         <div className="flex items-center gap-1.5 flex-wrap justify-end">
-          {/* v6.6.3 — 주 페이지네이션 */}
-          <div className="flex items-center gap-1 mr-2 text-xs text-muted">
+          {/* v6.6.4 — 주 페이지네이션 (큰 버튼, 자연스러운 라벨) */}
+          <div className="flex items-center gap-1 mr-2">
             <button
               onClick={() => loadWeek(weekOffset - 1)}
               disabled={loadingWeek}
-              className="hover:text-ink disabled:opacity-50 px-1"
+              className="px-3 py-1.5 text-xs rounded-md transition disabled:opacity-50"
+              style={{
+                border: "1px solid var(--border)",
+                backgroundColor: "var(--bg-card)",
+                color: "var(--text-main)",
+              }}
               title="지난 주"
             >
-              ‹
+              ‹ 지난주
             </button>
             {weekOffset !== 0 && (
               <button
                 onClick={() => loadWeek(0)}
                 disabled={loadingWeek}
-                className="hover:opacity-70 underline px-1"
-                style={{ color: "var(--accent)" }}
+                className="px-3 py-1.5 text-xs rounded-md transition disabled:opacity-50"
+                style={{
+                  backgroundColor: "var(--accent-soft)",
+                  color: "var(--accent-text)",
+                  border: "1px solid var(--accent)",
+                }}
               >
-                오늘 주
+                이번 주로
               </button>
             )}
             <button
               onClick={() => loadWeek(weekOffset + 1)}
               disabled={loadingWeek}
-              className="hover:text-ink disabled:opacity-50 px-1"
+              className="px-3 py-1.5 text-xs rounded-md transition disabled:opacity-50"
+              style={{
+                border: "1px solid var(--border)",
+                backgroundColor: "var(--bg-card)",
+                color: "var(--text-main)",
+              }}
               title="다음 주"
             >
-              ›
+              다음주 ›
             </button>
           </div>
           <select
