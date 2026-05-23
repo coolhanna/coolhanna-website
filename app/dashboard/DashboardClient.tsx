@@ -2151,6 +2151,7 @@ const ACTIVE_TODOS_ORDER_KEY = "dashboard:active-todos-order";
 
 function ActiveTodos({ data }: { data: any }) {
   // v6.5.1 — 진행중 할 일. 광고/공구와 분리. 드래그로 순서 변경.
+  // v6.6.2 — ✓ 완료 버튼 (대시보드에서 완료 폴더로 이동).
   const apiItems: any[] = data?.items || [];
   const [items, setItems] = useState<any[]>(() =>
     applySavedOrder(apiItems, loadOrder(ACTIVE_TODOS_ORDER_KEY))
@@ -2159,6 +2160,18 @@ function ActiveTodos({ data }: { data: any }) {
     setItems(applySavedOrder(apiItems, loadOrder(ACTIVE_TODOS_ORDER_KEY)));
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [data]);
+
+  async function completeTodo(file: string) {
+    // 낙관: 화면에서 즉시 제거
+    const snapshot = items;
+    setItems((cur) => cur.filter((it) => it.file !== file));
+    try {
+      await callApi("DELETE", `active-todos/${encodeURIComponent(file)}`);
+    } catch (e) {
+      setItems(snapshot);
+      alert("완료 처리 실패: " + (e as Error).message);
+    }
+  }
 
   const sensors = useSensors(
     useSensor(PointerSensor, { activationConstraint: { distance: 6 } }),
@@ -2209,7 +2222,11 @@ function ActiveTodos({ data }: { data: any }) {
           >
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
               {items.map((it) => (
-                <SortableTodoCard key={it.file} item={it} />
+                <SortableTodoCard
+                  key={it.file}
+                  item={it}
+                  onComplete={() => completeTodo(it.file)}
+                />
               ))}
             </div>
           </SortableContext>
@@ -2220,7 +2237,13 @@ function ActiveTodos({ data }: { data: any }) {
   );
 }
 
-function SortableTodoCard({ item }: { item: any }) {
+function SortableTodoCard({
+  item,
+  onComplete,
+}: {
+  item: any;
+  onComplete: () => void;
+}) {
   const { attributes, listeners, setNodeRef, transform, transition, isDragging } =
     useSortable({ id: item.file });
   const style: React.CSSProperties = {
@@ -2237,9 +2260,43 @@ function SortableTodoCard({ item }: { item: any }) {
       style={style}
       {...attributes}
       {...listeners}
-      className="rounded-lg p-3 transition"
+      className="rounded-lg p-3 transition relative group"
     >
-      <p className="text-sm font-medium leading-snug">{item.title}</p>
+      {/* v6.6.2 — ✓ 완료 버튼. 드래그 안 시작하게 stopPropagation + pointerdown stop */}
+      <button
+        onClick={(e) => {
+          e.stopPropagation();
+          e.preventDefault();
+          if (window.confirm(`"${item.title}" 완료 처리할까?`)) {
+            onComplete();
+          }
+        }}
+        onPointerDown={(e) => e.stopPropagation()}
+        className="absolute top-2 right-2 inline-flex items-center justify-center rounded-md transition"
+        style={{
+          width: 28,
+          height: 28,
+          backgroundColor: "var(--bg-card)",
+          border: "1px solid var(--border)",
+          color: "var(--accent)",
+          fontSize: 16,
+          lineHeight: 1,
+          cursor: "pointer",
+        }}
+        onMouseEnter={(e) => {
+          e.currentTarget.style.backgroundColor = "var(--accent-soft)";
+          e.currentTarget.style.borderColor = "var(--accent)";
+        }}
+        onMouseLeave={(e) => {
+          e.currentTarget.style.backgroundColor = "var(--bg-card)";
+          e.currentTarget.style.borderColor = "var(--border)";
+        }}
+        title="완료 처리"
+        aria-label="완료 처리"
+      >
+        ✓
+      </button>
+      <p className="text-sm font-medium leading-snug pr-8">{item.title}</p>
       <p className="text-xs text-muted mt-1">
         {item.state}
         {item.items_total > 0 && ` · ${item.items_done}/${item.items_total}`}
