@@ -398,12 +398,33 @@ export default function DashboardClient({ initial }: { initial: Initial }) {
           <h1 className="text-2xl font-semibold tracking-tight">
             한나 운영 대시보드
           </h1>
-          <span
-            className="text-lg font-medium"
-            style={{ color: "var(--accent)" }}
-          >
-            {fmtTimeKo(now)}
-          </span>
+          <div className="flex items-center gap-3">
+            <button
+              onClick={() => {
+                if (typeof window !== "undefined") window.location.reload();
+              }}
+              className="inline-flex items-center justify-center rounded-md transition hover:opacity-70"
+              style={{
+                width: 32,
+                height: 32,
+                border: "1px solid var(--border)",
+                backgroundColor: "var(--bg-card)",
+                color: "var(--accent)",
+                fontSize: 18,
+                lineHeight: 1,
+              }}
+              title="새로고침"
+              aria-label="새로고침"
+            >
+              ⟳
+            </button>
+            <span
+              className="text-lg font-medium"
+              style={{ color: "var(--accent)" }}
+            >
+              {fmtTimeKo(now)}
+            </span>
+          </div>
         </div>
       </header>
 

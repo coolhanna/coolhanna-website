@@ -12,7 +12,8 @@ async function forward(req: NextRequest, path: string[]) {
     return NextResponse.json({ error: "DASHBOARD_API_KEY 미설정" }, { status: 500 });
   }
   const sub = path.join("/");
-  const url = `${API_URL}/api/dashboard/${sub}`;
+  // v6.5.3 — query string(?limit=50 등)도 같이 forward
+  const url = `${API_URL}/api/dashboard/${sub}${req.nextUrl.search}`;
   const body = req.method === "GET" ? undefined : await req.text();
   const r = await fetch(url, {
     method: req.method,
