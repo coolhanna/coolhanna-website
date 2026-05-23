@@ -35,6 +35,8 @@ export const dash = {
   quickTasks: () => api<any>("/api/dashboard/quick-tasks"),
   weeklyRoutines: () => api<any>("/api/dashboard/weekly-routines"),
   ideasRecent: () => api<any>("/api/dashboard/ideas-recent?limit=3"),
+  ideasAll: (limit = 50) =>
+    api<any>(`/api/dashboard/ideas-recent?limit=${limit}`),
   // v6 — 일별 카드 통합 (오늘 + 내일)
   scheduleV2: () => api<any>("/api/dashboard/schedule-v2"),
   // v6.2 — 이번 주(월~일) 일별 카드 todos
@@ -43,6 +45,8 @@ export const dash = {
   todayMe: () => api<any>("/api/dashboard/today-me"),
   // v6.4 — 최근 메모 (오늘 + 어제, 미완료만)
   memosRecent: () => api<any>("/api/dashboard/memos-recent"),
+  // v6.5.1 — 진행중 할 일 (광고/공구와 분리)
+  activeTodos: () => api<any>("/api/dashboard/active-todos"),
   // 혜린 학습 대시보드 — 일별 스냅샷 카드 기반
   hyerinToday: () => api<HyerinTodayResponse>("/api/dashboard/hyerin/today"),
   hyerinWeek: () => api<HyerinWeekResponse>("/api/dashboard/hyerin/week"),

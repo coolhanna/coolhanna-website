@@ -1,6 +1,24 @@
 "use client";
 
 import { useEffect, useState, useTransition } from "react";
+import {
+  DndContext,
+  closestCenter,
+  KeyboardSensor,
+  PointerSensor,
+  TouchSensor,
+  useSensor,
+  useSensors,
+  type DragEndEvent,
+} from "@dnd-kit/core";
+import {
+  SortableContext,
+  arrayMove,
+  rectSortingStrategy,
+  sortableKeyboardCoordinates,
+  useSortable,
+} from "@dnd-kit/sortable";
+import { CSS } from "@dnd-kit/utilities";
 
 // 컬러 시스템은 dashboard/layout.tsx의 CSS 변수에서 관리.
 // Pill 컴포넌트 alpha 합성 등에서만 hex 직접 사용 (var(...)는 +"44" 안 됨).
@@ -296,6 +314,38 @@ function AddInline({
   );
 }
 
+// v6.5.1 — 공통 X 삭제 버튼. 모바일에서 항상 visible, PC는 hover 시 진해짐.
+// 크기: 22x22 (이전 11px 대비 ~2배). 터치 안전.
+function DeleteX({ onClick }: { onClick: () => void }) {
+  return (
+    <button
+      onClick={(e) => {
+        e.stopPropagation();
+        onClick();
+      }}
+      className="shrink-0 inline-flex items-center justify-center rounded-md text-base leading-none transition select-none"
+      style={{
+        width: 22,
+        height: 22,
+        color: "var(--text-secondary)",
+        opacity: 0.55,
+      }}
+      onMouseEnter={(e) => {
+        e.currentTarget.style.opacity = "1";
+        e.currentTarget.style.backgroundColor = "var(--bg-card-soft)";
+      }}
+      onMouseLeave={(e) => {
+        e.currentTarget.style.opacity = "0.55";
+        e.currentTarget.style.backgroundColor = "transparent";
+      }}
+      aria-label="삭제"
+      title="삭제"
+    >
+      ×
+    </button>
+  );
+}
+
 function ErrorBox({ msg }: { msg: string }) {
   return (
     <p
@@ -330,6 +380,7 @@ type Initial = {
   weeklyTodos: any;
   todayMe: any;
   memosRecent: any;
+  activeTodos: any;
 };
 
 export default function DashboardClient({ initial }: { initial: Initial }) {
@@ -394,6 +445,8 @@ export default function DashboardClient({ initial }: { initial: Initial }) {
         </div>
 
         <TodayMe data={initial.todayMe} />
+
+        <ActiveTodos data={initial.activeTodos} />
 
         <ActiveCards data={initial.active} />
 
@@ -979,14 +1032,7 @@ function CompactDoneSection({
           >
             <span className="shrink-0 mt-0.5" style={{ color: "var(--accent)" }}>·</span>
             <span className="flex-1">{d.text}</span>
-            <button
-              onClick={() => onRemove(d.line)}
-              className="text-[10px] text-muted opacity-0 group-hover:opacity-100 px-1"
-              aria-label="삭제"
-              title="삭제"
-            >
-              ×
-            </button>
+            <DeleteX onClick={() => onRemove(d.line)} />
           </li>
         ))}
       </ul>
@@ -1475,14 +1521,9 @@ function DailyPanel({
                   ·
                 </span>
                 <span className="flex-1 leading-snug">{d.text}</span>
-                <button
+                <DeleteX
                   onClick={() => startTransition(() => removeDone(d.line))}
-                  className="text-[11px] text-muted opacity-0 group-hover:opacity-100 transition px-1"
-                  title="삭제"
-                  aria-label="삭제"
-                >
-                  ×
-                </button>
+                />
               </li>
             ))}
           </ul>
@@ -1551,14 +1592,7 @@ function DailyTodoRow({
       >
         {todo.text}
       </span>
-      <button
-        onClick={onDelete}
-        className="text-[11px] text-muted opacity-0 group-hover:opacity-100 transition px-1"
-        title="삭제"
-        aria-label="삭제"
-      >
-        ×
-      </button>
+      <DeleteX onClick={onDelete} />
     </div>
   );
 }
@@ -1692,17 +1726,12 @@ function MemoPanel({ initial }: { initial: any }) {
                 className="mt-[3px] w-4 h-4 rounded shrink-0 cursor-pointer"
               />
               <span className="flex-1 leading-snug">{it.text}</span>
-              <span className="text-[10px] text-muted shrink-0 mt-0.5">
+              <span className="text-[10px] text-muted shrink-0 mt-1">
                 {dateLabel(it)}
               </span>
-              <button
+              <DeleteX
                 onClick={() => startTransition(() => remove(it.date, it.line))}
-                className="text-[11px] text-muted opacity-0 group-hover:opacity-100 transition px-1"
-                title="삭제"
-                aria-label="삭제"
-              >
-                ×
-              </button>
+              />
             </li>
           ))}
         </ul>
@@ -1859,58 +1888,260 @@ function QuickTasks({ initial }: { initial: any }) {
 // 진행중 카드
 // ─────────────────────────────────────────────────────────────────────
 
+const ACTIVE_CARDS_ORDER_KEY = "dashboard:active-cards-order";
+
+// 저장된 순서 + API 순서 머지. 새 카드는 뒤에 추가, 제거된 카드는 빠짐.
+function applySavedOrder<T extends { file: string }>(
+  items: T[],
+  savedIds: string[]
+): T[] {
+  const byId = new Map(items.map((it) => [it.file, it]));
+  const ordered: T[] = [];
+  for (const id of savedIds) {
+    const it = byId.get(id);
+    if (it) {
+      ordered.push(it);
+      byId.delete(id);
+    }
+  }
+  for (const it of byId.values()) ordered.push(it);
+  return ordered;
+}
+
+function loadOrder(key: string): string[] {
+  if (typeof window === "undefined") return [];
+  try {
+    const raw = window.localStorage.getItem(key);
+    return raw ? (JSON.parse(raw) as string[]) : [];
+  } catch {
+    return [];
+  }
+}
+
+function saveOrder(key: string, ids: string[]): void {
+  if (typeof window === "undefined") return;
+  try {
+    window.localStorage.setItem(key, JSON.stringify(ids));
+  } catch {
+    // localStorage 사용 불가 시 무시
+  }
+}
+
 function ActiveCards({ data }: { data: any }) {
-  const items = data?.items || [];
+  // v6.5.1 — 광고/공구만. 할 일은 별도 ActiveTodos 영역. 드래그로 순서 변경 가능.
+  const apiItems: any[] = data?.items || [];
+  const [items, setItems] = useState<any[]>(() =>
+    applySavedOrder(apiItems, loadOrder(ACTIVE_CARDS_ORDER_KEY))
+  );
+
+  // API 응답 갱신 시 저장된 순서로 재정렬
+  useEffect(() => {
+    setItems(applySavedOrder(apiItems, loadOrder(ACTIVE_CARDS_ORDER_KEY)));
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [data]);
+
+  const sensors = useSensors(
+    useSensor(PointerSensor, { activationConstraint: { distance: 6 } }),
+    useSensor(TouchSensor, {
+      activationConstraint: { delay: 200, tolerance: 8 },
+    }),
+    useSensor(KeyboardSensor, { coordinateGetter: sortableKeyboardCoordinates })
+  );
+
+  function handleDragEnd(event: DragEndEvent) {
+    const { active, over } = event;
+    if (!over || active.id === over.id) return;
+    const oldIndex = items.findIndex((it) => it.file === active.id);
+    const newIndex = items.findIndex((it) => it.file === over.id);
+    if (oldIndex === -1 || newIndex === -1) return;
+    const next = arrayMove(items, oldIndex, newIndex);
+    setItems(next);
+    saveOrder(
+      ACTIVE_CARDS_ORDER_KEY,
+      next.map((it) => it.file)
+    );
+  }
+
   return (
     <Card
-      title="진행중"
+      title="진행중 (광고/공구)"
       rightSlot={
-        <span className="text-xs text-muted">{data?.total || 0}건</span>
+        <span className="text-xs text-muted">
+          {items.length}건 · 드래그로 순서 변경
+        </span>
       }
     >
       {items.length === 0 ? (
         <p className="text-sm text-muted">없음</p>
       ) : (
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
-          {items.map((it: any, i: number) => (
-            <div
-              key={i}
-              className="rounded-lg p-3 transition"
-              style={{ border: "1px solid var(--border)" }}
-              onMouseEnter={(e) => {
-                e.currentTarget.style.borderColor = "var(--border-strong)";
-              }}
-              onMouseLeave={(e) => {
-                e.currentTarget.style.borderColor = "var(--border)";
-              }}
-            >
-              <div className="mb-1.5">
-                <ActiveCardTag audience={it.audience} type={it.type} />
-              </div>
-              <p className="text-sm font-medium leading-snug">{it.title}</p>
-              <p className="text-xs text-muted mt-1">{it.state}</p>
-              {(it.reels || it.shorts) && (
-                <p className="text-xs text-muted mt-0.5">
-                  {it.reels && `릴스 ${it.reels}`}
-                  {it.reels && it.shorts && " · "}
-                  {it.shorts && `숏 ${it.shorts}`}
-                </p>
-              )}
-              {it.deadline && (
-                <p
-                  className="text-xs mt-1 font-medium"
-                  style={{ color: "var(--accent)" }}
-                >
-                  {it.deadline_label ? `${it.deadline_label} ` : ""}
-                  {fmtMonthDayWeekday(it.deadline)}
-                </p>
-              )}
+        <DndContext
+          sensors={sensors}
+          collisionDetection={closestCenter}
+          onDragEnd={handleDragEnd}
+        >
+          <SortableContext
+            items={items.map((it) => it.file)}
+            strategy={rectSortingStrategy}
+          >
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
+              {items.map((it) => (
+                <SortableActiveCard key={it.file} item={it} />
+              ))}
             </div>
-          ))}
-        </div>
+          </SortableContext>
+        </DndContext>
+      )}
+    </Card>
+  );
+}
+
+function SortableActiveCard({ item }: { item: any }) {
+  const { attributes, listeners, setNodeRef, transform, transition, isDragging } =
+    useSortable({ id: item.file });
+  const style: React.CSSProperties = {
+    transform: CSS.Transform.toString(transform),
+    transition,
+    border: "1px solid var(--border)",
+    opacity: isDragging ? 0.7 : 1,
+    cursor: isDragging ? "grabbing" : "grab",
+    touchAction: "none",
+  };
+  return (
+    <div
+      ref={setNodeRef}
+      style={style}
+      {...attributes}
+      {...listeners}
+      className="rounded-lg p-3 transition"
+    >
+      <div className="mb-1.5">
+        <ActiveCardTag audience={item.audience} type={item.type} />
+      </div>
+      <p className="text-sm font-medium leading-snug">{item.title}</p>
+      <p className="text-xs text-muted mt-1">{item.state}</p>
+      {(item.reels || item.shorts) && (
+        <p className="text-xs text-muted mt-0.5">
+          {item.reels && `릴스 ${item.reels}`}
+          {item.reels && item.shorts && " · "}
+          {item.shorts && `숏 ${item.shorts}`}
+        </p>
+      )}
+      {item.deadline && (
+        <p
+          className="text-xs mt-1 font-medium"
+          style={{ color: "var(--accent)" }}
+        >
+          {item.deadline_label ? `${item.deadline_label} ` : ""}
+          {fmtMonthDayWeekday(item.deadline)}
+        </p>
+      )}
+    </div>
+  );
+}
+
+const ACTIVE_TODOS_ORDER_KEY = "dashboard:active-todos-order";
+
+function ActiveTodos({ data }: { data: any }) {
+  // v6.5.1 — 진행중 할 일. 광고/공구와 분리. 드래그로 순서 변경.
+  const apiItems: any[] = data?.items || [];
+  const [items, setItems] = useState<any[]>(() =>
+    applySavedOrder(apiItems, loadOrder(ACTIVE_TODOS_ORDER_KEY))
+  );
+  useEffect(() => {
+    setItems(applySavedOrder(apiItems, loadOrder(ACTIVE_TODOS_ORDER_KEY)));
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [data]);
+
+  const sensors = useSensors(
+    useSensor(PointerSensor, { activationConstraint: { distance: 6 } }),
+    useSensor(TouchSensor, {
+      activationConstraint: { delay: 200, tolerance: 8 },
+    }),
+    useSensor(KeyboardSensor, { coordinateGetter: sortableKeyboardCoordinates })
+  );
+
+  function handleDragEnd(event: DragEndEvent) {
+    const { active, over } = event;
+    if (!over || active.id === over.id) return;
+    const oldIndex = items.findIndex((it) => it.file === active.id);
+    const newIndex = items.findIndex((it) => it.file === over.id);
+    if (oldIndex === -1 || newIndex === -1) return;
+    const next = arrayMove(items, oldIndex, newIndex);
+    setItems(next);
+    saveOrder(
+      ACTIVE_TODOS_ORDER_KEY,
+      next.map((it) => it.file)
+    );
+  }
+
+  return (
+    <Card
+      title="진행중 할 일"
+      rightSlot={
+        <span className="text-xs text-muted">
+          {items.length}건 · 드래그로 순서 변경
+        </span>
+      }
+    >
+      {items.length === 0 ? (
+        <p className="text-sm text-muted">없음</p>
+      ) : (
+        <DndContext
+          sensors={sensors}
+          collisionDetection={closestCenter}
+          onDragEnd={handleDragEnd}
+        >
+          <SortableContext
+            items={items.map((it) => it.file)}
+            strategy={rectSortingStrategy}
+          >
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
+              {items.map((it) => (
+                <SortableTodoCard key={it.file} item={it} />
+              ))}
+            </div>
+          </SortableContext>
+        </DndContext>
       )}
       <ActiveAdd />
     </Card>
+  );
+}
+
+function SortableTodoCard({ item }: { item: any }) {
+  const { attributes, listeners, setNodeRef, transform, transition, isDragging } =
+    useSortable({ id: item.file });
+  const style: React.CSSProperties = {
+    transform: CSS.Transform.toString(transform),
+    transition,
+    border: "1px solid var(--border)",
+    opacity: isDragging ? 0.7 : 1,
+    cursor: isDragging ? "grabbing" : "grab",
+    touchAction: "none",
+  };
+  return (
+    <div
+      ref={setNodeRef}
+      style={style}
+      {...attributes}
+      {...listeners}
+      className="rounded-lg p-3 transition"
+    >
+      <p className="text-sm font-medium leading-snug">{item.title}</p>
+      <p className="text-xs text-muted mt-1">
+        {item.state}
+        {item.items_total > 0 && ` · ${item.items_done}/${item.items_total}`}
+      </p>
+      {item.deadline && (
+        <p
+          className="text-xs mt-1 font-medium"
+          style={{ color: "var(--accent)" }}
+        >
+          {item.deadline_label ? `${item.deadline_label} ` : ""}
+          {fmtMonthDayWeekday(item.deadline)}
+        </p>
+      )}
+    </div>
   );
 }
 
@@ -1957,6 +2188,11 @@ function ActiveAdd() {
 
 function IdeasRecent({ initial }: { initial: any }) {
   const [items, setItems] = useState<any[]>(initial?.items || []);
+  const [expanded, setExpanded] = useState(false);
+  const [loadingMore, setLoadingMore] = useState(false);
+  const total: number = initial?.total ?? items.length;
+  const hiddenCount = Math.max(0, total - items.length);
+
   async function add(text: string) {
     const r = await callApi("POST", "idea", { text });
     setItems([
@@ -1964,13 +2200,48 @@ function IdeasRecent({ initial }: { initial: any }) {
       ...items,
     ]);
   }
+
+  async function loadAll() {
+    if (loadingMore) return;
+    setLoadingMore(true);
+    try {
+      const r = await callApi("GET", "ideas-recent?limit=50");
+      setItems(r.items || []);
+      setExpanded(true);
+    } catch (e) {
+      alert("불러오기 실패: " + (e as Error).message);
+    } finally {
+      setLoadingMore(false);
+    }
+  }
+
+  function collapse() {
+    setItems(initial?.items || []);
+    setExpanded(false);
+  }
+
   return (
     <Card
       title="아이디어 (최근)"
       rightSlot={
-        initial?.total > 3 && (
-          <span className="text-xs text-muted">외 {initial.total - 3}건</span>
-        )
+        expanded ? (
+          <button
+            onClick={collapse}
+            className="text-xs transition hover:opacity-70"
+            style={{ color: "var(--accent)" }}
+          >
+            접기 ▲
+          </button>
+        ) : hiddenCount > 0 ? (
+          <button
+            onClick={loadAll}
+            disabled={loadingMore}
+            className="text-xs transition hover:opacity-70 disabled:opacity-50"
+            style={{ color: "var(--accent)" }}
+          >
+            {loadingMore ? "불러오는 중..." : `외 ${hiddenCount}건 더보기 ▼`}
+          </button>
+        ) : null
       }
     >
       {items.length === 0 ? (
