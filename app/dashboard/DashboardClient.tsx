@@ -2578,9 +2578,9 @@ function MonthlyCalendar({ data }: { data: any }) {
 function DetailLinks() {
   // v6.6 — 광고/공구/매출 실제 페이지. 나머지는 아직 준비 중 alert.
   const links: { label: string; href?: string; alert?: string }[] = [
-    { label: "광고", href: "/dashboard/광고" },
-    { label: "공구", href: "/dashboard/공구" },
-    { label: "매출", href: "/dashboard/매출" },
+    { label: "광고", href: "/dashboard/ads" },
+    { label: "공구", href: "/dashboard/gongu" },
+    { label: "매출", href: "/dashboard/revenue" },
     { label: "할일", alert: "준비 중 — 곧 만들 예정" },
     { label: "아이디어", alert: "준비 중 — 곧 만들 예정" },
     { label: "건강", alert: "준비 중 — 곧 만들 예정" },
