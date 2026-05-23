@@ -1261,11 +1261,30 @@ function WeeklyTodos({ initial }: { initial: any }) {
   const [busy, setBusy] = useState(false);
   const [, startTransition] = useTransition();
 
-  // 추가 인풋의 날짜 드롭다운 옵션 — 현재 표시 주의 7일
-  const dayOptions = days.map((d) => ({
-    value: d.date,
-    label: `${d.weekday} ${parseInt(d.date.split("-")[2], 10)}일`,
-  }));
+  // v6.6.5 — 일자 드롭다운:
+  //  - 이번 주 (offset=0): 오늘부터 7일 (지난 날 제외, 부족하면 다음 주 자동 채움)
+  //  - 다른 주 (offset≠0): 그 주 7일 그대로 (지난 주도 기록 가능)
+  const KO_WD_SHORT = ["월", "화", "수", "목", "금", "토", "일"];
+  const dayOptions = (() => {
+    if (weekOffset === 0) {
+      const opts: { value: string; label: string }[] = [];
+      const base = new Date();
+      base.setHours(0, 0, 0, 0);
+      for (let i = 0; i < 7; i++) {
+        const d = addDays(base, i);
+        const wd = KO_WD_SHORT[(d.getDay() + 6) % 7];
+        opts.push({
+          value: iso(d),
+          label: `${wd} ${d.getDate()}일`,
+        });
+      }
+      return opts;
+    }
+    return days.map((d) => ({
+      value: d.date,
+      label: `${d.weekday} ${parseInt(d.date.split("-")[2], 10)}일`,
+    }));
+  })();
 
   // v6.6.3 — 다른 주 fetch
   async function loadWeek(offset: number) {
@@ -1277,8 +1296,8 @@ function WeeklyTodos({ initial }: { initial: any }) {
       setWeekStart(r.week_start);
       setWeekEnd(r.week_end);
       setWeekOffset(offset);
-      // 새 주의 월요일을 기본 addDate로
-      setAddDate(r.week_start || todayIso);
+      // v6.6.5 — 이번 주(0)면 오늘 기본, 다른 주면 그 주 월요일
+      setAddDate(offset === 0 ? todayIso : (r.week_start || todayIso));
     } catch (e) {
       alert("불러오기 실패: " + (e as Error).message);
     } finally {
