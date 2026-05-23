@@ -59,6 +59,12 @@ export default function DashboardLayout({
           .dashboard-root .text-sm { font-size: 16px !important; line-height: 1.5 !important; }
           /* 상단 헤더 (날짜·시간) 는 원래 크기 유지 — 한나 명세 */
           .dashboard-root > header .text-xs { font-size: 0.75rem !important; line-height: 1rem !important; }
+          /* v6.6.1 — 모바일 헤더 시계 축소 (text-lg → text-base) */
+          .dashboard-root > header .text-lg { font-size: 1rem !important; }
+        }
+        /* v6.6.1 — 카드 시각 계층: 보더 약간 연하게, 호버 시 또렷 */
+        .dashboard-root section[class*="rounded-2xl"]:hover {
+          border-color: var(--border-strong) !important;
         }
       `}</style>
       {children}

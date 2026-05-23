@@ -38,7 +38,7 @@ const config: Config = {
       },
       maxWidth: {
         prose: "68ch",
-        page: "1100px",
+        page: "1280px",
       },
     },
   },

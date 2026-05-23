@@ -86,6 +86,23 @@ function fmtMonthDay(isoStr: string): string {
   }
 }
 
+// v6.6.1 — D-day 색 (마감 임박도 시각 표시)
+function deadlineColor(isoStr: string | null | undefined): string {
+  if (!isoStr) return "var(--text-secondary)";
+  try {
+    const [y, m, d] = isoStr.split("-").map((s) => parseInt(s, 10));
+    const target = new Date(y, m - 1, d);
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+    const diff = Math.round((target.getTime() - today.getTime()) / (1000 * 60 * 60 * 24));
+    if (diff <= 1) return "var(--danger)";       // 오늘/내일 = 임박
+    if (diff <= 3) return "var(--secondary-text)"; // 2-3일 = 주의
+    return "var(--text-secondary)";              // 그 외 = 평범
+  } catch {
+    return "var(--text-secondary)";
+  }
+}
+
 // "2026-05-19" → "5월 19일 (월)"
 function fmtMonthDayWeekday(isoStr: string): string {
   try {
@@ -137,6 +154,7 @@ function Card({
   bg,
   borderColor,
   rightSlot,
+  emphasis,
 }: {
   title?: string;
   children: React.ReactNode;
@@ -144,23 +162,43 @@ function Card({
   bg?: string;
   borderColor?: string;
   rightSlot?: React.ReactNode;
+  emphasis?: "primary" | "secondary"; // v6.6.1 — 시각 계층 (primary=오늘 카드)
 }) {
+  const isPrimary = emphasis === "primary";
+  const isSecondary = emphasis === "secondary";
   return (
     <section
-      className="rounded-2xl p-5"
+      className={isPrimary ? "rounded-2xl p-5 sm:p-6" : "rounded-2xl p-5"}
       style={{
-        backgroundColor: bg || "var(--bg-card)",
+        backgroundColor: bg || (isSecondary ? "var(--bg-card-soft)" : "var(--bg-card)"),
         border: `1px solid ${borderColor || "var(--border)"}`,
         ...(accent ? { borderTopColor: accent, borderTopWidth: 3 } : {}),
+        ...(isPrimary
+          ? { boxShadow: "0 1px 3px rgba(60, 70, 50, 0.06)" }
+          : {}),
       }}
     >
       {(title || rightSlot) && (
         <div className="flex items-center justify-between mb-3">
           {title && (
             <h2
-              className="text-sm font-semibold tracking-tight"
-              style={{ color: "var(--text-secondary)" }}
+              className={
+                isPrimary
+                  ? "font-semibold tracking-tight flex items-center gap-2 text-base"
+                  : "font-semibold tracking-tight flex items-center gap-2 text-sm"
+              }
+              style={{ color: "var(--text-main)" }}
             >
+              <span
+                className="inline-block rounded-full"
+                style={{
+                  width: isPrimary ? 6 : 4,
+                  height: isPrimary ? 6 : 4,
+                  backgroundColor: isPrimary
+                    ? "var(--accent)"
+                    : "var(--border-strong)",
+                }}
+              />
               {title}
             </h2>
           )}
@@ -2031,6 +2069,7 @@ function ActiveCards({ data }: { data: any }) {
   return (
     <Card
       title="진행중 (광고/공구)"
+      emphasis="secondary"
       rightSlot={
         <div className="flex items-center gap-2">
           <span className="text-xs text-muted">
@@ -2098,7 +2137,7 @@ function SortableActiveCard({ item }: { item: any }) {
       {item.deadline && (
         <p
           className="text-xs mt-1 font-medium"
-          style={{ color: "var(--accent)" }}
+          style={{ color: deadlineColor(item.deadline) }}
         >
           {item.deadline_label ? `${item.deadline_label} ` : ""}
           {fmtMonthDayWeekday(item.deadline)}
@@ -2146,6 +2185,7 @@ function ActiveTodos({ data }: { data: any }) {
   return (
     <Card
       title="진행중 할 일"
+      emphasis="secondary"
       rightSlot={
         <div className="flex items-center gap-2">
           <span className="text-xs text-muted">
@@ -2207,7 +2247,7 @@ function SortableTodoCard({ item }: { item: any }) {
       {item.deadline && (
         <p
           className="text-xs mt-1 font-medium"
-          style={{ color: "var(--accent)" }}
+          style={{ color: deadlineColor(item.deadline) }}
         >
           {item.deadline_label ? `${item.deadline_label} ` : ""}
           {fmtMonthDayWeekday(item.deadline)}

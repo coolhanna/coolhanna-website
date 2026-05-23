@@ -30,13 +30,16 @@ export default async function RevenuePage() {
           ← 대시보드
         </Link>
         <h1 className="text-2xl font-semibold tracking-tight mt-2">매출</h1>
+        <div className="mt-3">
+          <p className="text-xs text-muted">전체 합계</p>
+          <p
+            className="font-serif text-3xl sm:text-4xl tracking-tight"
+            style={{ color: "var(--accent)" }}
+          >
+            {fmtWon(grandTotal)}
+          </p>
+        </div>
         <div className="flex gap-6 mt-2 text-sm">
-          <span>
-            <span className="text-muted">전체 합계 </span>
-            <span className="font-medium" style={{ color: "var(--accent)" }}>
-              {fmtWon(grandTotal)}
-            </span>
-          </span>
           <span>
             <span className="text-muted">광고 </span>
             <span className="font-medium">{fmtWon(grandAd)}</span>
