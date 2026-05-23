@@ -679,6 +679,10 @@ function WeeklyCompact({
   const tomorrowIso = iso(addDays(new Date(), 1));
   const [expanded, setExpanded] = useState<string>(todayIso);
   const [days, setDays] = useState<any[]>(weeklyTodos?.days || []);
+  const [weekStart, setWeekStart] = useState<string>(weeklyTodos?.week_start || "");
+  const [weekEnd, setWeekEnd] = useState<string>(weeklyTodos?.week_end || "");
+  const [weekOffset, setWeekOffset] = useState(0);
+  const [loadingWeek, setLoadingWeek] = useState(false);
   const [, startTransition] = useTransition();
   const [addingDate, setAddingDate] = useState<string | null>(null);
   const [addText, setAddText] = useState("");
@@ -687,8 +691,24 @@ function WeeklyCompact({
   const evMap: Record<string, any[]> = calendar?.events_by_date || {};
   const dlMap: Record<string, any[]> = calendar?.deadlines_by_date || {};
 
-  const weekStart = weeklyTodos?.week_start || "";
-  const weekEnd = weeklyTodos?.week_end || "";
+  // v6.6.3 — 다른 주 fetch (모바일)
+  async function loadWeekMobile(offset: number) {
+    if (loadingWeek) return;
+    setLoadingWeek(true);
+    try {
+      const r = await callApi("GET", `weekly-todos?week_offset=${offset}`);
+      setDays(r.days || []);
+      setWeekStart(r.week_start);
+      setWeekEnd(r.week_end);
+      setWeekOffset(offset);
+      // 펼친 날짜 = 새 주의 첫 날
+      setExpanded(r.week_start || todayIso);
+    } catch (e) {
+      alert("불러오기 실패: " + (e as Error).message);
+    } finally {
+      setLoadingWeek(false);
+    }
+  }
 
   function shortLabel(dateStr: string): string {
     const evs = (evMap[dateStr] || []).filter((e: any) => !e?.summary?.startsWith?.("(제목 없음)"));
@@ -983,32 +1003,72 @@ function WeeklyCompact({
     return `${parseInt(m, 10)}/${parseInt(d, 10)}`;
   }
 
+  const weekLabelMobile =
+    weekOffset === 0
+      ? "이번 주"
+      : weekOffset === 1
+      ? "다음 주"
+      : weekOffset === -1
+      ? "지난 주"
+      : weekOffset > 0
+      ? `${weekOffset}주 후`
+      : `${-weekOffset}주 전`;
+
   return (
     <Card
       title={
         weekStart && weekEnd
-          ? `이번 주 (${fmtShortRange(weekStart)} - ${fmtShortRange(weekEnd)})`
-          : "이번 주"
+          ? `${weekLabelMobile} (${fmtShortRange(weekStart)} - ${fmtShortRange(weekEnd)})`
+          : weekLabelMobile
       }
       rightSlot={
-        <button
-          onClick={() =>
-            window.open(
-              "https://calendar.google.com",
-              "_blank",
-              "noopener,noreferrer"
-            )
-          }
-          className="px-2 py-0.5 text-xs rounded-md transition"
-          style={{
-            backgroundColor: "var(--secondary-soft)",
-            color: "var(--secondary-text)",
-            border: "1px solid var(--secondary)",
-          }}
-          title="구글 캘린더 새 탭으로 열기"
-        >
-          📅 캘린더
-        </button>
+        <div className="flex items-center gap-1">
+          {/* v6.6.3 — 모바일 주 페이지네이션 */}
+          <button
+            onClick={() => loadWeekMobile(weekOffset - 1)}
+            disabled={loadingWeek}
+            className="px-1.5 py-0.5 text-xs disabled:opacity-50"
+            title="지난 주"
+          >
+            ‹
+          </button>
+          {weekOffset !== 0 && (
+            <button
+              onClick={() => loadWeekMobile(0)}
+              disabled={loadingWeek}
+              className="px-1 text-xs underline"
+              style={{ color: "var(--accent)" }}
+            >
+              오늘
+            </button>
+          )}
+          <button
+            onClick={() => loadWeekMobile(weekOffset + 1)}
+            disabled={loadingWeek}
+            className="px-1.5 py-0.5 text-xs disabled:opacity-50"
+            title="다음 주"
+          >
+            ›
+          </button>
+          <button
+            onClick={() =>
+              window.open(
+                "https://calendar.google.com",
+                "_blank",
+                "noopener,noreferrer"
+              )
+            }
+            className="ml-1 px-2 py-0.5 text-xs rounded-md transition"
+            style={{
+              backgroundColor: "var(--secondary-soft)",
+              color: "var(--secondary-text)",
+              border: "1px solid var(--secondary)",
+            }}
+            title="구글 캘린더 새 탭으로 열기"
+          >
+            📅
+          </button>
+        </div>
       }
     >
       <ul className="divide-y" style={{ borderColor: "var(--border)" }}>
@@ -1158,17 +1218,62 @@ const MAX_VISIBLE_TODOS = 5;
 function WeeklyTodos({ initial }: { initial: any }) {
   const todayIso = iso(new Date());
   const [days, setDays] = useState<any[]>(initial?.days || []);
+  const [weekStart, setWeekStart] = useState<string>(
+    initial?.week_start || todayIso
+  );
+  const [weekEnd, setWeekEnd] = useState<string>(
+    initial?.week_end || todayIso
+  );
+  const [weekOffset, setWeekOffset] = useState(0); // 0=이번 주, ±N
+  const [loadingWeek, setLoadingWeek] = useState(false);
   const [expanded, setExpanded] = useState<Record<string, boolean>>({});
   const [addText, setAddText] = useState("");
   const [addDate, setAddDate] = useState<string>(todayIso);
   const [busy, setBusy] = useState(false);
   const [, startTransition] = useTransition();
 
-  // 추가 인풋의 날짜 드롭다운 옵션 — 이번 주 7일
+  // 추가 인풋의 날짜 드롭다운 옵션 — 현재 표시 주의 7일
   const dayOptions = days.map((d) => ({
     value: d.date,
     label: `${d.weekday} ${parseInt(d.date.split("-")[2], 10)}일`,
   }));
+
+  // v6.6.3 — 다른 주 fetch
+  async function loadWeek(offset: number) {
+    if (loadingWeek) return;
+    setLoadingWeek(true);
+    try {
+      const r = await callApi("GET", `weekly-todos?week_offset=${offset}`);
+      setDays(r.days || []);
+      setWeekStart(r.week_start);
+      setWeekEnd(r.week_end);
+      setWeekOffset(offset);
+      // 새 주의 월요일을 기본 addDate로
+      setAddDate(r.week_start || todayIso);
+    } catch (e) {
+      alert("불러오기 실패: " + (e as Error).message);
+    } finally {
+      setLoadingWeek(false);
+    }
+  }
+
+  function fmtRange(start: string, end: string): string {
+    if (!start || !end) return "";
+    const [, sm, sd] = start.split("-");
+    const [, em, ed] = end.split("-");
+    return `${parseInt(sm, 10)}/${parseInt(sd, 10)} - ${parseInt(em, 10)}/${parseInt(ed, 10)}`;
+  }
+
+  const weekLabel =
+    weekOffset === 0
+      ? "이번 주 할 일"
+      : weekOffset === 1
+      ? "다음 주 할 일"
+      : weekOffset === -1
+      ? "지난 주 할 일"
+      : weekOffset > 0
+      ? `${weekOffset}주 후 할 일`
+      : `${-weekOffset}주 전 할 일`;
 
   async function toggle(dateStr: string, line: number) {
     setDays((cur) =>
@@ -1223,9 +1328,38 @@ function WeeklyTodos({ initial }: { initial: any }) {
 
   return (
     <Card
-      title="이번 주 할 일"
+      title={`${weekLabel} (${fmtRange(weekStart, weekEnd)})`}
       rightSlot={
         <div className="flex items-center gap-1.5 flex-wrap justify-end">
+          {/* v6.6.3 — 주 페이지네이션 */}
+          <div className="flex items-center gap-1 mr-2 text-xs text-muted">
+            <button
+              onClick={() => loadWeek(weekOffset - 1)}
+              disabled={loadingWeek}
+              className="hover:text-ink disabled:opacity-50 px-1"
+              title="지난 주"
+            >
+              ‹
+            </button>
+            {weekOffset !== 0 && (
+              <button
+                onClick={() => loadWeek(0)}
+                disabled={loadingWeek}
+                className="hover:opacity-70 underline px-1"
+                style={{ color: "var(--accent)" }}
+              >
+                오늘 주
+              </button>
+            )}
+            <button
+              onClick={() => loadWeek(weekOffset + 1)}
+              disabled={loadingWeek}
+              className="hover:text-ink disabled:opacity-50 px-1"
+              title="다음 주"
+            >
+              ›
+            </button>
+          </div>
           <select
             value={addDate}
             onChange={(e) => setAddDate(e.target.value)}
