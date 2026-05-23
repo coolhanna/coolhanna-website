@@ -2536,59 +2536,67 @@ function MonthlyCalendar({ data }: { data: any }) {
 // ─────────────────────────────────────────────────────────────────────
 
 function DetailLinks() {
-  const links = [
-    "할일",
-    "광고",
-    "공구",
-    "아이디어",
-    "건강",
-    "매출",
-    "식단",
-    "📔 일기",
-    "루틴 설정",
+  // v6.6 — 광고/공구/매출 실제 페이지. 나머지는 아직 준비 중 alert.
+  const links: { label: string; href?: string; alert?: string }[] = [
+    { label: "광고", href: "/dashboard/광고" },
+    { label: "공구", href: "/dashboard/공구" },
+    { label: "매출", href: "/dashboard/매출" },
+    { label: "할일", alert: "준비 중 — 곧 만들 예정" },
+    { label: "아이디어", alert: "준비 중 — 곧 만들 예정" },
+    { label: "건강", alert: "준비 중 — 곧 만들 예정" },
+    { label: "식단", alert: "준비 중 — 곧 만들 예정" },
+    {
+      label: "📔 일기",
+      alert: "일기는 옵시디언에서 직접 확인:\n03_본질/일기/YYYY-MM-DD.md\n(전용 페이지는 추후)",
+    },
+    { label: "루틴 설정", alert: "준비 중 — 곧 만들 예정" },
   ];
-
-  function onClickDisabled(e: React.MouseEvent<HTMLButtonElement>) {
-    e.preventDefault();
-    if (typeof window !== "undefined") {
-      const label = e.currentTarget.textContent || "";
-      if (label.includes("일기")) {
-        window.alert(
-          "일기는 옵시디언에서 직접 확인:\n03_본질/일기/YYYY-MM-DD.md\n(전용 페이지는 추후)"
-        );
-      } else {
-        window.alert("준비 중 — 곧 만들 예정");
-      }
-    }
-  }
 
   return (
     <Card title="상세 보기">
       <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
-        {links.map((label) => (
-          <button
-            key={label}
-            onClick={onClickDisabled}
-            className="rounded-md py-2 text-center text-sm transition cursor-pointer"
-            style={{
-              backgroundColor: "var(--bg-card-soft)",
-              color: "var(--text-main)",
-              border: "1px solid var(--border)",
-            }}
-            onMouseEnter={(e) => {
-              e.currentTarget.style.backgroundColor = "var(--accent-soft)";
-            }}
-            onMouseLeave={(e) => {
-              e.currentTarget.style.backgroundColor = "var(--bg-card-soft)";
-            }}
-          >
-            {label} →
-          </button>
-        ))}
+        {links.map((l) =>
+          l.href ? (
+            <a
+              key={l.label}
+              href={l.href}
+              className="rounded-md py-2 text-center text-sm transition cursor-pointer"
+              style={{
+                backgroundColor: "var(--bg-card-soft)",
+                color: "var(--text-main)",
+                border: "1px solid var(--border)",
+                textDecoration: "none",
+              }}
+              onMouseEnter={(e) => {
+                e.currentTarget.style.backgroundColor = "var(--accent-soft)";
+              }}
+              onMouseLeave={(e) => {
+                e.currentTarget.style.backgroundColor = "var(--bg-card-soft)";
+              }}
+            >
+              {l.label} →
+            </a>
+          ) : (
+            <button
+              key={l.label}
+              onClick={() => {
+                if (typeof window !== "undefined" && l.alert) {
+                  window.alert(l.alert);
+                }
+              }}
+              className="rounded-md py-2 text-center text-sm transition cursor-pointer"
+              style={{
+                backgroundColor: "var(--bg-card-soft)",
+                color: "var(--text-muted-new, var(--text-secondary))",
+                border: "1px dashed var(--border)",
+                opacity: 0.6,
+              }}
+            >
+              {l.label}
+            </button>
+          )
+        )}
       </div>
-      <p className="text-[11px] text-muted mt-2">
-        각 페이지는 다음 단계 — 지금은 메인만 작동.
-      </p>
     </Card>
   );
 }

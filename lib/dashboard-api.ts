@@ -47,6 +47,10 @@ export const dash = {
   memosRecent: () => api<any>("/api/dashboard/memos-recent"),
   // v6.5.1 — 진행중 할 일 (광고/공구와 분리)
   activeTodos: () => api<any>("/api/dashboard/active-todos"),
+  // v6.6 — 상세 페이지 (광고/공구/매출)
+  adsDetail: () => api<any>("/api/dashboard/ads-detail"),
+  gonguDetail: () => api<any>("/api/dashboard/gongu-detail"),
+  revenueMonthly: () => api<any>("/api/dashboard/revenue-monthly"),
   // 혜린 학습 대시보드 — 일별 스냅샷 카드 기반
   hyerinToday: () => api<HyerinTodayResponse>("/api/dashboard/hyerin/today"),
   hyerinWeek: () => api<HyerinWeekResponse>("/api/dashboard/hyerin/week"),
