@@ -1888,6 +1888,50 @@ function QuickTasks({ initial }: { initial: any }) {
 // 진행중 카드
 // ─────────────────────────────────────────────────────────────────────
 
+// v6.5.2 — 새로고침 버튼. localStorage 순서 키 삭제 + 페이지 리로드.
+function RefreshButton({
+  storageKey,
+  title = "순서 초기화 + 새로고침",
+}: {
+  storageKey: string;
+  title?: string;
+}) {
+  function handleClick() {
+    if (typeof window === "undefined") return;
+    try {
+      window.localStorage.removeItem(storageKey);
+    } catch {
+      // 무시
+    }
+    window.location.reload();
+  }
+  return (
+    <button
+      onClick={handleClick}
+      title={title}
+      aria-label="새로고침"
+      className="shrink-0 inline-flex items-center justify-center rounded-md transition"
+      style={{
+        width: 28,
+        height: 28,
+        color: "var(--text-secondary)",
+        border: "1px solid var(--border)",
+        backgroundColor: "var(--bg-card-soft)",
+      }}
+      onMouseEnter={(e) => {
+        e.currentTarget.style.backgroundColor = "var(--accent-soft)";
+        e.currentTarget.style.color = "var(--accent-text)";
+      }}
+      onMouseLeave={(e) => {
+        e.currentTarget.style.backgroundColor = "var(--bg-card-soft)";
+        e.currentTarget.style.color = "var(--text-secondary)";
+      }}
+    >
+      <span style={{ fontSize: 14, lineHeight: 1 }}>↻</span>
+    </button>
+  );
+}
+
 const ACTIVE_CARDS_ORDER_KEY = "dashboard:active-cards-order";
 
 // 저장된 순서 + API 순서 머지. 새 카드는 뒤에 추가, 제거된 카드는 빠짐.
@@ -1966,9 +2010,12 @@ function ActiveCards({ data }: { data: any }) {
     <Card
       title="진행중 (광고/공구)"
       rightSlot={
-        <span className="text-xs text-muted">
-          {items.length}건 · 드래그로 순서 변경
-        </span>
+        <div className="flex items-center gap-2">
+          <span className="text-xs text-muted">
+            {items.length}건 · 드래그로 순서 변경
+          </span>
+          <RefreshButton storageKey={ACTIVE_CARDS_ORDER_KEY} />
+        </div>
       }
     >
       {items.length === 0 ? (
@@ -2078,9 +2125,12 @@ function ActiveTodos({ data }: { data: any }) {
     <Card
       title="진행중 할 일"
       rightSlot={
-        <span className="text-xs text-muted">
-          {items.length}건 · 드래그로 순서 변경
-        </span>
+        <div className="flex items-center gap-2">
+          <span className="text-xs text-muted">
+            {items.length}건 · 드래그로 순서 변경
+          </span>
+          <RefreshButton storageKey={ACTIVE_TODOS_ORDER_KEY} />
+        </div>
       }
     >
       {items.length === 0 ? (
