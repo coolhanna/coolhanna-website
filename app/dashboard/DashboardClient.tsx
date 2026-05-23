@@ -1798,10 +1798,11 @@ function TodayMe({ data }: { data: any }) {
         )}
         <div className="border-t border-rule pt-2">
           <p className="text-xs text-muted mb-1">식사</p>
-          <div className="grid grid-cols-3 gap-2 text-xs">
+          <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 text-xs">
             <MealSlot label="아침" summary={diet.breakfast} />
             <MealSlot label="점심" summary={diet.lunch} />
             <MealSlot label="저녁" summary={diet.dinner} />
+            <MealSlot label="간식" summary={diet.snack} />
           </div>
         </div>
         <p className="text-[11px] text-muted">생리 주기 — 추후 추가</p>
