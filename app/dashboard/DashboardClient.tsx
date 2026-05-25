@@ -1869,15 +1869,25 @@ function MemoPanel({ initial }: { initial: any }) {
   const [, startTransition] = useTransition();
 
   async function toggle(dateStr: string, line: number) {
-    // 낙관: 즉시 화면에서 제거 (체크 = 사라짐)
-    const snapshot = items;
+    // v6.6.7 — 체크해도 화면에 남김 (한나 룰 변경): done 상태로 표시 (줄긋기)
     setItems((cur) =>
-      cur.filter((it) => !(it.date === dateStr && it.line === line))
+      cur.map((it) =>
+        it.date === dateStr && it.line === line
+          ? { ...it, done: !it.done }
+          : it
+      )
     );
     try {
       await callApi("PATCH", `memo/${dateStr}/todo/${line}/toggle`);
     } catch {
-      setItems(snapshot);
+      // rollback
+      setItems((cur) =>
+        cur.map((it) =>
+          it.date === dateStr && it.line === line
+            ? { ...it, done: !it.done }
+            : it
+        )
+      );
     }
   }
 
@@ -1980,7 +1990,14 @@ function MemoPanel({ initial }: { initial: any }) {
                 }
                 className="mt-[3px] w-4 h-4 rounded shrink-0 cursor-pointer"
               />
-              <span className="flex-1 leading-snug">{it.text}</span>
+              <span
+                className={
+                  "flex-1 leading-snug " +
+                  (it.done ? "line-through text-muted" : "")
+                }
+              >
+                {it.text}
+              </span>
               <span className="text-[10px] text-muted shrink-0 mt-1">
                 {dateLabel(it)}
               </span>
