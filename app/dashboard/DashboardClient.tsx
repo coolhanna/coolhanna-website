@@ -1866,6 +1866,7 @@ function MemoPanel({ initial }: { initial: any }) {
   const [items, setItems] = useState<any[]>(initial?.items || []);
   const [addText, setAddText] = useState("");
   const [busy, setBusy] = useState(false);
+  const [showDone, setShowDone] = useState(false); // v6.6.8 — 완료 섹션 펼침
   const [, startTransition] = useTransition();
 
   async function toggle(dateStr: string, line: number) {
@@ -1973,41 +1974,87 @@ function MemoPanel({ initial }: { initial: any }) {
         </div>
       }
     >
-      {items.length === 0 ? (
-        <p className="text-sm text-muted">없음</p>
-      ) : (
-        <ul className="space-y-1">
-          {items.map((it) => (
-            <li
-              key={`${it.date}-${it.line}`}
-              className="flex items-start gap-2 group text-sm"
-            >
-              <input
-                type="checkbox"
-                checked={!!it.done}
-                onChange={() =>
-                  startTransition(() => toggle(it.date, it.line))
-                }
-                className="mt-[3px] w-4 h-4 rounded shrink-0 cursor-pointer"
-              />
-              <span
-                className={
-                  "flex-1 leading-snug " +
-                  (it.done ? "line-through text-muted" : "")
-                }
-              >
-                {it.text}
-              </span>
-              <span className="text-[10px] text-muted shrink-0 mt-1">
-                {dateLabel(it)}
-              </span>
-              <DeleteX
-                onClick={() => startTransition(() => remove(it.date, it.line))}
-              />
-            </li>
-          ))}
-        </ul>
-      )}
+      {(() => {
+        const pending = items.filter((it) => !it.done);
+        const done = items.filter((it) => it.done);
+        return (
+          <>
+            {pending.length === 0 && done.length === 0 && (
+              <p className="text-sm text-muted">없음</p>
+            )}
+            {pending.length > 0 && (
+              <ul className="space-y-1">
+                {pending.map((it) => (
+                  <li
+                    key={`${it.date}-${it.line}`}
+                    className="flex items-start gap-2 group text-sm"
+                  >
+                    <input
+                      type="checkbox"
+                      checked={false}
+                      onChange={() =>
+                        startTransition(() => toggle(it.date, it.line))
+                      }
+                      className="mt-[3px] w-4 h-4 rounded shrink-0 cursor-pointer"
+                    />
+                    <span className="flex-1 leading-snug">{it.text}</span>
+                    <span className="text-[10px] text-muted shrink-0 mt-1">
+                      {dateLabel(it)}
+                    </span>
+                    <DeleteX
+                      onClick={() =>
+                        startTransition(() => remove(it.date, it.line))
+                      }
+                    />
+                  </li>
+                ))}
+              </ul>
+            )}
+            {done.length > 0 && (
+              <div className={pending.length > 0 ? "mt-3 pt-3 border-t border-rule" : ""}>
+                <button
+                  onClick={() => setShowDone((v) => !v)}
+                  className="text-xs flex items-center gap-1 hover:opacity-70 transition"
+                  style={{ color: "var(--text-secondary)" }}
+                >
+                  <span>완료 {done.length}건</span>
+                  <span>{showDone ? "▲" : "▼"}</span>
+                </button>
+                {showDone && (
+                  <ul className="space-y-1 mt-2">
+                    {done.map((it) => (
+                      <li
+                        key={`${it.date}-${it.line}`}
+                        className="flex items-start gap-2 group text-sm"
+                      >
+                        <input
+                          type="checkbox"
+                          checked={true}
+                          onChange={() =>
+                            startTransition(() => toggle(it.date, it.line))
+                          }
+                          className="mt-[3px] w-4 h-4 rounded shrink-0 cursor-pointer"
+                        />
+                        <span className="flex-1 leading-snug line-through text-muted">
+                          {it.text}
+                        </span>
+                        <span className="text-[10px] text-muted shrink-0 mt-1">
+                          {dateLabel(it)}
+                        </span>
+                        <DeleteX
+                          onClick={() =>
+                            startTransition(() => remove(it.date, it.line))
+                          }
+                        />
+                      </li>
+                    ))}
+                  </ul>
+                )}
+              </div>
+            )}
+          </>
+        );
+      })()}
     </Card>
   );
 }
