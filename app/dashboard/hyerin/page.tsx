@@ -1,27 +1,59 @@
 import type { Metadata } from "next";
+import Link from "next/link";
 import {
   dash,
+  type HyerinMonthResponse,
   type HyerinTodayResponse,
   type HyerinWeekResponse,
-  type HyerinMonthResponse,
 } from "@/lib/dashboard-api";
 import TrainingsRow from "./TrainingsRow";
 
 export const metadata: Metadata = {
-  title: "혜린의 학습 일지 — 쿨한나",
+  title: "혜린 학습 관제판 — 쿨한나",
   robots: { index: false, follow: false },
 };
 
 export const dynamic = "force-dynamic";
 
+type HyerinDashboardPageProps = {
+  searchParams?: Promise<{ week?: string }> | { week?: string };
+};
+
+const TRAINING_ORDER = [
+  "기술훈련",
+  "사고훈련",
+  "음성일지",
+  "작품작업_에샤",
+  "작품작업_리스트",
+];
+
+const TRAINING_LABELS: Record<string, string> = {
+  기술훈련: "기술훈련",
+  사고훈련: "사고훈련",
+  음성일지: "음성훈련",
+  작품작업_에샤: "에샤",
+  작품작업_리스트: "리스트",
+};
+
 function isApiError<T>(x: T | { error: string }): x is { error: string } {
   return typeof x === "object" && x !== null && "error" in (x as object);
 }
 
-export default async function HyerinDashboardPage() {
+function clampWeekOffset(value: number) {
+  if (!Number.isFinite(value)) return 0;
+  return Math.max(-12, Math.min(0, value));
+}
+
+function hyerinWeekHref(offset: number) {
+  return offset === 0 ? "/dashboard/hyerin" : `/dashboard/hyerin?week=${offset}`;
+}
+
+export default async function HyerinDashboardPage({ searchParams }: HyerinDashboardPageProps) {
+  const params = await searchParams;
+  const weekOffset = clampWeekOffset(Number.parseInt(params?.week ?? "0", 10));
   const [today, week, month] = await Promise.all([
     dash.hyerinToday(),
-    dash.hyerinWeek(),
+    dash.hyerinWeek(weekOffset),
     dash.hyerin30Days(),
   ]);
 
@@ -34,7 +66,7 @@ export default async function HyerinDashboardPage() {
   return (
     <div className="hyerin-dashboard">
       <style>{HYERIN_CSS}</style>
-      <div className="hyerin-inner">
+      <div className="hyerin-shell">
         {errors.length > 0 ? (
           <ErrorState errors={errors} />
         ) : (
@@ -42,6 +74,7 @@ export default async function HyerinDashboardPage() {
             today={today as HyerinTodayResponse}
             week={week as HyerinWeekResponse}
             month={month as HyerinMonthResponse}
+            weekOffset={weekOffset}
           />
         )}
       </div>
@@ -53,110 +86,184 @@ function HyerinContent({
   today,
   week,
   month,
+  weekOffset,
 }: {
   today: HyerinTodayResponse;
   week: HyerinWeekResponse;
   month: HyerinMonthResponse;
+  weekOffset: number;
 }) {
   if (!today.exists) {
     return (
       <>
-        <Header date={today.date} weekday={today.요일} />
+        <Header date={today.date} weekday={today.요일} status="기록 대기" />
         <EmptyState message={today.message} />
-        <WeekStrip days={week.days} 표시일={week.표시일} />
+        <WeekStrip days={week.days} 표시일={week.표시일} weekOffset={weekOffset} />
         <MonthChart days={month.days} />
       </>
     );
   }
 
+  const summary = today.summary!;
+  const status = today.data_status;
+  const lineMap = today.한줄평 ?? {};
+  const completed = TRAINING_ORDER.filter((key) => lineMap[key] && lineMap[key] !== "안 함");
+  const missed = TRAINING_ORDER.filter((key) => !lineMap[key] || lineMap[key] === "안 함");
+
   return (
     <>
-      <Header date={today.date} weekday={today.요일} />
-      <SummaryStrip summary={today.summary!} />
-      <TrainingsRow 한줄평={today.한줄평 ?? {}} date={today.date} />
-      <CommentBlock
-        title="👩 엄마가 보는 이번 주"
-        text={today.한나용_코멘트 ?? ""}
-        tone="mom"
+      <Header
+        date={today.date}
+        weekday={today.요일}
+        status={status?.source === "live" ? "원본 기준" : "스냅샷 기준"}
       />
-      <CommentBlock
-        title="✍ 혜린이에게"
-        text={today.혜린용_코멘트 ?? ""}
-        tone="hyerin"
+      {status?.is_stale && <DataWarning text={status.warning} />}
+      <section className="command-grid">
+        <TodayStatus summary={summary} completed={completed.length} missed={missed.length} />
+        <NextAction
+          summary={summary}
+          completed={completed}
+          missed={missed}
+          누적={today.누적_지표 ?? {}}
+          stale={Boolean(status?.is_stale)}
+        />
+      </section>
+      <TrainingsRow 한줄평={lineMap} date={today.date} />
+      <section className="lower-grid">
+        <WeekStrip days={week.days} 표시일={week.표시일} weekOffset={weekOffset} />
+        <MetricsPanel 누적={today.누적_지표 ?? {}} />
+      </section>
+      <CoachPanel
+        mom={today.한나용_코멘트 ?? ""}
+        hyerin={today.혜린용_코멘트 ?? ""}
+        stale={Boolean(status?.is_stale)}
       />
-      <WeekStrip days={week.days} 표시일={week.표시일} />
-      <MetricsRow 누적={today.누적_지표 ?? {}} />
+      <TrainingTrendPanel days={month.days} />
+      <PastCommentsPanel days={month.days} />
       <MonthChart days={month.days} />
     </>
   );
 }
 
-function Header({ date, weekday }: { date: string; weekday?: string }) {
+function Header({
+  date,
+  weekday,
+  status,
+}: {
+  date: string;
+  weekday?: string;
+  status: string;
+}) {
   const d = new Date(`${date}T00:00:00`);
   const month = d.getMonth() + 1;
   const day = d.getDate();
   const wd = weekday ?? ["월", "화", "수", "목", "금", "토", "일"][(d.getDay() + 6) % 7];
   return (
     <header className="hyerin-header">
-      <h1>혜린의 학습 일지 ✍</h1>
-      <p>
-        {month}월 {day}일 ({wd}) · 어제까지의 기록
-      </p>
+      <div>
+        <p className="eyebrow">HYERIN STUDY OPS</p>
+        <h1>혜린 학습 관제판</h1>
+        <p className="header-sub">
+          {month}월 {day}일 ({wd}) 기록 · {status}
+        </p>
+      </div>
+      <div className="date-badge">
+        <strong>{day}</strong>
+        <span>{wd}</span>
+      </div>
     </header>
   );
 }
 
-function SummaryStrip({
+function TodayStatus({
   summary,
+  completed,
+  missed,
 }: {
   summary: NonNullable<HyerinTodayResponse["summary"]>;
+  completed: number;
+  missed: number;
 }) {
-  const cells: Array<{ label: string; value: string; unit: string }> = [
-    {
-      label: "글자수",
-      value: summary.글자수_오늘.toLocaleString(),
-      unit: "자",
-    },
-    { label: "평균 점수", value: summary.평균_점수.toFixed(1), unit: "/10" },
-    {
-      label: "훈련 완료",
-      value: `${summary.훈련_완료}/${summary.훈련_전체}`,
-      unit: "",
-    },
-    { label: "연속", value: summary.연속_일수.toString(), unit: "일" },
-  ];
+  const completionRate = Math.round((completed / Math.max(summary.훈련_전체, 1)) * 100);
   return (
-    <section className="summary-strip">
-      {cells.map((c, i) => (
-        <div
-          key={c.label}
-          className={`summary-cell ${i < cells.length - 1 ? "with-divider" : ""}`}
-        >
-          <div className="cell-label">{c.label}</div>
-          <div className="cell-value">
-            <strong>{c.value}</strong>
-            {c.unit && <span>{c.unit}</span>}
-          </div>
-        </div>
-      ))}
+    <section className="status-panel">
+      <div className="status-top">
+        <span>오늘 상태</span>
+        <strong>{completionRate}%</strong>
+      </div>
+      <div className="hero-metric">
+        <strong>{summary.글자수_오늘.toLocaleString()}</strong>
+        <span>자</span>
+      </div>
+      <div className="kpi-grid">
+        <Metric label="훈련" value={`${summary.훈련_완료}/${summary.훈련_전체}`} />
+        <Metric label="연속" value={`${summary.연속_일수}일`} />
+        <Metric label="점수" value={summary.평균_점수 ? summary.평균_점수.toFixed(1) : "-"} />
+        <Metric label="공백" value={`${missed}개`} />
+      </div>
     </section>
   );
 }
 
-function CommentBlock({
-  title,
-  text,
-  tone,
-}: {
-  title: string;
-  text: string;
-  tone: "mom" | "hyerin";
-}) {
-  if (!text.trim()) return null;
+function Metric({ label, value }: { label: string; value: string }) {
   return (
-    <section className={`comment-block tone-${tone}`}>
-      <div className="comment-title">{title}</div>
-      <p className="comment-text">{text}</p>
+    <div className="metric-box">
+      <span>{label}</span>
+      <strong>{value}</strong>
+    </div>
+  );
+}
+
+function NextAction({
+  summary,
+  completed,
+  missed,
+  누적,
+  stale,
+}: {
+  summary: NonNullable<HyerinTodayResponse["summary"]>;
+  completed: string[];
+  missed: string[];
+  누적: Record<string, string>;
+  stale: boolean;
+}) {
+  const weakest = 누적["가장 약한 훈련"] ?? missed[0] ?? "작품작업_리스트";
+  const priority = missed.includes("작품작업_리스트")
+    ? "작품작업_리스트"
+    : missed.includes("음성일지")
+      ? "음성일지"
+      : weakest;
+  const priorityLabel = TRAINING_LABELS[priority] ?? priority;
+  const action =
+    summary.훈련_완료 === 0
+      ? `${priorityLabel} 하나만 열고 10분짜리 기록을 남기기`
+      : `${priorityLabel}를 다음 1순위로 잡고 균형 회복하기`;
+  const completedText =
+    completed.length > 0
+      ? completed.map((key) => TRAINING_LABELS[key] ?? key).join(", ")
+      : "아직 없음";
+
+  return (
+    <section className="action-panel">
+      <div className="panel-label">다음 판단</div>
+      <h2>{action}</h2>
+      <p>
+        완료한 훈련은 {completedText}. 지금은 양보다 공백을 줄이는 쪽이 더 중요합니다.
+      </p>
+      {stale && (
+        <p className="quiet-note">
+          AI 코멘트는 숨겼고, 숫자와 훈련 상태는 원본 카드 기준으로 복구했습니다.
+        </p>
+      )}
+    </section>
+  );
+}
+
+function DataWarning({ text }: { text: string }) {
+  return (
+    <section className="data-warning">
+      <strong>데이터 보정 중</strong>
+      <span>{text}</span>
     </section>
   );
 }
@@ -164,36 +271,60 @@ function CommentBlock({
 function WeekStrip({
   days,
   표시일,
+  weekOffset,
 }: {
   days: HyerinWeekResponse["days"];
   표시일: string;
+  weekOffset: number;
 }) {
   const maxChars = Math.max(...days.map((d) => d.글자수), 1);
+  const weekLabel =
+    weekOffset === 0
+      ? "이번 주"
+      : weekOffset === -1
+        ? "저번 주"
+        : `${Math.abs(weekOffset)}주 전`;
   return (
     <section className="week-strip">
-      <h3 className="section-title">이번 주</h3>
+      <div className="section-head">
+        <h3>{weekLabel} 흐름</h3>
+        <div className="week-nav">
+          <Link href={hyerinWeekHref(weekOffset - 1)} aria-label="이전 주 보기">
+            ‹
+          </Link>
+          {weekOffset < 0 && (
+            <Link href={hyerinWeekHref(weekOffset + 1)} aria-label="다음 주 보기">
+              ›
+            </Link>
+          )}
+        </div>
+      </div>
       <div className="week-grid">
         {days.map((d) => {
           const isFocus = d.date === 표시일;
           const heightPct = Math.round((d.글자수 / maxChars) * 100);
+          const tooltip = d.exists
+            ? `${d.date}\n${d.글자수.toLocaleString()}자 · 훈련 ${d.훈련완료}/5\n${
+                d.source === "live" ? "원본 카드 기준" : "스냅샷 기준"
+              }`
+            : `${d.date}\n아직 기록 없음`;
           return (
             <div
               key={d.date}
-              className={`week-cell ${isFocus ? "is-focus" : ""} ${d.exists ? "" : "is-empty"}`}
+              className={`week-cell ${isFocus ? "is-focus" : ""} ${d.exists ? "" : "is-empty"} ${d.source === "live" ? "is-live" : ""}`}
+              data-tooltip={tooltip}
             >
               <div className="weekday">{d.요일}</div>
               <div className="bar-wrap">
                 <div
                   className="bar"
-                  style={{ height: `${Math.max(heightPct, d.exists ? 4 : 0)}%` }}
+                  style={{ height: `${Math.max(heightPct, d.exists ? 5 : 0)}%` }}
                 />
               </div>
               <div className="chars">
-                {d.exists && d.글자수 > 0 ? d.글자수.toLocaleString() : "—"}
+                {d.exists && d.글자수 > 0 ? d.글자수.toLocaleString() : "-"}
               </div>
-              <div className="completed">
-                {d.exists ? `${d.훈련완료}/5` : ""}
-              </div>
+              <div className="completed">{d.exists ? `${d.훈련완료}/5` : ""}</div>
             </div>
           );
         })}
@@ -202,32 +333,160 @@ function WeekStrip({
   );
 }
 
-function MetricsRow({ 누적 }: { 누적: Record<string, string> }) {
-  const chars = 누적["이번 달 총 글자수"];
-  const done = 누적["이번 달 훈련 완료"];
-  const weak = 누적["가장 약한 훈련"];
-  const list = 누적["작품 진도 (리스트)"];
-  const esha = 누적["작품 진도 (에샤)"];
-
-  const parts: React.ReactNode[] = [];
-  if (chars) parts.push(<span key="c">이번 달 <strong>{chars}자</strong></span>);
-  if (done) parts.push(<span key="d"><strong>{done}</strong></span>);
-  if (weak) parts.push(<span key="w">약한 훈련: <strong>{weak}</strong></span>);
-  if (list) parts.push(<span key="l">리스트 <strong>{list}</strong></span>);
-  if (esha) parts.push(<span key="e">에샤 <strong>{esha}</strong></span>);
-
-  if (parts.length === 0) return null;
+function MetricsPanel({ 누적 }: { 누적: Record<string, string> }) {
+  const rows = [
+    ["이번 달 총 글자수", 누적["이번 달 총 글자수"]],
+    ["이번 달 훈련 완료", 누적["이번 달 훈련 완료"]],
+    ["가장 약한 훈련", 누적["가장 약한 훈련"]],
+    ["리스트", 누적["작품 진도 (리스트)"]],
+    ["에샤", 누적["작품 진도 (에샤)"]],
+  ].filter(([, value]) => Boolean(value));
 
   return (
-    <section className="metrics-row">
-      {parts.map((p, i) => (
-        <span key={i} className="metric-item">
-          {p}
-          {i < parts.length - 1 && <span className="dot"> · </span>}
-        </span>
-      ))}
+    <section className="metrics-panel">
+      <div className="section-head">
+        <h3>월간 누적</h3>
+        <span>진도</span>
+      </div>
+      <div className="metric-list">
+        {rows.map(([label, value]) => (
+          <div key={label} className="metric-line">
+            <span>{label}</span>
+            <strong>{value}</strong>
+          </div>
+        ))}
+      </div>
     </section>
   );
+}
+
+function CoachPanel({
+  mom,
+  hyerin,
+  stale,
+}: {
+  mom: string;
+  hyerin: string;
+  stale: boolean;
+}) {
+  if (stale) {
+    return (
+      <section className="coach-panel muted">
+        <div className="section-head">
+          <h3>코멘트</h3>
+          <span>대기</span>
+        </div>
+        <p>
+          원본 카드가 스냅샷보다 최신이라 AI 코멘트는 잠시 숨겼습니다. 다음 스냅샷을
+          재생성하면 한나용/혜린용 코멘트를 다시 보여줍니다.
+        </p>
+      </section>
+    );
+  }
+  if (!mom.trim() && !hyerin.trim()) return null;
+  return (
+    <section className="coach-grid">
+      {mom.trim() && <CommentBlock title="한나가 볼 것" text={mom} />}
+      {hyerin.trim() && <CommentBlock title="혜린이에게" text={hyerin} />}
+    </section>
+  );
+}
+
+function CommentBlock({ title, text }: { title: string; text: string }) {
+  return (
+    <article className="comment-block">
+      <h3>{title}</h3>
+      <p>{text}</p>
+    </article>
+  );
+}
+
+function TrainingTrendPanel({ days }: { days: HyerinMonthResponse["days"] }) {
+  const maxChars = Math.max(
+    ...TRAINING_ORDER.flatMap((folder) => days.map((day) => day.훈련별?.[folder]?.글자수 ?? 0)),
+    1,
+  );
+
+  return (
+    <section className="training-trend-panel">
+      <div className="section-head">
+        <h3>훈련별 증가 흐름</h3>
+        <span>최근 30일</span>
+      </div>
+      <div className="trend-rows">
+        {TRAINING_ORDER.map((folder) => (
+          <div key={folder} className="trend-row">
+            <div className="trend-label">{TRAINING_LABELS[folder]}</div>
+            <div className="trend-bars" aria-label={`${TRAINING_LABELS[folder]} 최근 30일 추이`}>
+              {days.map((day) => {
+                const metric = day.훈련별?.[folder];
+                const chars = metric?.글자수 ?? 0;
+                const cards = metric?.카드수 ?? 0;
+                const height = Math.max((chars / maxChars) * 100, chars > 0 ? 8 : 0);
+                return (
+                  <div
+                    key={`${folder}-${day.date}`}
+                    className={`trend-bar ${chars > 0 ? "has-data" : ""}`}
+                    style={{ height: `${height}%` }}
+                    data-tooltip={`${day.date}\n${TRAINING_LABELS[folder]} · ${chars.toLocaleString()}자\n카드 ${cards}개 · ${metric?.완료 ? "완료" : "미완료"}`}
+                    aria-label={`${day.date} ${TRAINING_LABELS[folder]} ${chars.toLocaleString()}자 카드 ${cards}개`}
+                  />
+                );
+              })}
+            </div>
+          </div>
+        ))}
+      </div>
+    </section>
+  );
+}
+
+function PastCommentsPanel({ days }: { days: HyerinMonthResponse["days"] }) {
+  const commentDays = [...days]
+    .reverse()
+    .filter((day) => day.코멘트?.한나?.trim() || day.코멘트?.혜린?.trim())
+    .slice(0, 8);
+
+  if (commentDays.length === 0) return null;
+
+  return (
+    <section className="past-comments-panel">
+      <div className="section-head">
+        <h3>지난 코멘트</h3>
+        <span>최근 기록</span>
+      </div>
+      <div className="past-comment-list">
+        {commentDays.map((day) => (
+          <article key={day.date} className="past-comment-card">
+            <div className="past-comment-head">
+              <strong>{formatShortDate(day.date)}</strong>
+              <span>
+                {day.글자수.toLocaleString()}자 · {day.훈련완료}/5
+                {day.코멘트.stale ? " · 보정됨" : ""}
+              </span>
+            </div>
+            {day.코멘트.한나.trim() && (
+              <p>
+                <b>한나</b>
+                {day.코멘트.한나}
+              </p>
+            )}
+            {day.코멘트.혜린.trim() && (
+              <p>
+                <b>혜린</b>
+                {day.코멘트.혜린}
+              </p>
+            )}
+          </article>
+        ))}
+      </div>
+    </section>
+  );
+}
+
+function formatShortDate(date: string) {
+  const d = new Date(`${date}T00:00:00`);
+  return `${d.getMonth() + 1}/${d.getDate()}`;
 }
 
 function MonthChart({ days }: { days: HyerinMonthResponse["days"] }) {
@@ -235,25 +494,31 @@ function MonthChart({ days }: { days: HyerinMonthResponse["days"] }) {
   if (allZero) {
     return (
       <section className="month-chart">
-        <h3 className="section-title">최근 30일</h3>
-        <p className="month-empty">데이터 쌓이는 중...</p>
+        <div className="section-head">
+          <h3>최근 30일</h3>
+          <span>대기</span>
+        </div>
+        <p className="month-empty">데이터 쌓이는 중</p>
       </section>
     );
   }
 
-  const W = 600;
-  const H = 140;
-  const PAD = 20;
-  const chartW = W - PAD * 2;
-  const chartH = H - PAD * 2;
+  const width = 600;
+  const height = 150;
+  const pad = 20;
+  const chartW = width - pad * 2;
+  const chartH = height - pad * 2;
   const maxChars = Math.max(...days.map((d) => d.글자수), 1);
   const slot = chartW / days.length;
 
   return (
     <section className="month-chart">
-      <h3 className="section-title">최근 30일</h3>
+      <div className="section-head">
+        <h3>최근 30일</h3>
+        <span>글자수와 점수</span>
+      </div>
       <svg
-        viewBox={`0 0 ${W} ${H}`}
+        viewBox={`0 0 ${width} ${height}`}
         className="month-svg"
         preserveAspectRatio="none"
         role="img"
@@ -262,18 +527,18 @@ function MonthChart({ days }: { days: HyerinMonthResponse["days"] }) {
         {[0.25, 0.5, 0.75].map((g) => (
           <line
             key={g}
-            x1={PAD}
-            y1={H - PAD - chartH * g}
-            x2={W - PAD}
-            y2={H - PAD - chartH * g}
-            stroke="var(--hyerin-border)"
-            strokeDasharray="2 4"
+            x1={pad}
+            y1={height - pad - chartH * g}
+            x2={width - pad}
+            y2={height - pad - chartH * g}
+            stroke="var(--line)"
+            strokeDasharray="2 5"
           />
         ))}
         {days.map((d, i) => {
           const h = (d.글자수 / maxChars) * chartH;
-          const x = PAD + i * slot;
-          const y = H - PAD - h;
+          const x = pad + i * slot;
+          const y = height - pad - h;
           return (
             <g key={d.date}>
               <rect
@@ -281,41 +546,28 @@ function MonthChart({ days }: { days: HyerinMonthResponse["days"] }) {
                 y={y}
                 width={Math.max(slot - 3, 1)}
                 height={Math.max(h, 0)}
-                fill="var(--hyerin-accent)"
-                rx="1.5"
+                fill="var(--ink)"
+                opacity={d.글자수 > 0 ? 0.82 : 0.12}
+                rx="2"
+                aria-label={`${d.date} · ${d.글자수.toLocaleString()}자 · 훈련 ${d.훈련완료}/5`}
               />
               {d.평균점수 > 0 && (
                 <circle
                   cx={x + slot / 2}
-                  cy={H - PAD - (d.평균점수 / 10) * chartH}
-                  r="2.5"
-                  fill="var(--hyerin-secondary)"
+                  cy={height - pad - (d.평균점수 / 10) * chartH}
+                  r="2.8"
+                  fill="var(--mint)"
+                  aria-label={`${d.date} · 평균 점수 ${d.평균점수.toFixed(1)}`}
                 />
               )}
             </g>
           );
         })}
-        <line
-          x1={PAD}
-          y1={H - PAD}
-          x2={W - PAD}
-          y2={H - PAD}
-          stroke="var(--hyerin-border)"
-        />
+        <line x1={pad} y1={height - pad} x2={width - pad} y2={height - pad} stroke="var(--line)" />
       </svg>
       <div className="month-legend">
-        <span>
-          <i style={{ background: "var(--hyerin-accent)" }} /> 글자수
-        </span>
-        <span>
-          <i
-            style={{
-              background: "var(--hyerin-secondary)",
-              borderRadius: "50%",
-            }}
-          />{" "}
-          평균 점수
-        </span>
+        <span>글자수</span>
+        <span>평균 점수</span>
       </div>
     </section>
   );
@@ -324,11 +576,8 @@ function MonthChart({ days }: { days: HyerinMonthResponse["days"] }) {
 function EmptyState({ message }: { message?: string }) {
   return (
     <section className="empty-state">
-      <p>
-        {message ??
-          "오늘 학습 데이터가 아직 정리되지 않았어요."}
-      </p>
-      <p className="empty-hint">매일 밤 11시 50분에 정리됩니다.</p>
+      <h2>아직 표시할 학습 기록이 없습니다.</h2>
+      <p>{message ?? "오늘 학습 데이터가 아직 정리되지 않았어요."}</p>
     </section>
   );
 }
@@ -338,9 +587,8 @@ function ErrorState({ errors }: { errors: string[] }) {
     <div className="hyerin-error">
       <strong>대시보드 API 호출 실패</strong>
       <pre>{errors.join("\n")}</pre>
-      <p className="hyerin-error-hint">
-        Vercel 환경변수 <code>DASHBOARD_API_URL</code>,{" "}
-        <code>DASHBOARD_API_KEY</code> 확인.
+      <p>
+        Vercel 환경변수 <code>DASHBOARD_API_URL</code>, <code>DASHBOARD_API_KEY</code> 확인.
       </p>
     </div>
   );
@@ -348,351 +596,628 @@ function ErrorState({ errors }: { errors: string[] }) {
 
 const HYERIN_CSS = `
   .hyerin-dashboard {
-    --hyerin-bg-page: #FAF6F0;
-    --hyerin-bg-card: #FFFFFF;
-    --hyerin-bg-soft: #F7F0E5;
-    --hyerin-accent: #E89B7C;
-    --hyerin-accent-soft: #FFF0E8;
-    --hyerin-secondary: #D4A04F;
-    --hyerin-secondary-soft: #FFF8EC;
-    --hyerin-success: #8FBC8F;
-    --hyerin-text-main: #3A2F2A;
-    --hyerin-text-sub: #8B7D75;
-    --hyerin-border: #EFE5DA;
+    --paper: #F4F1EA;
+    --surface: #FFFDF8;
+    --surface-strong: #272A25;
+    --ink: #242822;
+    --muted: #73736A;
+    --line: #DDD7CA;
+    --amber: #D48A3A;
+    --amber-soft: #F8E4C8;
+    --mint: #5E8F78;
+    --mint-soft: #DDEBE2;
+    --danger: #B65E43;
 
     min-height: 100vh;
-    background: var(--hyerin-bg-page);
-    color: var(--hyerin-text-main);
+    background: var(--paper);
+    color: var(--ink);
     font-family: ui-sans-serif, system-ui, "Apple SD Gothic Neo", "Noto Sans KR", sans-serif;
     padding: 1.25rem;
-    box-sizing: border-box;
   }
   .hyerin-dashboard * { box-sizing: border-box; }
-  .hyerin-inner {
-    max-width: 1100px;
+  .hyerin-shell {
+    width: min(1120px, 100%);
     margin: 0 auto;
     display: flex;
     flex-direction: column;
-    gap: 0.5rem;
+    gap: 0.75rem;
   }
-
-  /* Header */
-  .hyerin-header { margin: 0; }
+  .hyerin-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-end;
+    gap: 1rem;
+    padding: 0.25rem 0 0.5rem;
+  }
+  .eyebrow {
+    margin: 0 0 0.35rem;
+    font-size: 0.72rem;
+    letter-spacing: 0.08em;
+    color: var(--mint);
+    font-weight: 800;
+  }
   .hyerin-header h1 {
-    font-size: 1.5rem;
-    font-weight: 700;
-    color: var(--hyerin-text-main);
-    margin: 0 0 0.2rem;
-    letter-spacing: -0.02em;
-  }
-  .hyerin-header p {
-    color: var(--hyerin-text-sub);
     margin: 0;
-    font-size: 0.875rem;
+    font-size: clamp(1.55rem, 3.2vw, 2.55rem);
+    line-height: 0.98;
+    letter-spacing: 0;
+    font-weight: 850;
   }
-
-  /* SummaryStrip */
-  .summary-strip {
-    background: var(--hyerin-bg-card);
-    border: 1px solid var(--hyerin-border);
-    border-top: 2px solid var(--hyerin-secondary);
-    border-radius: 0.625rem;
-    padding: 0.875rem 1.25rem;
+  .header-sub {
+    margin: 0.45rem 0 0;
+    color: var(--muted);
+    font-size: 0.92rem;
+  }
+  .date-badge {
+    width: 3.7rem;
+    aspect-ratio: 1;
+    background: var(--surface-strong);
+    color: var(--surface);
     display: grid;
-    grid-template-columns: repeat(2, 1fr);
-    gap: 0.75rem 0;
-    box-shadow: 0 1px 2px rgba(58,47,42,0.06);
+    place-items: center;
+    align-content: center;
+    border-radius: 0.45rem;
   }
-  @media (min-width: 640px) {
-    .summary-strip { grid-template-columns: repeat(4, 1fr); }
-  }
-  .summary-cell { display: flex; flex-direction: column; gap: 0.2rem; padding: 0 1rem; }
-  .summary-cell:first-child { padding-left: 0; }
-  @media (min-width: 640px) {
-    .summary-cell.with-divider { border-right: 1px solid var(--hyerin-border); }
-  }
-  .cell-label { color: var(--hyerin-text-sub); font-size: 0.75rem; font-weight: 500; }
-  .cell-value strong {
-    font-size: 1.5rem;
-    font-weight: 700;
-    color: var(--hyerin-accent);
-    letter-spacing: -0.02em;
-    line-height: 1.1;
-  }
-  .cell-value span { color: var(--hyerin-text-sub); font-size: 0.8125rem; margin-left: 0.2rem; }
+  .date-badge strong { font-size: 1.55rem; line-height: 1; }
+  .date-badge span { font-size: 0.75rem; color: #D8D3C7; }
 
-  /* TrainingsRow */
-  .trainings-section {
-    background: var(--hyerin-bg-card);
-    border: 1px solid var(--hyerin-border);
-    border-radius: 0.625rem;
-    padding: 0.875rem 1rem;
-    box-shadow: 0 1px 2px rgba(58,47,42,0.06);
+  .data-warning {
+    display: flex;
+    gap: 0.8rem;
+    align-items: center;
+    background: #FFF4E7;
+    border: 1px solid #E7B36D;
+    color: #7A4B16;
+    border-radius: 0.5rem;
+    padding: 0.75rem 0.9rem;
+    font-size: 0.86rem;
   }
-  .section-title {
-    margin: 0 0 0.625rem;
-    font-size: 0.9375rem;
-    font-weight: 600;
-    color: var(--hyerin-text-main);
-    letter-spacing: -0.01em;
+  .data-warning strong { white-space: nowrap; color: #5A350F; }
+
+  .command-grid {
+    display: grid;
+    grid-template-columns: minmax(0, 0.9fr) minmax(0, 1.25fr);
+    gap: 0.75rem;
+  }
+  .status-panel,
+  .action-panel,
+  .trainings-section,
+  .week-strip,
+  .metrics-panel,
+  .coach-panel,
+  .comment-block,
+  .training-trend-panel,
+  .past-comments-panel,
+  .month-chart,
+  .empty-state {
+    background: var(--surface);
+    border: 1px solid var(--line);
+    border-radius: 0.5rem;
+  }
+  .status-panel {
+    padding: 1rem;
+    background: var(--surface-strong);
+    color: var(--surface);
+  }
+  .status-top {
+    display: flex;
+    justify-content: space-between;
+    color: #D9D4C8;
+    font-size: 0.82rem;
+  }
+  .status-top strong { color: var(--amber-soft); }
+  .hero-metric {
+    margin: 0.5rem 0 0.9rem;
+    display: flex;
+    align-items: baseline;
+    gap: 0.3rem;
+  }
+  .hero-metric strong {
+    font-size: clamp(2.25rem, 6.2vw, 4rem);
+    line-height: 0.92;
+    letter-spacing: 0;
+  }
+  .hero-metric span { color: #D9D4C8; font-weight: 700; }
+  .kpi-grid {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 0.45rem;
+  }
+  .metric-box {
+    min-width: 0;
+    background: rgba(255, 253, 248, 0.08);
+    border: 1px solid rgba(255, 253, 248, 0.13);
+    border-radius: 0.4rem;
+    padding: 0.55rem 0.45rem;
+  }
+  .metric-box span {
+    display: block;
+    color: #C9C3B8;
+    font-size: 0.68rem;
+  }
+  .metric-box strong {
+    display: block;
+    margin-top: 0.18rem;
+    font-size: 0.95rem;
+    color: var(--surface);
+  }
+
+  .action-panel {
+    padding: 1rem 1.1rem;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+  }
+  .panel-label {
+    color: var(--mint);
+    font-size: 0.75rem;
+    font-weight: 800;
+    margin-bottom: 0.45rem;
+  }
+  .action-panel h2 {
+    margin: 0;
+    font-size: clamp(1.05rem, 2.1vw, 1.55rem);
+    line-height: 1.15;
+    letter-spacing: 0;
+  }
+  .action-panel p,
+  .coach-panel p {
+    margin: 0.65rem 0 0;
+    color: var(--muted);
+    line-height: 1.55;
+    font-size: 0.84rem;
+  }
+  .quiet-note {
+    color: #8A5A18 !important;
+    background: #FFF2DD;
+    border-radius: 0.35rem;
+    padding: 0.55rem 0.65rem;
+  }
+
+  .trainings-section {
+    padding: 0.9rem;
+  }
+  .section-title,
+  .section-head h3 {
+    margin: 0;
+    font-size: 0.9rem;
+    font-weight: 800;
+    letter-spacing: 0;
+  }
+  .section-title { margin-bottom: 0.65rem; }
+  .section-head {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 1rem;
+    margin-bottom: 0.7rem;
+  }
+  .section-head span {
+    color: var(--muted);
+    font-size: 0.75rem;
+    font-weight: 700;
+  }
+  .week-nav {
+    display: inline-flex;
+    gap: 0.3rem;
+    align-items: center;
+  }
+  .week-nav a {
+    width: 1.65rem;
+    height: 1.65rem;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    border: 1px solid var(--line);
+    border-radius: 0.35rem;
+    background: var(--surface);
+    color: var(--ink);
+    font-size: 1rem;
+    font-weight: 900;
+    line-height: 1;
+    text-decoration: none;
+  }
+  .week-nav a:hover {
+    border-color: var(--mint);
+    background: var(--mint-soft);
   }
   .trainings-grid {
     display: grid;
-    grid-template-columns: 1fr;
-    gap: 0.5rem;
-  }
-  @media (min-width: 768px) {
-    .trainings-grid { grid-template-columns: repeat(5, 1fr); align-items: start; }
+    grid-template-columns: repeat(5, minmax(0, 1fr));
+    gap: 0.55rem;
+    align-items: start;
   }
   .training-card {
-    background: var(--hyerin-bg-soft);
-    border: 1px solid var(--hyerin-border);
-    border-radius: 0.5rem;
-    padding: 0.625rem 0.75rem;
+    min-height: 7.1rem;
+    border: 1px solid var(--line);
+    border-radius: 0.45rem;
+    padding: 0.7rem;
+    background: #F7F3EA;
     display: flex;
     flex-direction: column;
-    gap: 0.3rem;
-    min-height: 0;
+    gap: 0.45rem;
   }
   .training-card.done {
-    background: var(--hyerin-accent-soft);
-    border-color: var(--hyerin-accent);
+    background: var(--mint-soft);
+    border-color: #AFC9BA;
   }
-  .training-card.empty { opacity: 0.6; }
-  .training-card.open {
-    grid-column: 1 / -1;
+  .training-card.empty {
+    background: #F3EFE6;
+    color: var(--muted);
+    opacity: 0.78;
   }
+  .training-card.open { grid-column: 1 / -1; }
   .training-head {
     display: flex;
-    justify-content: space-between;
     align-items: center;
+    justify-content: space-between;
     gap: 0.5rem;
   }
   .training-name {
-    font-size: 0.8125rem;
-    font-weight: 600;
-    color: var(--hyerin-text-main);
+    font-size: 0.76rem;
+    font-weight: 850;
   }
-  .check { color: var(--hyerin-success); font-weight: 700; font-size: 0.875rem; }
+  .check { color: var(--mint); font-weight: 900; }
   .training-line {
-    font-size: 0.75rem;
-    color: var(--hyerin-text-main);
-    line-height: 1.4;
+    color: var(--ink);
+    font-size: 0.74rem;
+    line-height: 1.48;
     display: -webkit-box;
-    -webkit-line-clamp: 3;
+    -webkit-line-clamp: 4;
     -webkit-box-orient: vertical;
     overflow: hidden;
   }
   .detail-btn {
     align-self: flex-start;
-    background: transparent;
-    border: none;
-    padding: 0;
-    margin-top: 0.1rem;
-    color: var(--hyerin-accent);
-    font-size: 0.6875rem;
-    font-weight: 600;
+    margin-top: auto;
+    border: 1px solid var(--line);
+    background: var(--surface);
+    color: var(--ink);
+    border-radius: 0.35rem;
+    padding: 0.35rem 0.55rem;
+    font-size: 0.75rem;
+    font-weight: 800;
     cursor: pointer;
     font-family: inherit;
   }
-  .detail-btn:hover:not(:disabled) { text-decoration: underline; }
   .detail-btn:disabled { opacity: 0.6; cursor: wait; }
   .training-detail {
     margin-top: 0.5rem;
-    padding: 0.625rem;
-    background: var(--hyerin-bg-card);
-    border: 1px solid var(--hyerin-border);
+    padding: 0.75rem;
+    background: var(--surface);
+    border: 1px solid var(--line);
     border-radius: 0.4rem;
     display: flex;
     flex-direction: column;
-    gap: 0.5rem;
+    gap: 0.6rem;
     max-height: 24rem;
     overflow-y: auto;
   }
-  .detail-card { display: flex; flex-direction: column; gap: 0.3rem; }
+  .detail-card { display: flex; flex-direction: column; gap: 0.35rem; }
   .detail-filename {
-    font-size: 0.6875rem;
-    color: var(--hyerin-text-sub);
+    color: var(--muted);
+    font-size: 0.72rem;
     font-family: ui-monospace, monospace;
   }
   .detail-content {
     margin: 0;
-    font-size: 0.75rem;
-    line-height: 1.55;
-    color: var(--hyerin-text-main);
     white-space: pre-wrap;
     word-break: break-word;
-    font-family: inherit;
+    color: var(--ink);
+    font: inherit;
+    font-size: 0.82rem;
+    line-height: 1.6;
   }
   .detail-error {
-    font-size: 0.75rem;
-    color: #6B3A1A;
-    background: #FFF1EC;
-    border: 1px solid var(--hyerin-accent);
-    border-radius: 0.3rem;
-    padding: 0.4rem 0.6rem;
+    color: var(--danger);
+    background: #FFF1EA;
+    border: 1px solid #E0A28F;
+    border-radius: 0.35rem;
+    padding: 0.45rem 0.6rem;
+    font-size: 0.8rem;
   }
-  .detail-empty { font-size: 0.75rem; color: var(--hyerin-text-sub); }
+  .detail-empty { color: var(--muted); font-size: 0.8rem; }
 
-  /* CommentBlock */
-  .comment-block {
-    border-radius: 0.625rem;
-    padding: 0.625rem 1rem;
-    border-left: 3px solid;
+  .lower-grid {
+    display: grid;
+    grid-template-columns: minmax(0, 1.15fr) minmax(280px, 0.85fr);
+    gap: 0.75rem;
   }
-  .comment-block.tone-mom {
-    background: var(--hyerin-secondary-soft);
-    border-left-color: var(--hyerin-secondary);
-  }
-  .comment-block.tone-hyerin {
-    background: var(--hyerin-accent-soft);
-    border-left-color: var(--hyerin-accent);
-  }
-  .comment-title {
-    font-size: 0.8125rem;
-    font-weight: 700;
-    color: var(--hyerin-text-main);
-    margin-bottom: 0.25rem;
-  }
-  .comment-text {
-    margin: 0;
-    font-size: 0.8125rem;
-    line-height: 1.55;
-    color: var(--hyerin-text-main);
-    white-space: pre-wrap;
-  }
-
-  /* WeekStrip */
-  .week-strip {
-    background: var(--hyerin-bg-card);
-    border: 1px solid var(--hyerin-border);
-    border-radius: 0.625rem;
-    padding: 0.75rem 1rem;
-    box-shadow: 0 1px 2px rgba(58,47,42,0.06);
+  .week-strip,
+  .metrics-panel,
+  .month-chart,
+  .training-trend-panel,
+  .past-comments-panel,
+  .coach-panel {
+    padding: 0.9rem;
   }
   .week-grid {
     display: grid;
     grid-template-columns: repeat(7, 1fr);
-    gap: 0.25rem;
+    gap: 0.35rem;
   }
   .week-cell {
+    position: relative;
+    min-width: 0;
+    min-height: 6.3rem;
+    border: 1px solid transparent;
+    background: #F5F0E7;
+    border-radius: 0.38rem;
+    padding: 0.45rem 0.3rem;
     display: flex;
     flex-direction: column;
     align-items: center;
-    gap: 0.2rem;
-    padding: 0.5rem 0.25rem;
-    border-radius: 0.4rem;
-    border: 1px solid transparent;
-    background: var(--hyerin-bg-soft);
+    gap: 0.25rem;
   }
   .week-cell.is-focus {
-    border-color: var(--hyerin-accent);
-    background: var(--hyerin-accent-soft);
+    border-color: var(--ink);
+    background: var(--amber-soft);
   }
-  .week-cell.is-empty { opacity: 0.55; }
-  .weekday { font-size: 0.75rem; color: var(--hyerin-text-sub); font-weight: 500; }
+  .week-cell.is-live {
+    box-shadow: inset 0 -3px 0 var(--mint);
+  }
+  .week-cell.is-empty { opacity: 0.48; }
+  .weekday {
+    color: var(--muted);
+    font-size: 0.74rem;
+    font-weight: 800;
+  }
   .bar-wrap {
     width: 100%;
-    height: 30px;
+    height: 2rem;
     display: flex;
     align-items: flex-end;
     justify-content: center;
   }
   .bar {
-    width: 55%;
-    background: var(--hyerin-accent);
+    width: 58%;
+    background: var(--ink);
     border-radius: 2px 2px 0 0;
   }
-  .week-cell.is-empty .bar { background: var(--hyerin-border); }
-  .chars { font-size: 0.8125rem; color: var(--hyerin-text-main); font-weight: 600; line-height: 1.1; }
-  .completed { font-size: 0.6875rem; color: var(--hyerin-text-sub); min-height: 0.7rem; }
-
-  /* MetricsRow */
-  .metrics-row {
-    background: var(--hyerin-bg-card);
-    border: 1px solid var(--hyerin-border);
-    border-radius: 0.625rem;
-    padding: 0.625rem 1rem;
-    font-size: 0.8125rem;
-    color: var(--hyerin-text-sub);
-    display: flex;
-    flex-wrap: wrap;
-    align-items: center;
-    gap: 0.1rem;
+  .chars {
+    font-size: 0.78rem;
+    font-weight: 850;
   }
-  .metrics-row strong { color: var(--hyerin-accent); font-weight: 700; }
-  .metrics-row .dot { color: var(--hyerin-border); margin: 0 0.15rem; }
-  .metric-item { display: inline-flex; align-items: center; }
-
-  /* MonthChart */
-  .month-chart {
-    background: var(--hyerin-bg-card);
-    border: 1px solid var(--hyerin-border);
-    border-radius: 0.625rem;
-    padding: 0.75rem 1rem;
-    box-shadow: 0 1px 2px rgba(58,47,42,0.06);
+  .completed {
+    color: var(--muted);
+    min-height: 0.85rem;
+    font-size: 0.68rem;
+  }
+  .metric-list {
+    display: flex;
+    flex-direction: column;
+    gap: 0.45rem;
+  }
+  .metric-line {
+    display: flex;
+    justify-content: space-between;
+    gap: 0.8rem;
+    border-bottom: 1px solid var(--line);
+    padding-bottom: 0.45rem;
+    font-size: 0.86rem;
+  }
+  .metric-line:last-child {
+    border-bottom: none;
+    padding-bottom: 0;
+  }
+  .metric-line span { color: var(--muted); }
+  .metric-line strong {
+    text-align: right;
+    color: var(--ink);
+  }
+  .coach-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 0.75rem;
+  }
+  .coach-panel.muted {
+    background: #F7F3EA;
+  }
+  .comment-block {
+    padding: 0.9rem;
+    border-left: 4px solid var(--mint);
+  }
+  .comment-block h3 {
+    margin: 0 0 0.45rem;
+    font-size: 0.95rem;
+  }
+  .comment-block p {
+    margin: 0;
+    color: var(--ink);
+    line-height: 1.58;
+    white-space: pre-wrap;
+    font-size: 0.9rem;
+  }
+  .training-trend-panel {
+    padding: 0.9rem;
+  }
+  .trend-rows {
+    display: flex;
+    flex-direction: column;
+    gap: 0.7rem;
+  }
+  .trend-row {
+    display: grid;
+    grid-template-columns: 5.5rem minmax(0, 1fr);
+    align-items: center;
+    gap: 0.75rem;
+  }
+  .trend-label {
+    color: var(--ink);
+    font-size: 0.78rem;
+    font-weight: 800;
+  }
+  .trend-bars {
+    height: 2.2rem;
+    display: grid;
+    grid-template-columns: repeat(30, minmax(2px, 1fr));
+    align-items: end;
+    gap: 0.13rem;
+    border-bottom: 1px solid var(--line);
+  }
+  .trend-bar {
+    position: relative;
+    min-height: 2px;
+    background: #E8E0D3;
+    border-radius: 2px 2px 0 0;
+  }
+  .trend-bar.has-data {
+    background: var(--mint);
+  }
+  .week-cell[data-tooltip]:hover::after,
+  .trend-bar[data-tooltip]:hover::after {
+    content: attr(data-tooltip);
+    position: absolute;
+    z-index: 30;
+    left: 50%;
+    bottom: calc(100% + 0.5rem);
+    transform: translateX(-50%);
+    width: max-content;
+    max-width: 13rem;
+    padding: 0.45rem 0.55rem;
+    border-radius: 0.34rem;
+    background: #20231F;
+    color: #FFFDF8;
+    box-shadow: 0 10px 24px rgba(32, 35, 31, 0.2);
+    font-size: 0.72rem;
+    font-weight: 750;
+    line-height: 1.42;
+    text-align: left;
+    white-space: pre-line;
+    pointer-events: none;
+  }
+  .week-cell[data-tooltip]:hover::before,
+  .trend-bar[data-tooltip]:hover::before {
+    content: "";
+    position: absolute;
+    z-index: 31;
+    left: 50%;
+    bottom: calc(100% + 0.18rem);
+    transform: translateX(-50%);
+    border: 0.34rem solid transparent;
+    border-top-color: #20231F;
+    pointer-events: none;
+  }
+  .past-comments-panel {
+    padding: 0.9rem;
+  }
+  .past-comment-list {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 0.6rem;
+    max-height: 24rem;
+    overflow-y: auto;
+    padding-right: 0.2rem;
+  }
+  .past-comment-card {
+    background: #F8F4EC;
+    border: 1px solid var(--line);
+    border-radius: 0.42rem;
+    padding: 0.7rem;
+  }
+  .past-comment-head {
+    display: flex;
+    justify-content: space-between;
+    gap: 0.6rem;
+    align-items: baseline;
+    margin-bottom: 0.45rem;
+  }
+  .past-comment-head strong {
+    font-size: 0.82rem;
+  }
+  .past-comment-head span {
+    color: var(--muted);
+    font-size: 0.7rem;
+    text-align: right;
+  }
+  .past-comment-card p {
+    margin: 0.45rem 0 0;
+    color: var(--ink);
+    font-size: 0.78rem;
+    line-height: 1.5;
+    white-space: pre-wrap;
+  }
+  .past-comment-card b {
+    display: inline-block;
+    margin-right: 0.4rem;
+    color: var(--mint);
+    font-size: 0.72rem;
   }
   .month-svg {
     width: 100%;
-    height: 140px;
+    height: 150px;
     display: block;
   }
   .month-legend {
     display: flex;
+    justify-content: flex-end;
     gap: 1rem;
-    margin-top: 0.4rem;
+    margin-top: 0.45rem;
+    color: var(--muted);
     font-size: 0.75rem;
-    color: var(--hyerin-text-sub);
-  }
-  .month-legend span { display: inline-flex; align-items: center; }
-  .month-legend i {
-    display: inline-block;
-    width: 9px;
-    height: 9px;
-    border-radius: 2px;
-    margin-right: 0.4rem;
   }
   .month-empty {
-    text-align: center;
-    color: var(--hyerin-text-sub);
-    padding: 1rem 0;
     margin: 0;
-    font-size: 0.875rem;
-  }
-
-  /* EmptyState */
-  .empty-state {
-    background: var(--hyerin-bg-card);
-    border: 1px dashed var(--hyerin-border);
-    border-radius: 0.625rem;
-    padding: 1.5rem;
+    color: var(--muted);
     text-align: center;
-    color: var(--hyerin-text-sub);
+    padding: 1.5rem 0;
   }
-  .empty-state p { margin: 0; font-size: 0.9375rem; }
-  .empty-state .empty-hint { font-size: 0.8125rem; margin-top: 0.4rem; }
-
-  /* ErrorState */
+  .empty-state {
+    padding: 1.4rem;
+  }
+  .empty-state h2 {
+    margin: 0 0 0.45rem;
+    font-size: 1.2rem;
+  }
+  .empty-state p {
+    margin: 0;
+    color: var(--muted);
+  }
   .hyerin-error {
-    background: #FFF1EC;
-    border: 1px solid var(--hyerin-accent);
-    color: #6B3A1A;
-    border-radius: 0.625rem;
-    padding: 1rem 1.25rem;
+    background: #FFF1EA;
+    border: 1px solid #E0A28F;
+    color: #6B311F;
+    border-radius: 0.5rem;
+    padding: 1rem;
   }
-  .hyerin-error strong { display: block; margin-bottom: 0.4rem; }
+  .hyerin-error strong { display: block; margin-bottom: 0.45rem; }
   .hyerin-error pre {
     margin: 0;
-    font-size: 0.8rem;
     white-space: pre-wrap;
     word-break: break-word;
-    font-family: ui-monospace, "SF Mono", monospace;
+    font-size: 0.8rem;
   }
-  .hyerin-error-hint { margin: 0.5rem 0 0; font-size: 0.8rem; color: #8B5A35; }
-  .hyerin-error-hint code {
-    background: #FFE3D4;
-    padding: 0.1rem 0.35rem;
-    border-radius: 4px;
-    font-size: 0.75rem;
+  .hyerin-error p {
+    margin: 0.6rem 0 0;
+    font-size: 0.82rem;
+  }
+  .hyerin-error code {
+    background: #FFE2D7;
+    border-radius: 0.25rem;
+    padding: 0.1rem 0.3rem;
+  }
+
+  @media (max-width: 900px) {
+    .command-grid,
+    .lower-grid,
+    .coach-grid,
+    .past-comment-list {
+      grid-template-columns: 1fr;
+    }
+    .trainings-grid {
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
+  }
+  @media (max-width: 640px) {
+    .hyerin-dashboard { padding: 0.85rem; }
+    .hyerin-header { align-items: flex-start; }
+    .date-badge { width: 3.5rem; }
+    .data-warning { align-items: flex-start; flex-direction: column; gap: 0.25rem; }
+    .kpi-grid { grid-template-columns: repeat(2, 1fr); }
+    .trainings-grid { grid-template-columns: 1fr; }
+    .week-grid { gap: 0.22rem; }
+    .week-cell { min-height: 5.7rem; padding-inline: 0.15rem; }
+    .chars { font-size: 0.68rem; }
+    .trend-row { grid-template-columns: 1fr; gap: 0.35rem; }
   }
 `;

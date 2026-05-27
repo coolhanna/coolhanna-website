@@ -14,7 +14,7 @@ const FOLDERS = [
 const LABELS: Record<string, string> = {
   기술훈련: "기술훈련",
   사고훈련: "사고훈련",
-  음성일지: "음성일지",
+  음성일지: "음성훈련",
   작품작업_에샤: "에샤",
   작품작업_리스트: "리스트",
 };
@@ -57,9 +57,12 @@ export default function TrainingsRow({ 한줄평, date }: Props) {
     setOpenFolder(folder);
   }
 
+  const displayDate = new Date(`${date}T00:00:00`);
+  const trainingTitle = `${displayDate.getMonth() + 1}/${displayDate.getDate()} 훈련`;
+
   return (
     <section className="trainings-section">
-      <h3 className="section-title">어제의 훈련</h3>
+      <h3 className="section-title">{trainingTitle}</h3>
       <div className="trainings-grid">
         {FOLDERS.map((folder) => {
           const line = 한줄평[folder] ?? "안 함";

@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 
 // /dashboard 접근 시 dashboard_session 쿠키 체크. 없으면 /dashboard/login으로.
-export function middleware(req: NextRequest) {
+export function proxy(req: NextRequest) {
   const { pathname } = req.nextUrl;
   if (!pathname.startsWith("/dashboard")) return NextResponse.next();
   if (pathname === "/dashboard/login") return NextResponse.next();

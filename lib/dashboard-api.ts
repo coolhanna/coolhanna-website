@@ -56,7 +56,8 @@ export const dash = {
   revenueMonthly: () => api<any>("/api/dashboard/revenue-monthly"),
   // 혜린 학습 대시보드 — 일별 스냅샷 카드 기반
   hyerinToday: () => api<HyerinTodayResponse>("/api/dashboard/hyerin/today"),
-  hyerinWeek: () => api<HyerinWeekResponse>("/api/dashboard/hyerin/week"),
+  hyerinWeek: (weekOffset = 0) =>
+    api<HyerinWeekResponse>(`/api/dashboard/hyerin/week?week_offset=${weekOffset}`),
   hyerin30Days: () => api<HyerinMonthResponse>("/api/dashboard/hyerin/30days"),
   hyerinTrainingDetail: (folder: string, date: string) =>
     api<HyerinTrainingDetailResponse>(
@@ -81,9 +82,15 @@ export interface HyerinTodayResponse {
     연속_일수: number;
   };
   한줄평?: Record<string, string>;
+  훈련별_지표?: Record<string, HyerinTrainingMetric>;
   한나용_코멘트?: string;
   혜린용_코멘트?: string;
   누적_지표?: Record<string, string>;
+  data_status?: {
+    source: "snapshot" | "live";
+    is_stale: boolean;
+    warning: string;
+  };
 }
 
 export interface HyerinWeekDay {
@@ -93,22 +100,39 @@ export interface HyerinWeekDay {
   평균점수: number;
   훈련완료: number;
   exists: boolean;
+  source?: "snapshot" | "live";
 }
 
 export interface HyerinWeekResponse {
   days: HyerinWeekDay[];
   표시일: string;
+  week_offset?: number;
+  week_start?: string;
+  week_end?: string;
 }
 
 export interface HyerinMonthDay {
   date: string;
   글자수: number;
   평균점수: number;
+  훈련완료: number;
+  훈련별: Record<string, HyerinTrainingMetric>;
+  코멘트: {
+    한나: string;
+    혜린: string;
+    stale: boolean;
+  };
 }
 
 export interface HyerinMonthResponse {
   days: HyerinMonthDay[];
   표시일: string;
+}
+
+export interface HyerinTrainingMetric {
+  글자수: number;
+  카드수: number;
+  완료: boolean;
 }
 
 export interface HyerinTrainingCard {
