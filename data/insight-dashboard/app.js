@@ -211,6 +211,7 @@ function render() {
 
   renderWorkbench(data);
   renderLaneBars(data);
+  renderSourceTree(data);
   renderTodayFocus(data);
   renderGapBoard(data);
   renderSourceCards(data);
@@ -474,6 +475,56 @@ function renderLaneBars(data) {
           <span>${laneLabels[item.lane]}</span>
           <div class="track"><span class="fill ${item.lane}" style="width:${(item.count / max) * 100}%"></span></div>
           <strong>${number(item.count)}</strong>
+        </div>
+      `,
+    )
+    .join("");
+}
+
+function renderSourceTree(data) {
+  const tree = data.sourceTree || [];
+  const root = document.getElementById("sourceTree");
+  if (!root) return;
+  root.innerHTML = tree
+    .map(
+      (branch) => `
+        <article class="tree-branch">
+          <header>
+            <div>
+              <h3>${escapeHtml(branch.label)}</h3>
+              <p>${escapeHtml(branch.note || "")}</p>
+            </div>
+            <strong>${number(branch.count)}</strong>
+          </header>
+          <div class="tree-children">
+            ${(branch.children || [])
+              .map(
+                (child) => `
+                  <details class="tree-child" ${child.children?.length ? "" : "open"}>
+                    <summary>
+                      <span>${escapeHtml(child.label)}</span>
+                      <em>${child.count ? number(child.count) : escapeHtml(child.note || "")}</em>
+                    </summary>
+                    ${child.children?.length ? `<div class="tree-leaves">${renderTreeLeaves(child.children)}</div>` : ""}
+                    ${child.note && child.children?.length ? `<p>${escapeHtml(child.note)}</p>` : ""}
+                  </details>
+                `,
+              )
+              .join("")}
+          </div>
+        </article>
+      `,
+    )
+    .join("");
+}
+
+function renderTreeLeaves(items) {
+  return items
+    .map(
+      (item) => `
+        <div class="tree-leaf">
+          <span>${escapeHtml(item.label)}</span>
+          <em>${item.count ? number(item.count) : escapeHtml(item.note || "")}</em>
         </div>
       `,
     )

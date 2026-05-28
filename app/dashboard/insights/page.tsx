@@ -2,7 +2,7 @@ import type { Metadata } from "next";
 import Link from "next/link";
 
 export const metadata: Metadata = {
-  title: "한나 인사이트 현황판 — 쿨한나",
+  title: "Thinking Partner — 쿨한나",
   robots: { index: false, follow: false },
 };
 
@@ -15,7 +15,7 @@ export default function InsightsDashboardPage() {
             <Link href="/dashboard" className="text-xs text-muted hover:opacity-70">
               ← 운영 대시보드
             </Link>
-            <h1 className="mt-1 text-2xl font-semibold tracking-tight">한나 인사이트 현황판</h1>
+            <h1 className="mt-1 text-2xl font-semibold tracking-tight">Thinking Partner</h1>
           </div>
           <a
             href="/dashboard/insights/static/index.html"
@@ -32,7 +32,7 @@ export default function InsightsDashboardPage() {
           </a>
         </header>
         <iframe
-          title="한나 인사이트 현황판"
+          title="Thinking Partner"
           src="/dashboard/insights/static/index.html"
           className="h-[calc(100vh-92px)] w-full rounded-xl border"
           style={{ borderColor: "var(--border)", backgroundColor: "#f7f6f0" }}

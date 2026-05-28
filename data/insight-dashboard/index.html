@@ -3,13 +3,13 @@
   <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
-    <title>Coolhanna Insight Dashboard</title>
-    <link rel="stylesheet" href="./styles.css?v=20260528-1738" />
+    <title>Coolhanna Thinking Partner</title>
+    <link rel="stylesheet" href="./styles.css?v=20260528-1810" />
   </head>
   <body>
     <div class="app-shell">
       <aside class="rail" aria-label="대시보드 메뉴">
-        <div class="mark">H</div>
+        <div class="mark">T</div>
         <button class="rail-btn active" data-view="overview" title="현황">현황</button>
         <button class="rail-btn" data-view="themes" title="인사이트">인사이트</button>
         <button class="rail-btn" data-view="inner" title="한나 관점">한나</button>
@@ -21,8 +21,8 @@
       <main>
         <header class="topbar">
           <div>
-            <p class="eyebrow">다른 대시보드에서 이미 보는 자료는 빼고, 오늘 흡수할 재료만</p>
-            <h1>한나 인사이트 현황판</h1>
+            <p class="eyebrow">자료 저장소가 아니라, 생각을 같이 정리하는 화면</p>
+            <h1>Thinking Partner</h1>
           </div>
           <div class="meta">
             <label class="search-box">
@@ -61,6 +61,14 @@
               <div class="lane-bars" id="laneBars"></div>
             </article>
           </div>
+
+          <section class="section-block first-block source-map-section">
+            <div class="section-title">
+              <h2>수집 목차</h2>
+              <p>YouTube, AI 트렌드, 강의, 내 사고, 도서관이 어떤 가지로 쌓이고 있는지 먼저 봅니다.</p>
+            </div>
+            <div id="sourceTree" class="source-tree"></div>
+          </section>
 
           <section class="section-block first-block">
             <div class="section-title">
@@ -180,7 +188,7 @@
       <button id="closeDialog">닫기</button>
     </dialog>
 
-    <script type="module" src="./app.js?v=20260528-1738"></script>
+    <script type="module" src="./app.js?v=20260528-1810"></script>
     <div id="toast" class="toast" role="status" aria-live="polite"></div>
   </body>
 </html>

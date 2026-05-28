@@ -877,6 +877,135 @@ h2 {
   margin-top: 0;
 }
 
+.source-map-section {
+  margin-bottom: 24px;
+}
+
+.source-tree {
+  display: grid;
+  grid-template-columns: repeat(5, minmax(0, 1fr));
+  gap: 10px;
+}
+
+.tree-branch {
+  border: 1px solid var(--line);
+  border-top: 4px solid var(--green);
+  background: rgba(255, 255, 255, 0.78);
+  box-shadow: var(--shadow);
+  min-height: 280px;
+  padding: 13px;
+}
+
+.tree-branch:nth-child(2) {
+  border-top-color: var(--blue);
+}
+
+.tree-branch:nth-child(3) {
+  border-top-color: var(--gold);
+}
+
+.tree-branch:nth-child(5) {
+  border-top-color: var(--red);
+}
+
+.tree-branch header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 10px;
+  margin-bottom: 10px;
+}
+
+.tree-branch h3 {
+  font-size: 17px;
+  line-height: 1.25;
+  margin: 0 0 5px;
+}
+
+.tree-branch p {
+  color: var(--muted);
+  font-size: 12px;
+  line-height: 1.45;
+  margin: 0;
+}
+
+.tree-branch header strong {
+  font-size: 27px;
+  line-height: 1;
+}
+
+.tree-children {
+  display: grid;
+  gap: 7px;
+}
+
+.tree-child {
+  border: 1px solid var(--line);
+  background: rgba(251, 252, 248, 0.78);
+}
+
+.tree-child summary {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 8px;
+  min-height: 34px;
+  padding: 7px 9px;
+  cursor: pointer;
+  list-style: none;
+}
+
+.tree-child summary::-webkit-details-marker {
+  display: none;
+}
+
+.tree-child summary span,
+.tree-leaf span {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.tree-child summary span {
+  color: var(--ink);
+  font-size: 13px;
+  font-weight: 800;
+}
+
+.tree-child summary em,
+.tree-leaf em {
+  color: var(--muted);
+  font-size: 11px;
+  font-style: normal;
+  font-weight: 800;
+}
+
+.tree-child > p {
+  border-top: 1px solid var(--line);
+  padding: 7px 9px;
+}
+
+.tree-leaves {
+  border-top: 1px solid var(--line);
+  display: grid;
+  gap: 1px;
+  padding: 6px;
+}
+
+.tree-leaf {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 7px;
+  min-height: 27px;
+  padding: 4px 5px;
+}
+
+.tree-leaf + .tree-leaf {
+  border-top: 1px solid rgba(216, 221, 214, 0.7);
+}
+
 .section-title {
   display: flex;
   justify-content: space-between;
@@ -1517,6 +1646,7 @@ dialog button {
   .search-results,
   .gap-grid,
   .cluster-grid,
+  .source-tree,
   .library-bars,
   .library-board,
   .intake-grid,
