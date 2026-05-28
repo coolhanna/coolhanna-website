@@ -9,7 +9,7 @@ import {
 import TrainingsRow from "./TrainingsRow";
 
 export const metadata: Metadata = {
-  title: "혜린의 작은 작가방 — 쿨한나",
+  title: "혜린의 이야기 아틀리에 — 쿨한나",
   robots: { index: false, follow: false },
 };
 
@@ -158,16 +158,12 @@ function Header({
   return (
     <header className="hyerin-header">
       <div>
-        <p className="eyebrow">HYERIN WRITING ROOM</p>
-        <h1>혜린의 작은 작가방</h1>
+        <p className="eyebrow">HYERIN STORY ATELIER</p>
+        <h1>혜린의 이야기 아틀리에</h1>
         <p className="header-sub">
           {month}월 {day}일 ({wd}) 기록 · {status}
         </p>
-        <div className="header-charms" aria-label="작가방 분위기">
-          <span>작가 노트</span>
-          <span>오늘도 한 장면</span>
-          <span>반짝 저장</span>
-        </div>
+        <p className="header-note">읽고 · 말하고 · 쓰고 · 만들어 보는 오늘</p>
       </div>
       <div className="date-badge">
         <strong>{day}</strong>
@@ -639,30 +635,11 @@ const HYERIN_CSS = `
     color: var(--muted);
     font-size: 0.92rem;
   }
-  .header-charms {
-    display: flex;
-    flex-wrap: wrap;
-    gap: 0.4rem;
-    margin-top: 0.65rem;
-  }
-  .header-charms span {
-    border: 1px solid #E7CDBB;
-    background: rgba(255, 253, 248, 0.72);
-    border-radius: 0.35rem;
-    color: #75574B;
-    font-size: 0.74rem;
+  .header-note {
+    color: #7D6657;
+    font-size: 0.78rem;
     font-weight: 800;
-    padding: 0.28rem 0.58rem;
-  }
-  .header-charms span:nth-child(2) {
-    border-color: #D7C7E8;
-    color: #625177;
-    background: rgba(239, 230, 250, 0.72);
-  }
-  .header-charms span:nth-child(3) {
-    border-color: #C9DFC8;
-    color: #4F735D;
-    background: rgba(227, 241, 232, 0.78);
+    margin: 0.58rem 0 0;
   }
   .date-badge {
     width: 3.7rem;
