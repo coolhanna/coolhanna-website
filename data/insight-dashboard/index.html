@@ -1,0 +1,186 @@
+<!doctype html>
+<html lang="ko">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Coolhanna Insight Dashboard</title>
+    <link rel="stylesheet" href="./styles.css?v=20260528-1640" />
+  </head>
+  <body>
+    <div class="app-shell">
+      <aside class="rail" aria-label="대시보드 메뉴">
+        <div class="mark">H</div>
+        <button class="rail-btn active" data-view="overview" title="현황">현황</button>
+        <button class="rail-btn" data-view="themes" title="인사이트">인사이트</button>
+        <button class="rail-btn" data-view="inner" title="한나 관점">한나</button>
+        <button class="rail-btn" data-view="sources" title="자료원">자료</button>
+        <button class="rail-btn" data-view="library" title="도서관">도서관</button>
+        <button class="rail-btn" data-view="intake" title="수집">수집</button>
+      </aside>
+
+      <main>
+        <header class="topbar">
+          <div>
+            <p class="eyebrow">다른 대시보드에서 이미 보는 자료는 빼고, 오늘 흡수할 재료만</p>
+            <h1>한나 인사이트 현황판</h1>
+          </div>
+          <div class="meta">
+            <label class="search-box">
+              <span>검색</span>
+              <input id="globalSearch" type="search" placeholder="책, 강의, AI 변화, 한나 관점 검색" />
+            </label>
+            <span id="generatedAt">스캔 대기 중</span>
+            <button id="refreshNotice" class="ghost-btn" title="데이터 갱신 안내">갱신 방법</button>
+          </div>
+        </header>
+
+        <section id="searchPanel" class="search-panel" hidden>
+          <div class="section-title compact-title">
+            <h2>검색 결과</h2>
+            <p id="searchSummary"></p>
+          </div>
+          <div id="searchResults" class="search-results"></div>
+        </section>
+
+        <section id="overview" class="view active">
+          <div class="hero-grid priority-grid">
+            <article class="focus-panel">
+              <div class="panel-head">
+                <span>15분 흡수 큐</span>
+                <strong id="todayCount">-</strong>
+              </div>
+              <div id="todayFocus" class="focus-list"></div>
+            </article>
+
+            <article class="signal-panel">
+              <div class="panel-head">
+                <span>남긴 인사이트</span>
+                <strong id="allMarkdown">-</strong>
+              </div>
+              <p>댓글 반응, 책, 아이디어, 데일리 요약, 사고 OS는 각자 더 맞는 자리로 보내고 여기에는 바로 흡수할 재료만 남깁니다.</p>
+              <div class="lane-bars" id="laneBars"></div>
+            </article>
+          </div>
+
+          <section class="section-block first-block">
+            <div class="section-title">
+              <h2>지금 놓치고 있는 것</h2>
+              <p>남은 자료 안에서도 한나 관점, 외부 근거, 반응 신호 중 약한 축이 있으면 산출물이 흐려집니다.</p>
+            </div>
+            <div id="gapBoard" class="gap-grid"></div>
+          </section>
+
+          <section class="reader-section">
+            <div class="section-title">
+              <h2>대시보드 안에서 읽기</h2>
+              <p>카드를 누르면 Obsidian으로 나가기 전에 여기서 먼저 맥락을 확인합니다.</p>
+            </div>
+            <article id="readerPanel" class="reader-panel"></article>
+          </section>
+
+          <section class="workbench-section">
+            <div class="section-title">
+              <h2>남은 흡수 세트</h2>
+              <p>다른 대시보드에서 이미 보는 자료를 제외하고, 오늘 써먹을 관점과 근거와 반응만 묶습니다.</p>
+            </div>
+            <div id="workbench" class="workbench-grid"></div>
+          </section>
+
+          <section class="section-block">
+            <div class="section-title">
+              <h2>자료별 현황</h2>
+              <p>보관된 전체가 아니라 이 화면에 실제로 남긴 흡수 재료만 셉니다.</p>
+            </div>
+            <div id="sourceCards" class="metric-grid"></div>
+          </section>
+
+          <section class="section-block">
+            <div class="section-title">
+              <h2>이번 화면에서 제외한 것</h2>
+              <p>이미 잘 정리된 책, 아이디어/할일, 댓글 반응, 데일리 요약, 내부 OS/프롬프트/대본 패턴은 여기서 일부러 걷어냈습니다.</p>
+            </div>
+            <div id="excludedCards" class="metric-grid compact"></div>
+          </section>
+        </section>
+
+        <section id="themes" class="view">
+          <div class="section-title">
+            <h2>주제별 인사이트 보드</h2>
+            <p>여기서 얻을 것은 “뭘 읽을까”가 아니라 “어떤 관점으로 말할까”입니다.</p>
+          </div>
+          <div id="themeBoard" class="theme-grid"></div>
+        </section>
+
+        <section id="inner" class="view">
+          <div class="section-title">
+            <h2>한나 관점</h2>
+            <p>본질 인터뷰나 사고 OS가 아니라, 음성 사고흐름·앤드엔·비즈니스 PT처럼 지금 판단으로 바꿀 수 있는 재료만 봅니다.</p>
+          </div>
+          <div id="hannaClusters" class="cluster-grid"></div>
+          <div id="innerBoard" class="insight-grid"></div>
+        </section>
+
+        <section id="sources" class="view">
+          <div class="section-title">
+            <h2>자료원</h2>
+            <p>롱블랙, 유튜브, 크리에이터 분석, 내 릴스 반응이 어떤 근거를 주는지 확인합니다.</p>
+          </div>
+          <div id="recentDocs" class="table-list"></div>
+        </section>
+
+        <section id="library" class="view">
+          <div class="section-title">
+            <h2>도서관</h2>
+            <p>책은 이미 좋은 정보가 많으니 본 보드에 섞지 않고, 한눈에 훑는 독립 카테고리로 봅니다.</p>
+          </div>
+          <div id="libraryBars" class="library-bars"></div>
+          <div id="libraryBoard" class="library-board"></div>
+        </section>
+
+        <section id="intake" class="view">
+          <div class="section-title">
+            <h2>링크 수집과 AI 레이더</h2>
+            <p>그때그때 보낸 링크와 빠르게 바뀌는 AI 자료를 한나 관점으로 바꾸는 작업대입니다.</p>
+          </div>
+          <div id="intakeBoard" class="intake-grid"></div>
+          <div class="section-title sub-title">
+            <h2>AI 레이더 2.0 라인업</h2>
+            <p id="aiRadarNote">기존 샘플을 제외하고 새 소스 라인업으로 다시 시작합니다.</p>
+          </div>
+          <article id="radarAutomation" class="automation-panel"></article>
+          <div id="radarLineup" class="radar-lineup"></div>
+          <div class="section-title sub-title">
+            <h2>요약 방식</h2>
+            <p>원문을 쌓는 게 아니라 한나가 바로 흡수할 카드로 바꿉니다.</p>
+          </div>
+          <div id="radarWorkflow" class="workflow-grid"></div>
+          <article class="radar-template">
+            <header>
+              <div>
+                <h3>AI 레이더 카드 필드</h3>
+                <p>링크를 보냈을 때 이 항목만 남기면 자료가 쌓여도 다시 보기 쉽습니다.</p>
+              </div>
+              <button id="copyRadarPrompt" class="ghost-mini" type="button">레이더 프롬프트 복사</button>
+            </header>
+            <div id="radarFields" class="radar-fields"></div>
+          </article>
+        </section>
+      </main>
+
+      <aside id="readerDrawer" class="reader-drawer" hidden aria-label="본문 이어보기">
+        <button id="closeReader" class="drawer-close" type="button" aria-label="닫기">×</button>
+        <article id="readerDrawerPanel" class="reader-panel drawer-panel"></article>
+      </aside>
+    </div>
+
+    <dialog id="refreshDialog">
+      <h2>데이터 갱신</h2>
+      <p>vault가 바뀐 뒤 아래 명령을 실행하면 대시보드 데이터가 다시 만들어집니다.</p>
+      <code>node scripts/generate-data.mjs</code>
+      <button id="closeDialog">닫기</button>
+    </dialog>
+
+    <script type="module" src="./app.js?v=20260528-1640"></script>
+    <div id="toast" class="toast" role="status" aria-live="polite"></div>
+  </body>
+</html>

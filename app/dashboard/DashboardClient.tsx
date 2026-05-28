@@ -3274,6 +3274,7 @@ function DetailLinks() {
     { label: "광고", href: "/dashboard/ads" },
     { label: "공구", href: "/dashboard/gongu" },
     { label: "매출", href: "/dashboard/revenue" },
+    { label: "인사이트", href: "/dashboard/insights" },
     { label: "할일", alert: "준비 중 — 곧 만들 예정" },
     { label: "아이디어", alert: "준비 중 — 곧 만들 예정" },
     { label: "건강", alert: "준비 중 — 곧 만들 예정" },

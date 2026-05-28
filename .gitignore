@@ -38,3 +38,6 @@ yarn-error.log*
 # typescript
 *.tsbuildinfo
 next-env.d.ts
+
+# private generated dashboard data
+data/insight-dashboard/data/dashboard-data.json
