@@ -9,7 +9,7 @@ import {
 import TrainingsRow from "./TrainingsRow";
 
 export const metadata: Metadata = {
-  title: "혜린 학습 관제판 — 쿨한나",
+  title: "혜린의 작은 작가방 — 쿨한나",
   robots: { index: false, follow: false },
 };
 
@@ -158,11 +158,16 @@ function Header({
   return (
     <header className="hyerin-header">
       <div>
-        <p className="eyebrow">HYERIN STUDY OPS</p>
-        <h1>혜린 학습 관제판</h1>
+        <p className="eyebrow">HYERIN WRITING ROOM</p>
+        <h1>혜린의 작은 작가방</h1>
         <p className="header-sub">
           {month}월 {day}일 ({wd}) 기록 · {status}
         </p>
+        <div className="header-charms" aria-label="작가방 분위기">
+          <span>작가 노트</span>
+          <span>오늘도 한 장면</span>
+          <span>반짝 저장</span>
+        </div>
       </div>
       <div className="date-badge">
         <strong>{day}</strong>
@@ -185,7 +190,7 @@ function TodayStatus({
   return (
     <section className="status-panel">
       <div className="status-top">
-        <span>오늘 상태</span>
+        <span>오늘의 반짝</span>
         <strong>{completionRate}%</strong>
       </div>
       <div className="hero-metric">
@@ -232,7 +237,7 @@ function NextAction({
   const action =
     summary.훈련_완료 === 0
       ? `${priorityLabel} 하나만 열고 10분짜리 기록을 남기기`
-      : `${priorityLabel}를 다음 1순위로 잡고 균형 회복하기`;
+      : `${priorityLabel} 한 칸만 살짝 채워보기`;
   const completedText =
     completed.length > 0
       ? completed.map((key) => TRAINING_LABELS[key] ?? key).join(", ")
@@ -240,10 +245,10 @@ function NextAction({
 
   return (
     <section className="action-panel">
-      <div className="panel-label">다음 판단</div>
+      <div className="panel-label">다음 작은 발걸음</div>
       <h2>{action}</h2>
       <p>
-        완료한 훈련은 {completedText}. 지금은 양보다 공백을 줄이는 쪽이 더 중요합니다.
+        오늘 모은 조각은 {completedText}. 지금은 양보다 공백을 줄이는 쪽이 더 중요합니다.
       </p>
     </section>
   );
@@ -560,38 +565,60 @@ function ErrorState({ errors }: { errors: string[] }) {
 
 const HYERIN_CSS = `
   .hyerin-dashboard {
-    --paper: #F4F1EA;
+    --paper: #F8F1E7;
     --surface: #FFFDF8;
-    --surface-strong: #272A25;
-    --ink: #242822;
-    --muted: #73736A;
-    --line: #DDD7CA;
-    --amber: #D48A3A;
-    --amber-soft: #F8E4C8;
-    --mint: #5E8F78;
-    --mint-soft: #DDEBE2;
+    --surface-strong: #2B2B24;
+    --ink: #292923;
+    --muted: #746E64;
+    --line: #E6D8C7;
+    --amber: #DD9550;
+    --amber-soft: #FFE8BE;
+    --mint: #6C987E;
+    --mint-soft: #E3F1E8;
+    --peach: #EFA79E;
+    --peach-soft: #FFE5DE;
+    --blue-soft: #E7EFFB;
+    --lilac-soft: #EFE6FA;
+    --butter: #FFF3C9;
     --danger: #B65E43;
 
     min-height: 100vh;
-    background: var(--paper);
+    background:
+      linear-gradient(rgba(255, 255, 255, 0.44) 1px, transparent 1px),
+      linear-gradient(90deg, rgba(255, 255, 255, 0.38) 1px, transparent 1px),
+      linear-gradient(135deg, #F8F1E7 0%, #F7E8DE 48%, #EEF4E9 100%);
+    background-size: 28px 28px, 28px 28px, auto;
     color: var(--ink);
     font-family: ui-sans-serif, system-ui, "Apple SD Gothic Neo", "Noto Sans KR", sans-serif;
     padding: 1.25rem;
   }
   .hyerin-dashboard * { box-sizing: border-box; }
   .hyerin-shell {
+    position: relative;
     width: min(1120px, 100%);
     margin: 0 auto;
     display: flex;
     flex-direction: column;
     gap: 0.75rem;
   }
+  .hyerin-shell::before {
+    content: "✦";
+    position: absolute;
+    top: 0.35rem;
+    right: 6.2rem;
+    color: var(--peach);
+    font-size: 1.25rem;
+    font-weight: 900;
+    transform: rotate(10deg);
+    pointer-events: none;
+  }
   .hyerin-header {
+    position: relative;
     display: flex;
     justify-content: space-between;
     align-items: flex-end;
     gap: 1rem;
-    padding: 0.25rem 0 0.5rem;
+    padding: 0.35rem 0 0.65rem;
   }
   .eyebrow {
     margin: 0 0 0.35rem;
@@ -612,18 +639,45 @@ const HYERIN_CSS = `
     color: var(--muted);
     font-size: 0.92rem;
   }
+  .header-charms {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.4rem;
+    margin-top: 0.65rem;
+  }
+  .header-charms span {
+    border: 1px solid #E7CDBB;
+    background: rgba(255, 253, 248, 0.72);
+    border-radius: 0.35rem;
+    color: #75574B;
+    font-size: 0.74rem;
+    font-weight: 800;
+    padding: 0.28rem 0.58rem;
+  }
+  .header-charms span:nth-child(2) {
+    border-color: #D7C7E8;
+    color: #625177;
+    background: rgba(239, 230, 250, 0.72);
+  }
+  .header-charms span:nth-child(3) {
+    border-color: #C9DFC8;
+    color: #4F735D;
+    background: rgba(227, 241, 232, 0.78);
+  }
   .date-badge {
     width: 3.7rem;
     aspect-ratio: 1;
-    background: var(--surface-strong);
-    color: var(--surface);
+    background: #2C2B24;
+    color: #FFF8E8;
     display: grid;
     place-items: center;
     align-content: center;
     border-radius: 0.45rem;
+    border: 2px solid #F0B6AC;
+    box-shadow: 5px 5px 0 #F4D4BC;
   }
   .date-badge strong { font-size: 1.55rem; line-height: 1; }
-  .date-badge span { font-size: 0.75rem; color: #D8D3C7; }
+  .date-badge span { font-size: 0.75rem; color: #F1DACB; }
 
   .command-grid {
     display: grid;
@@ -644,11 +698,32 @@ const HYERIN_CSS = `
     background: var(--surface);
     border: 1px solid var(--line);
     border-radius: 0.5rem;
+    box-shadow: 0 1px 0 rgba(86, 73, 55, 0.05);
   }
   .status-panel {
+    position: relative;
+    overflow: hidden;
     padding: 1rem;
-    background: var(--surface-strong);
+    background:
+      linear-gradient(135deg, rgba(255, 243, 201, 0.12) 0 25%, transparent 25% 50%, rgba(255, 243, 201, 0.12) 50% 75%, transparent 75%),
+      var(--surface-strong);
+    background-size: 18px 18px, auto;
     color: var(--surface);
+    border-color: #38372F;
+  }
+  .status-panel::after {
+    content: "작가력";
+    position: absolute;
+    top: 0.72rem;
+    right: 4.8rem;
+    color: #332F27;
+    background: var(--butter);
+    border: 1px solid #E2C978;
+    border-radius: 0.32rem;
+    padding: 0.18rem 0.42rem;
+    font-size: 0.68rem;
+    font-weight: 900;
+    transform: rotate(3deg);
   }
   .status-top {
     display: flex;
@@ -676,8 +751,8 @@ const HYERIN_CSS = `
   }
   .metric-box {
     min-width: 0;
-    background: rgba(255, 253, 248, 0.08);
-    border: 1px solid rgba(255, 253, 248, 0.13);
+    background: rgba(255, 253, 248, 0.1);
+    border: 1px solid rgba(255, 253, 248, 0.18);
     border-radius: 0.4rem;
     padding: 0.55rem 0.45rem;
   }
@@ -694,13 +769,27 @@ const HYERIN_CSS = `
   }
 
   .action-panel {
+    position: relative;
     padding: 1rem 1.1rem;
     display: flex;
     flex-direction: column;
     justify-content: center;
+    background:
+      linear-gradient(90deg, rgba(239, 167, 158, 0.18), transparent 38%),
+      var(--surface);
+    border-color: #E8C8B7;
+  }
+  .action-panel::before {
+    content: "✎";
+    position: absolute;
+    right: 1rem;
+    top: 0.8rem;
+    color: var(--peach);
+    font-size: 1.1rem;
+    font-weight: 900;
   }
   .panel-label {
-    color: var(--mint);
+    color: #B16E5E;
     font-size: 0.75rem;
     font-weight: 800;
     margin-bottom: 0.45rem;
@@ -720,6 +809,9 @@ const HYERIN_CSS = `
   }
   .trainings-section {
     padding: 0.9rem;
+    background:
+      linear-gradient(180deg, rgba(255, 243, 201, 0.2), transparent 38%),
+      var(--surface);
   }
   .section-title,
   .section-head h3 {
@@ -772,21 +864,47 @@ const HYERIN_CSS = `
     align-items: start;
   }
   .training-card {
+    position: relative;
     min-height: 7.1rem;
     border: 1px solid var(--line);
     border-radius: 0.45rem;
     padding: 0.7rem;
-    background: #F7F3EA;
+    background: #FAF2E8;
     display: flex;
     flex-direction: column;
     gap: 0.45rem;
+  }
+  .training-card::before {
+    content: "";
+    position: absolute;
+    top: -1px;
+    left: 0.7rem;
+    width: 2.1rem;
+    height: 0.35rem;
+    background: rgba(239, 167, 158, 0.58);
+    border-radius: 0 0 0.25rem 0.25rem;
   }
   .training-card.done {
     background: var(--mint-soft);
     border-color: #AFC9BA;
   }
+  .training-card.done:nth-child(2) {
+    background: var(--mint-soft);
+  }
+  .training-card.done:nth-child(3) {
+    background: var(--blue-soft);
+    border-color: #BFD0E8;
+  }
+  .training-card.done:nth-child(4) {
+    background: var(--peach-soft);
+    border-color: #E9B9AD;
+  }
+  .training-card.done:nth-child(5) {
+    background: var(--lilac-soft);
+    border-color: #D2C2E6;
+  }
   .training-card.empty {
-    background: #F3EFE6;
+    background: #F5EFE5;
     color: var(--muted);
     opacity: 0.78;
   }
@@ -801,7 +919,17 @@ const HYERIN_CSS = `
     font-size: 0.76rem;
     font-weight: 850;
   }
-  .check { color: var(--mint); font-weight: 900; }
+  .check {
+    color: #7B5C3F;
+    background: rgba(255, 253, 248, 0.65);
+    border: 1px solid rgba(123, 92, 63, 0.18);
+    border-radius: 0.35rem;
+    display: inline-grid;
+    place-items: center;
+    width: 1.2rem;
+    height: 1.2rem;
+    font-weight: 900;
+  }
   .training-line {
     color: var(--ink);
     font-size: 0.74rem;
@@ -815,7 +943,7 @@ const HYERIN_CSS = `
     align-self: flex-start;
     margin-top: auto;
     border: 1px solid var(--line);
-    background: var(--surface);
+    background: #FFF8ED;
     color: var(--ink);
     border-radius: 0.35rem;
     padding: 0.35rem 0.55rem;
@@ -823,6 +951,10 @@ const HYERIN_CSS = `
     font-weight: 800;
     cursor: pointer;
     font-family: inherit;
+  }
+  .detail-btn:hover:not(:disabled) {
+    border-color: var(--peach);
+    background: #FFF1E8;
   }
   .detail-btn:disabled { opacity: 0.6; cursor: wait; }
   .training-detail {
@@ -885,7 +1017,7 @@ const HYERIN_CSS = `
     min-width: 0;
     min-height: 6.3rem;
     border: 1px solid transparent;
-    background: #F5F0E7;
+    background: #F8F1E8;
     border-radius: 0.38rem;
     padding: 0.45rem 0.3rem;
     display: flex;
@@ -894,11 +1026,17 @@ const HYERIN_CSS = `
     gap: 0.25rem;
   }
   .week-cell.is-focus {
-    border-color: var(--ink);
-    background: var(--amber-soft);
+    border-color: #8D7152;
+    background: var(--butter);
+    box-shadow: inset 0 0 0 2px rgba(255, 253, 248, 0.6);
   }
   .week-cell.is-live {
     box-shadow: inset 0 -3px 0 var(--mint);
+  }
+  .week-cell.is-focus.is-live {
+    box-shadow:
+      inset 0 0 0 2px rgba(255, 253, 248, 0.6),
+      inset 0 -3px 0 var(--mint);
   }
   .week-cell.is-empty { opacity: 0.48; }
   .weekday {
@@ -915,7 +1053,7 @@ const HYERIN_CSS = `
   }
   .bar {
     width: 58%;
-    background: var(--ink);
+    background: linear-gradient(180deg, var(--peach), var(--amber));
     border-radius: 2px 2px 0 0;
   }
   .chars {
@@ -955,8 +1093,17 @@ const HYERIN_CSS = `
     gap: 0.75rem;
   }
   .comment-block {
+    background:
+      linear-gradient(180deg, rgba(255, 243, 201, 0.18), transparent 45%),
+      var(--surface);
     padding: 0.9rem;
     border-left: 4px solid var(--mint);
+  }
+  .comment-block:nth-child(2) {
+    border-left-color: var(--peach);
+    background:
+      linear-gradient(180deg, rgba(255, 229, 222, 0.42), transparent 55%),
+      var(--surface);
   }
   .comment-block h3 {
     margin: 0 0 0.45rem;
@@ -1003,7 +1150,7 @@ const HYERIN_CSS = `
     border-radius: 2px 2px 0 0;
   }
   .trend-bar.has-data {
-    background: var(--mint);
+    background: linear-gradient(180deg, var(--mint), #86B493);
   }
   .week-cell[data-tooltip]:hover::after,
   .trend-bar[data-tooltip]:hover::after {
@@ -1051,10 +1198,21 @@ const HYERIN_CSS = `
     padding-right: 0.2rem;
   }
   .past-comment-card {
-    background: #F8F4EC;
+    position: relative;
+    background: #FFF9EF;
     border: 1px solid var(--line);
     border-radius: 0.42rem;
     padding: 0.7rem;
+  }
+  .past-comment-card::before {
+    content: "";
+    position: absolute;
+    top: -1px;
+    right: 0.8rem;
+    width: 1.6rem;
+    height: 0.3rem;
+    background: rgba(227, 196, 128, 0.68);
+    border-radius: 0 0 0.2rem 0.2rem;
   }
   .past-comment-head {
     display: flex;
@@ -1096,6 +1254,12 @@ const HYERIN_CSS = `
     margin-top: 0.45rem;
     color: var(--muted);
     font-size: 0.75rem;
+  }
+  .month-chart rect {
+    fill: #2B2B24;
+  }
+  .month-chart circle {
+    fill: var(--peach);
   }
   .month-empty {
     margin: 0;

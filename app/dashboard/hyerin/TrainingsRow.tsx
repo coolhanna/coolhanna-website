@@ -58,7 +58,7 @@ export default function TrainingsRow({ 한줄평, date }: Props) {
   }
 
   const displayDate = new Date(`${date}T00:00:00`);
-  const trainingTitle = `${displayDate.getMonth() + 1}/${displayDate.getDate()} 훈련`;
+  const trainingTitle = `${displayDate.getMonth() + 1}/${displayDate.getDate()} 훈련 스티커`;
 
   return (
     <section className="trainings-section">
