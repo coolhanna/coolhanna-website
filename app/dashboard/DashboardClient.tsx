@@ -86,6 +86,11 @@ function fmtMonthDay(isoStr: string): string {
   }
 }
 
+function fmtWon(n: number | null | undefined): string {
+  if (!n) return "금액 미정";
+  return new Intl.NumberFormat("ko-KR").format(n) + "원";
+}
+
 // v6.6.1 — D-day 색 (마감 임박도 시각 표시)
 function deadlineColor(isoStr: string | null | undefined): string {
   if (!isoStr) return "var(--text-secondary)";
@@ -171,7 +176,9 @@ function Card({
       className={isPrimary ? "rounded-2xl p-5 sm:p-6" : "rounded-2xl p-5"}
       style={{
         backgroundColor: bg || (isSecondary ? "var(--bg-card-soft)" : "var(--bg-card)"),
-        border: `1px solid ${borderColor || "var(--border)"}`,
+        borderStyle: "solid",
+        borderWidth: 1,
+        borderColor: borderColor || "var(--border)",
         ...(accent ? { borderTopColor: accent, borderTopWidth: 3 } : {}),
         ...(isPrimary
           ? { boxShadow: "0 1px 3px rgba(60, 70, 50, 0.06)" }
@@ -405,6 +412,7 @@ type Initial = {
   incomplete: any;
   stuck: any;
   active: any;
+  paymentFollowups: any;
   cashflow: any;
   health: any;
   calendar: any;
@@ -419,6 +427,7 @@ type Initial = {
   todayMe: any;
   memosRecent: any;
   activeTodos: any;
+  thinkingTracks: any;
 };
 
 export default function DashboardClient({ initial }: { initial: Initial }) {
@@ -485,6 +494,8 @@ export default function DashboardClient({ initial }: { initial: Initial }) {
           />
         </div>
 
+        <ThinkingTracks initial={initial.thinkingTracks} />
+
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
           <DailyPanel
             kind="today"
@@ -508,6 +519,8 @@ export default function DashboardClient({ initial }: { initial: Initial }) {
         <ActiveTodos data={initial.activeTodos} />
 
         <ActiveCards data={initial.active} />
+
+        <PaymentFollowups data={initial.paymentFollowups} />
 
         <IdeasRecent initial={initial.ideasRecent} />
 
@@ -1566,6 +1579,275 @@ function WeeklyTodos({ initial }: { initial: any }) {
 }
 
 // ─────────────────────────────────────────────────────────────────────
+// 생각 이어가기 — 이번 달 / 이번 주
+// ─────────────────────────────────────────────────────────────────────
+
+type ThinkingScope = "week" | "month";
+
+function ThinkingTracks({ initial }: { initial: any }) {
+  const [tracks, setTracks] = useState<{ week: any[]; month: any[] }>({
+    week: initial?.week || [],
+    month: initial?.month || [],
+  });
+  const [busy, setBusy] = useState(false);
+
+  async function refresh() {
+    const r = await callApi("GET", "thinking-tracks");
+    setTracks({ week: r.week || [], month: r.month || [] });
+  }
+
+  async function add(scope: ThinkingScope, text: string) {
+    setBusy(true);
+    try {
+      await callApi("POST", "thinking-track", { scope, text });
+      await refresh();
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  async function toggle(scope: ThinkingScope, line: number) {
+    setBusy(true);
+    try {
+      await callApi("PATCH", "thinking-track/toggle", { scope, line });
+      await refresh();
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  async function addNote(scope: ThinkingScope, line: number, text: string) {
+    setBusy(true);
+    try {
+      await callApi("POST", "thinking-track/note", { scope, line, text });
+      await refresh();
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  return (
+    <Card
+      title="생각 이어가기"
+      rightSlot={
+        <span className="text-xs text-muted">
+          월간 {tracks.month.filter((x) => !x.done).length} · 주간{" "}
+          {tracks.week.filter((x) => !x.done).length}
+        </span>
+      }
+    >
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-3">
+        <ThoughtColumn
+          title="이번 주에 이어갈 생각"
+          scope="week"
+          items={tracks.week}
+          busy={busy}
+          placeholder="이번 주에 놓치면 아쉬운 생각"
+          onAdd={add}
+          onToggle={toggle}
+          onAddNote={addNote}
+        />
+        <ThoughtColumn
+          title="이번 달에 붙잡을 생각"
+          scope="month"
+          items={tracks.month}
+          busy={busy}
+          placeholder="이번 달 내내 굴릴 질문"
+          onAdd={add}
+          onToggle={toggle}
+          onAddNote={addNote}
+        />
+      </div>
+    </Card>
+  );
+}
+
+function ThoughtColumn({
+  title,
+  scope,
+  items,
+  busy,
+  placeholder,
+  onAdd,
+  onToggle,
+  onAddNote,
+}: {
+  title: string;
+  scope: ThinkingScope;
+  items: any[];
+  busy: boolean;
+  placeholder: string;
+  onAdd: (scope: ThinkingScope, text: string) => Promise<void>;
+  onToggle: (scope: ThinkingScope, line: number) => Promise<void>;
+  onAddNote: (scope: ThinkingScope, line: number, text: string) => Promise<void>;
+}) {
+  const active = items.filter((it) => !it.done);
+  const done = items.filter((it) => it.done);
+
+  return (
+    <div
+      className="rounded-lg p-3"
+      style={{
+        border: "1px solid var(--border)",
+        backgroundColor: "var(--bg-card-soft)",
+      }}
+    >
+      <div className="flex items-center justify-between gap-2 mb-2">
+        <h3 className="text-sm font-semibold" style={{ color: "var(--text-main)" }}>
+          {title}
+        </h3>
+        <span className="text-[11px] text-muted">{active.length}개 진행</span>
+      </div>
+      {active.length === 0 && done.length === 0 && (
+        <p className="text-sm text-muted">아직 없음</p>
+      )}
+      <div className="space-y-2">
+        {active.map((it) => (
+          <ThoughtRow
+            key={it.line}
+            item={it}
+            busy={busy}
+            onToggle={() => onToggle(scope, it.line)}
+            onAddNote={(text) => onAddNote(scope, it.line, text)}
+          />
+        ))}
+      </div>
+      {done.length > 0 && (
+        <details className="mt-3">
+          <summary className="text-xs text-muted cursor-pointer">
+            닫은 생각 {done.length}개
+          </summary>
+          <div className="space-y-1.5 mt-2">
+            {done.map((it) => (
+              <ThoughtRow
+                key={it.line}
+                item={it}
+                busy={busy}
+                onToggle={() => onToggle(scope, it.line)}
+                onAddNote={(text) => onAddNote(scope, it.line, text)}
+                compact
+              />
+            ))}
+          </div>
+        </details>
+      )}
+      <AddInline placeholder={placeholder} onAdd={(text) => onAdd(scope, text)} />
+    </div>
+  );
+}
+
+function ThoughtRow({
+  item,
+  busy,
+  onToggle,
+  onAddNote,
+  compact,
+}: {
+  item: any;
+  busy: boolean;
+  onToggle: () => void;
+  onAddNote: (text: string) => Promise<void>;
+  compact?: boolean;
+}) {
+  const [adding, setAdding] = useState(false);
+  const [text, setText] = useState("");
+  const notes = item.notes || [];
+  const lastNotes = compact ? notes.slice(-1) : notes.slice(-3);
+
+  async function submit() {
+    const value = text.trim();
+    if (!value || busy) return;
+    try {
+      await onAddNote(value);
+      setText("");
+      setAdding(false);
+    } catch (e) {
+      alert("저장 실패: " + (e as Error).message);
+    }
+  }
+
+  return (
+    <div
+      className="rounded-md p-2"
+      style={{
+        backgroundColor: "var(--bg-card)",
+        border: "1px solid var(--border)",
+      }}
+    >
+      <label className="flex items-start gap-2 cursor-pointer">
+        <input
+          type="checkbox"
+          checked={!!item.done}
+          onChange={onToggle}
+          disabled={busy}
+          className="mt-[3px] w-4 h-4 rounded shrink-0 cursor-pointer"
+        />
+        <span
+          className={
+            "text-sm leading-snug flex-1 " +
+            (item.done ? "line-through text-muted" : "text-ink")
+          }
+        >
+          {item.text}
+        </span>
+      </label>
+      {lastNotes.length > 0 && (
+        <ul className="mt-1.5 ml-6 space-y-0.5">
+          {lastNotes.map((note: string, idx: number) => (
+            <li key={idx} className="text-xs text-muted leading-snug">
+              {note}
+            </li>
+          ))}
+        </ul>
+      )}
+      {!compact && (
+        adding ? (
+          <div className="flex gap-1.5 mt-2 ml-6">
+            <input
+              autoFocus
+              value={text}
+              onChange={(e) => setText(e.target.value)}
+              onKeyDown={(e) => {
+                if (e.key === "Enter") submit();
+                if (e.key === "Escape") {
+                  setAdding(false);
+                  setText("");
+                }
+              }}
+              placeholder="꼬리 생각"
+              disabled={busy}
+              className="flex-1 text-xs rounded px-2 py-1 outline-none"
+              style={{
+                border: "1px solid var(--border)",
+                backgroundColor: "var(--bg-card)",
+                color: "var(--text-main)",
+              }}
+            />
+            <button
+              onClick={submit}
+              disabled={busy || !text.trim()}
+              className="text-xs px-2 py-1 rounded disabled:opacity-50"
+              style={{ backgroundColor: "var(--accent)", color: "#ffffff" }}
+            >
+              Enter
+            </button>
+          </div>
+        ) : (
+          <button
+            onClick={() => setAdding(true)}
+            disabled={busy}
+            className="text-[11px] mt-1.5 ml-6 transition hover:opacity-70 disabled:opacity-50"
+            style={{ color: "var(--accent)" }}
+          >
+            + 꼬리
+          </button>
+        )
+      )}
+    </div>
+  );
+}
+
+// ─────────────────────────────────────────────────────────────────────
 // 오늘 / 내일 패널
 // ─────────────────────────────────────────────────────────────────────
 
@@ -2205,6 +2487,78 @@ function QuickTasks({ initial }: { initial: any }) {
 }
 
 // ─────────────────────────────────────────────────────────────────────
+// 입금 대기 — 업로드/마감 이후 돈 들어올 카드만
+// ─────────────────────────────────────────────────────────────────────
+
+function PaymentFollowups({ data }: { data: any }) {
+  if (data?.error) {
+    return (
+      <Card title="입금 대기">
+        <ErrorBox msg={data.error} />
+      </Card>
+    );
+  }
+  const items: any[] = data?.items || [];
+  if (items.length === 0) {
+    return null;
+  }
+
+  return (
+    <Card
+      title="입금 대기"
+      bg="var(--bg-card-soft)"
+      borderColor="var(--border)"
+      rightSlot={
+        <span className="text-xs text-muted">
+          {items.length}건
+          {data?.overdue > 0 && (
+            <span style={{ color: "var(--danger)" }}> · 지연 {data.overdue}</span>
+          )}
+        </span>
+      }
+    >
+      <div className="divide-y" style={{ borderColor: "var(--border)" }}>
+        {items.map((it) => {
+          const overdue =
+            typeof it.days_until_payment === "number" && it.days_until_payment < 0;
+          return (
+            <div
+              key={`${it.type}-${it.file}`}
+              className="flex flex-wrap items-center gap-x-2 gap-y-1 py-1.5 text-xs"
+            >
+              <ActiveCardTag audience={it.audience} type={it.type} />
+              <span className="font-medium min-w-0 truncate max-w-[180px] sm:max-w-[260px]">
+                {it.title}
+              </span>
+              <span
+                className="font-medium"
+                style={{
+                  color: overdue ? "var(--danger-text)" : "var(--text-secondary)",
+                }}
+              >
+                {it.wait_label}
+              </span>
+              <span className="text-muted">
+                {it.anchor_label} {it.anchor_date ? fmtMonthDayWeekday(it.anchor_date) : "미정"}
+              </span>
+              <span className="text-muted">
+                입금 {it.payment_date ? fmtMonthDayWeekday(it.payment_date) : "미정"}
+              </span>
+              <span
+                className="ml-auto font-medium"
+                style={{ color: overdue ? "var(--danger-text)" : "var(--text-secondary)" }}
+              >
+                {fmtWon(it.amount_won)}
+              </span>
+            </div>
+          );
+        })}
+      </div>
+    </Card>
+  );
+}
+
+// ─────────────────────────────────────────────────────────────────────
 // 진행중 카드
 // ─────────────────────────────────────────────────────────────────────
 
@@ -2293,16 +2647,36 @@ function saveOrder(key: string, ids: string[]): void {
 
 function ActiveCards({ data }: { data: any }) {
   // v6.5.1 — 광고/공구만. 할 일은 별도 ActiveTodos 영역. 드래그로 순서 변경 가능.
-  const apiItems: any[] = data?.items || [];
+  const [apiItems, setApiItems] = useState<any[]>(() => data?.items || []);
   const [items, setItems] = useState<any[]>(() =>
     applySavedOrder(apiItems, loadOrder(ACTIVE_CARDS_ORDER_KEY))
   );
 
   // API 응답 갱신 시 저장된 순서로 재정렬
   useEffect(() => {
-    setItems(applySavedOrder(apiItems, loadOrder(ACTIVE_CARDS_ORDER_KEY)));
+    const next = data?.items || [];
+    setApiItems(next);
+    setItems(applySavedOrder(next, loadOrder(ACTIVE_CARDS_ORDER_KEY)));
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [data]);
+
+  // SSR/개발 HMR 상태가 오래 붙잡히는 경우를 막기 위해 마운트 후 한 번 더 최신화.
+  useEffect(() => {
+    let cancelled = false;
+    callApi("GET", "active-cards")
+      .then((r) => {
+        if (cancelled || r?.error) return;
+        const next = r.items || [];
+        setApiItems(next);
+        setItems(applySavedOrder(next, loadOrder(ACTIVE_CARDS_ORDER_KEY)));
+      })
+      .catch(() => {
+        // 초기 데이터가 있으므로 조용히 유지.
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, []);
 
   const sensors = useSensors(
     useSensor(PointerSensor, { activationConstraint: { distance: 6 } }),
@@ -2343,6 +2717,7 @@ function ActiveCards({ data }: { data: any }) {
         <p className="text-sm text-muted">없음</p>
       ) : (
         <DndContext
+          id="active-cards-dnd"
           sensors={sensors}
           collisionDetection={closestCenter}
           onDragEnd={handleDragEnd}
@@ -2472,6 +2847,7 @@ function ActiveTodos({ data }: { data: any }) {
         <p className="text-sm text-muted">없음</p>
       ) : (
         <DndContext
+          id="active-todos-dnd"
           sensors={sensors}
           collisionDetection={closestCenter}
           onDragEnd={handleDragEnd}

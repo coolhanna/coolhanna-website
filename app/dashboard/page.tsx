@@ -12,6 +12,7 @@ export default async function DashboardPage() {
     incomplete,
     stuck,
     active,
+    paymentFollowups,
     cashflow,
     health,
     calendar,
@@ -24,6 +25,7 @@ export default async function DashboardPage() {
     todayMe,
     memosRecent,
     activeTodos,
+    thinkingTracks,
   ] = await Promise.all([
     dash.today(),
     dash.recommendation(),
@@ -32,6 +34,7 @@ export default async function DashboardPage() {
     dash.incomplete(),
     dash.stuck(),
     dash.activeCards(),
+    dash.paymentFollowups(),
     dash.cashflow(),
     dash.healthTrend(),
     dash.calendar(),
@@ -44,6 +47,7 @@ export default async function DashboardPage() {
     dash.todayMe(),
     dash.memosRecent(),
     dash.activeTodos(),
+    dash.thinkingTracks(),
   ]);
 
   return (
@@ -56,6 +60,7 @@ export default async function DashboardPage() {
         incomplete,
         stuck,
         active,
+        paymentFollowups,
         cashflow,
         health,
         calendar,
@@ -68,6 +73,7 @@ export default async function DashboardPage() {
         todayMe,
         memosRecent,
         activeTodos,
+        thinkingTracks,
       }}
     />
   );

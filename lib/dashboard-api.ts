@@ -26,6 +26,7 @@ export const dash = {
   incomplete: () => api<any>("/api/dashboard/incomplete?limit=5"),
   stuck: () => api<any>("/api/dashboard/stuck"),
   activeCards: () => api<any>("/api/dashboard/active-cards"),
+  paymentFollowups: () => api<any>("/api/dashboard/payment-followups"),
   cashflow: () => api<any>("/api/dashboard/cashflow"),
   healthTrend: () => api<any>("/api/dashboard/health-trend"),
   calendar: () => api<any>("/api/dashboard/calendar"),
@@ -50,6 +51,7 @@ export const dash = {
   memosRecent: () => api<any>("/api/dashboard/memos-recent"),
   // v6.5.1 — 진행중 할 일 (광고/공구와 분리)
   activeTodos: () => api<any>("/api/dashboard/active-todos"),
+  thinkingTracks: () => api<any>("/api/dashboard/thinking-tracks"),
   // v6.6 — 상세 페이지 (광고/공구/매출)
   adsDetail: () => api<any>("/api/dashboard/ads-detail"),
   gonguDetail: () => api<any>("/api/dashboard/gongu-detail"),

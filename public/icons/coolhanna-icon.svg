@@ -1,0 +1,10 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1024 1024" role="img" aria-label="Coolhanna dashboard icon">
+  <rect width="1024" height="1024" rx="228" fill="#6F8062"/>
+  <rect x="128" y="128" width="768" height="768" rx="184" fill="#F4F2EC"/>
+  <path d="M252 330c0-45 36-81 81-81h358c45 0 81 36 81 81v364c0 45-36 81-81 81H333c-45 0-81-36-81-81V330Z" fill="#FFFFFF"/>
+  <path d="M314 394h396" stroke="#D8D9CF" stroke-width="36" stroke-linecap="round"/>
+  <path d="M314 514h396" stroke="#D8D9CF" stroke-width="36" stroke-linecap="round"/>
+  <path d="M314 634h252" stroke="#D8D9CF" stroke-width="36" stroke-linecap="round"/>
+  <circle cx="710" cy="634" r="34" fill="#B5A874"/>
+  <path d="M380 284v456h82V554h100v186h82V284h-82v188H462V284h-82Z" fill="#3F4F33"/>
+</svg>
