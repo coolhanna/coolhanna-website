@@ -117,7 +117,6 @@ function HyerinContent({
         weekday={today.요일}
         status={status?.source === "live" ? "원본 기준" : "스냅샷 기준"}
       />
-      {status?.is_stale && <DataWarning text={status.warning} />}
       <section className="command-grid">
         <TodayStatus summary={summary} completed={completed.length} missed={missed.length} />
         <NextAction
@@ -125,7 +124,6 @@ function HyerinContent({
           completed={completed}
           missed={missed}
           누적={today.누적_지표 ?? {}}
-          stale={Boolean(status?.is_stale)}
         />
       </section>
       <TrainingsRow 한줄평={lineMap} date={today.date} />
@@ -136,7 +134,6 @@ function HyerinContent({
       <CoachPanel
         mom={today.한나용_코멘트 ?? ""}
         hyerin={today.혜린용_코멘트 ?? ""}
-        stale={Boolean(status?.is_stale)}
       />
       <TrainingTrendPanel days={month.days} />
       <PastCommentsPanel days={month.days} />
@@ -219,13 +216,11 @@ function NextAction({
   completed,
   missed,
   누적,
-  stale,
 }: {
   summary: NonNullable<HyerinTodayResponse["summary"]>;
   completed: string[];
   missed: string[];
   누적: Record<string, string>;
-  stale: boolean;
 }) {
   const weakest = 누적["가장 약한 훈련"] ?? missed[0] ?? "작품작업_리스트";
   const priority = missed.includes("작품작업_리스트")
@@ -250,20 +245,6 @@ function NextAction({
       <p>
         완료한 훈련은 {completedText}. 지금은 양보다 공백을 줄이는 쪽이 더 중요합니다.
       </p>
-      {stale && (
-        <p className="quiet-note">
-          AI 코멘트는 숨겼고, 숫자와 훈련 상태는 원본 카드 기준으로 복구했습니다.
-        </p>
-      )}
-    </section>
-  );
-}
-
-function DataWarning({ text }: { text: string }) {
-  return (
-    <section className="data-warning">
-      <strong>데이터 보정 중</strong>
-      <span>{text}</span>
     </section>
   );
 }
@@ -363,26 +344,10 @@ function MetricsPanel({ 누적 }: { 누적: Record<string, string> }) {
 function CoachPanel({
   mom,
   hyerin,
-  stale,
 }: {
   mom: string;
   hyerin: string;
-  stale: boolean;
 }) {
-  if (stale) {
-    return (
-      <section className="coach-panel muted">
-        <div className="section-head">
-          <h3>코멘트</h3>
-          <span>대기</span>
-        </div>
-        <p>
-          원본 카드가 스냅샷보다 최신이라 AI 코멘트는 잠시 숨겼습니다. 다음 스냅샷을
-          재생성하면 한나용/혜린용 코멘트를 다시 보여줍니다.
-        </p>
-      </section>
-    );
-  }
   if (!mom.trim() && !hyerin.trim()) return null;
   return (
     <section className="coach-grid">
@@ -462,7 +427,6 @@ function PastCommentsPanel({ days }: { days: HyerinMonthResponse["days"] }) {
               <strong>{formatShortDate(day.date)}</strong>
               <span>
                 {day.글자수.toLocaleString()}자 · {day.훈련완료}/5
-                {day.코멘트.stale ? " · 보정됨" : ""}
               </span>
             </div>
             {day.코멘트.한나.trim() && (
@@ -661,19 +625,6 @@ const HYERIN_CSS = `
   .date-badge strong { font-size: 1.55rem; line-height: 1; }
   .date-badge span { font-size: 0.75rem; color: #D8D3C7; }
 
-  .data-warning {
-    display: flex;
-    gap: 0.8rem;
-    align-items: center;
-    background: #FFF4E7;
-    border: 1px solid #E7B36D;
-    color: #7A4B16;
-    border-radius: 0.5rem;
-    padding: 0.75rem 0.9rem;
-    font-size: 0.86rem;
-  }
-  .data-warning strong { white-space: nowrap; color: #5A350F; }
-
   .command-grid {
     display: grid;
     grid-template-columns: minmax(0, 0.9fr) minmax(0, 1.25fr);
@@ -767,13 +718,6 @@ const HYERIN_CSS = `
     line-height: 1.55;
     font-size: 0.84rem;
   }
-  .quiet-note {
-    color: #8A5A18 !important;
-    background: #FFF2DD;
-    border-radius: 0.35rem;
-    padding: 0.55rem 0.65rem;
-  }
-
   .trainings-section {
     padding: 0.9rem;
   }
@@ -1010,9 +954,6 @@ const HYERIN_CSS = `
     grid-template-columns: 1fr 1fr;
     gap: 0.75rem;
   }
-  .coach-panel.muted {
-    background: #F7F3EA;
-  }
   .comment-block {
     padding: 0.9rem;
     border-left: 4px solid var(--mint);
@@ -1212,7 +1153,6 @@ const HYERIN_CSS = `
     .hyerin-dashboard { padding: 0.85rem; }
     .hyerin-header { align-items: flex-start; }
     .date-badge { width: 3.5rem; }
-    .data-warning { align-items: flex-start; flex-direction: column; gap: 0.25rem; }
     .kpi-grid { grid-template-columns: repeat(2, 1fr); }
     .trainings-grid { grid-template-columns: 1fr; }
     .week-grid { gap: 0.22rem; }
