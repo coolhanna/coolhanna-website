@@ -9,7 +9,7 @@ import {
 import TrainingsRow from "./TrainingsRow";
 
 export const metadata: Metadata = {
-  title: "혜린의 이야기 아틀리에 — 쿨한나",
+  title: "혜린, 이야기 아뜰리에 — 쿨한나",
   robots: { index: false, follow: false },
 };
 
@@ -159,7 +159,7 @@ function Header({
     <header className="hyerin-header">
       <div>
         <p className="eyebrow">HYERIN STORY ATELIER</p>
-        <h1>혜린의 이야기 아틀리에</h1>
+        <h1>혜린, 이야기 아뜰리에</h1>
         <p className="header-sub">
           {month}월 {day}일 ({wd}) 기록 · {status}
         </p>
