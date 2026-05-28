@@ -421,7 +421,7 @@ h2 {
   align-items: flex-start;
   justify-content: space-between;
   gap: 20px;
-  margin-bottom: 12px;
+  margin-bottom: 18px;
 }
 
 .reader-panel header span {
@@ -432,6 +432,7 @@ h2 {
 
 .reader-panel h2 {
   font-size: 24px;
+  line-height: 1.25;
   margin: 4px 0 0;
 }
 
@@ -446,9 +447,9 @@ h2 {
   border-left: 4px solid var(--green);
   background: #f4f8f5;
   color: var(--ink);
-  font-size: 16px;
+  font-size: 15px;
   line-height: 1.75;
-  margin: 0 0 14px;
+  margin: 0 0 16px;
   padding: 14px 16px;
 }
 
@@ -469,9 +470,9 @@ h2 {
   border: 1px solid var(--line);
   background: #fcfcfb;
   color: #30332f;
-  font-size: 14px;
+  font-size: 15px;
   line-height: 1.85;
-  padding: 14px;
+  padding: 16px;
   white-space: pre-wrap;
 }
 
@@ -480,7 +481,7 @@ h2 {
 }
 
 .reader-body p {
-  margin: 0 0 12px;
+  margin: 0 0 16px;
 }
 
 .reader-body p:last-child {
@@ -491,37 +492,40 @@ h2 {
   color: var(--muted);
   font-size: 11px;
   font-weight: 900;
-  margin: 12px 0 6px;
+  margin: 16px 0 8px;
 }
 
 .reader-drawer {
   position: fixed;
-  inset: 0 0 0 auto;
+  inset: 0;
   z-index: 50;
-  width: min(760px, calc(100vw - 72px));
-  background: var(--paper);
-  border-left: 1px solid var(--line);
-  box-shadow: -18px 0 44px rgba(31, 36, 32, 0.18);
-  padding: 22px;
-  transform: translateX(104%);
+  width: 100%;
+  background: rgba(23, 28, 25, 0.42);
+  border: 0;
+  box-shadow: none;
+  padding: 22px 28px;
+  transform: translateY(18px);
+  opacity: 0;
   transition: transform 0.18s ease;
   overflow: auto;
+  pointer-events: none;
 }
 
 .reader-drawer.open {
-  transform: translateX(0);
+  transform: translateY(0);
+  opacity: 1;
+  pointer-events: auto;
 }
 
 .drawer-close {
   position: sticky;
-  top: 0;
+  top: 12px;
   z-index: 1;
-  margin-left: auto;
-  margin-bottom: 10px;
+  margin: 0 0 -48px auto;
   display: grid;
   place-items: center;
-  width: 34px;
-  height: 34px;
+  width: 40px;
+  height: 40px;
   border: 1px solid var(--line);
   background: var(--paper-strong);
   color: var(--ink);
@@ -530,13 +534,59 @@ h2 {
 }
 
 .drawer-panel {
-  box-shadow: none;
+  width: min(980px, 100%);
+  min-height: calc(100vh - 44px);
+  margin: 0 auto;
+  box-shadow: 0 24px 70px rgba(22, 24, 21, 0.26);
+  padding: 34px clamp(28px, 4vw, 60px) 46px;
 }
 
 .drawer-panel .reader-body {
   max-height: none;
-  font-size: 15px;
-  line-height: 1.9;
+  border: 0;
+  background: transparent;
+  color: #262926;
+  font-size: 17px;
+  line-height: 1.92;
+  max-width: 76ch;
+  padding: 0;
+}
+
+.drawer-panel .reader-body p {
+  margin-bottom: 20px;
+}
+
+.reader-list {
+  margin: 0 0 18px;
+  padding-left: 22px;
+  color: #30332f;
+  font-size: 16px;
+  line-height: 1.75;
+}
+
+.reader-more-note {
+  border-top: 1px solid var(--line);
+  color: var(--muted);
+  font-size: 12px;
+  line-height: 1.5;
+  margin: 22px 0 0;
+  padding-top: 12px;
+}
+
+.reader-coverage-note {
+  border: 1px solid var(--line);
+  background: #f7f6ef;
+  color: var(--muted);
+  font-size: 13px;
+  line-height: 1.6;
+  margin: 20px 0 0;
+  max-width: 76ch;
+  padding: 12px 14px;
+}
+
+.reader-coverage-note a {
+  color: var(--green);
+  font-weight: 800;
 }
 
 .reader-tags {

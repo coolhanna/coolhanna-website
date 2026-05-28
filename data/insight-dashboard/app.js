@@ -144,8 +144,7 @@ function compactReaderText(value, max = 560) {
 }
 
 function longReaderText(doc) {
-  const text = String(doc.preview || doc.excerpt || "");
-  return text.length > 3600 ? `${text.slice(0, 3600).trim()}\n\n...` : text;
+  return String(doc.body || doc.preview || doc.excerpt || "");
 }
 
 function readerParagraphs(value) {
@@ -153,10 +152,41 @@ function readerParagraphs(value) {
   if (!text) return '<p class="empty">본문 미리보기가 없습니다.</p>';
   return text
     .split(/\n{2,}/)
-    .map((block) => block.trim())
+    .flatMap((block) => readableBlocks(block))
     .filter(Boolean)
-    .map((block) => `<p>${escapeHtml(block).replace(/\n/g, "<br>")}</p>`)
+    .map((block) => {
+      const lines = block.split("\n").map((line) => line.trim()).filter(Boolean);
+      const isList = lines.length > 1 && lines.every((line) => /^[-*]\s+/.test(line));
+      if (isList) {
+        return `<ul class="reader-list">${lines
+          .map((line) => `<li>${escapeHtml(line.replace(/^[-*]\s+/, ""))}</li>`)
+          .join("")}</ul>`;
+      }
+      return `<p>${escapeHtml(block).replace(/\n/g, "<br>")}</p>`;
+    })
     .join("");
+}
+
+function readableBlocks(block) {
+  const text = String(block || "").trim();
+  if (text.length <= 780) return [text];
+  const sentences = text
+    .replace(/([.!?。？！]|다\.|요\.|죠\.|니다\.|어요\.|예요\.)\s+/g, "$1\n")
+    .split("\n")
+    .map((part) => part.trim())
+    .filter(Boolean);
+  const out = [];
+  let current = "";
+  for (const sentence of sentences.length ? sentences : [text]) {
+    if ((current + " " + sentence).trim().length > 520 && current) {
+      out.push(current.trim());
+      current = sentence;
+    } else {
+      current = `${current} ${sentence}`.trim();
+    }
+  }
+  if (current) out.push(current.trim());
+  return out;
 }
 
 function surface(doc) {
@@ -232,6 +262,18 @@ function docFacts(doc, max = 2) {
   return `<div class="fact-strip">${facts.map((item) => `<span>${escapeHtml(truncate(item, 72))}</span>`).join("")}</div>`;
 }
 
+function readerCoverageNote(doc) {
+  const bodyLength = String(doc.body || doc.preview || "").length;
+  const likelySourceSummary = bodyLength < 2200 && /유튜브|영상|강의|롱블랙|인사이트/.test(
+    `${doc.groupLabel || ""} ${doc.category || ""} ${doc.title || ""}`,
+  );
+  if (!likelySourceSummary) return "";
+  const linkText = doc.sourceUrl
+    ? `<a href="${escapeHtml(doc.sourceUrl)}" target="_blank" rel="noreferrer">원본 링크</a>`
+    : "";
+  return `<p class="reader-coverage-note">현재 vault에 저장된 본문은 요약본 길이입니다. 더 긴 대본/전문을 수집하면 이 자리에서 이어서 읽을 수 있습니다. ${linkText}</p>`;
+}
+
 function docPreviewCard(doc, className = "preview-card") {
   const card = surface(doc);
   return `
@@ -270,13 +312,16 @@ function renderReader(doc) {
       <div class="reader-actions">
         <button class="ghost-mini copy-reader-prompt" type="button" data-doc-id="${escapeHtml(doc.id)}">제작 프롬프트</button>
         <button class="ghost-mini copy-doc-path" type="button" data-path="${escapeHtml(doc.path)}">경로 복사</button>
+        ${doc.sourceUrl ? `<a class="ghost-mini" href="${escapeHtml(doc.sourceUrl)}" target="_blank" rel="noreferrer">원본 링크</a>` : ""}
       </div>
     </header>
     <p class="reader-lead">${escapeHtml(card.lead || doc.excerpt || "요약이 아직 없습니다.")}</p>
     ${docFacts(doc, 4)}
     ${docBullets(doc, 5)}
-    <div class="reader-body-label">본문 이어보기</div>
+    <div class="reader-body-label">본문</div>
     <div class="reader-body long-reader">${readerParagraphs(longReaderText(doc) || doc.path)}</div>
+    ${readerCoverageNote(doc)}
+    ${doc.bodyTruncated ? '<p class="reader-more-note">긴 원문이라 대시보드에는 앞부분을 우선 불러왔습니다. 이어서 더 크게 확장할 수 있어요.</p>' : ""}
     <div class="reader-tags">${tags}</div>
   `;
   document.getElementById("readerPanel").innerHTML = html;
