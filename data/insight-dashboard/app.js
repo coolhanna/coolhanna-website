@@ -494,7 +494,11 @@ function renderSourceTree(data) {
               <h3>${escapeHtml(branch.label)}</h3>
               <p>${escapeHtml(branch.note || "")}</p>
             </div>
-            <strong>${number(branch.count)}</strong>
+            <div class="tree-side">
+              <strong>${number(branch.count)}</strong>
+              ${treeStatus(branch)}
+              ${branch.lastLabel ? `<em>${escapeHtml(branch.lastLabel)}</em>` : ""}
+            </div>
           </header>
           <div class="tree-children">
             ${(branch.children || [])
@@ -503,10 +507,13 @@ function renderSourceTree(data) {
                   <details class="tree-child" ${child.children?.length ? "" : "open"}>
                     <summary>
                       <span>${escapeHtml(child.label)}</span>
-                      <em>${child.count ? number(child.count) : escapeHtml(child.note || "")}</em>
+                      <div class="tree-summary-meta">
+                        ${child.count ? `<b>${number(child.count)}</b>` : ""}
+                        ${treeStatus(child)}
+                      </div>
                     </summary>
                     ${child.children?.length ? `<div class="tree-leaves">${renderTreeLeaves(child.children)}</div>` : ""}
-                    ${child.note && child.children?.length ? `<p>${escapeHtml(child.note)}</p>` : ""}
+                    ${child.note ? `<p>${escapeHtml(child.note)}</p>` : ""}
                   </details>
                 `,
               )
@@ -518,13 +525,23 @@ function renderSourceTree(data) {
     .join("");
 }
 
+function treeStatus(item) {
+  const status = item.status || "unknown";
+  const label = item.statusLabel || status;
+  return `<small class="tree-status status-${escapeHtml(status)}">${escapeHtml(label)}</small>`;
+}
+
 function renderTreeLeaves(items) {
   return items
     .map(
       (item) => `
         <div class="tree-leaf">
           <span>${escapeHtml(item.label)}</span>
-          <em>${item.count ? number(item.count) : escapeHtml(item.note || "")}</em>
+          <div class="tree-summary-meta">
+            ${item.count ? `<b>${number(item.count)}</b>` : ""}
+            ${treeStatus(item)}
+          </div>
+          ${item.lastLabel ? `<small>${escapeHtml(item.lastLabel)}</small>` : ""}
         </div>
       `,
     )

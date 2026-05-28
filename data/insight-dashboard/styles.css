@@ -883,7 +883,7 @@ h2 {
 
 .source-tree {
   display: grid;
-  grid-template-columns: repeat(5, minmax(0, 1fr));
+  grid-template-columns: repeat(4, minmax(0, 1fr));
   gap: 10px;
 }
 
@@ -892,7 +892,7 @@ h2 {
   border-top: 4px solid var(--green);
   background: rgba(255, 255, 255, 0.78);
   box-shadow: var(--shadow);
-  min-height: 280px;
+  min-height: 318px;
   padding: 13px;
 }
 
@@ -904,7 +904,8 @@ h2 {
   border-top-color: var(--gold);
 }
 
-.tree-branch:nth-child(5) {
+.tree-branch:nth-child(5),
+.tree-branch:nth-child(7) {
   border-top-color: var(--red);
 }
 
@@ -932,6 +933,21 @@ h2 {
 .tree-branch header strong {
   font-size: 27px;
   line-height: 1;
+}
+
+.tree-side {
+  display: grid;
+  justify-items: end;
+  gap: 5px;
+  min-width: 72px;
+}
+
+.tree-side em,
+.tree-leaf > small {
+  color: var(--muted);
+  font-size: 10px;
+  font-style: normal;
+  font-weight: 800;
 }
 
 .tree-children {
@@ -981,6 +997,65 @@ h2 {
   font-weight: 800;
 }
 
+.tree-summary-meta {
+  display: inline-flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 5px;
+  min-width: 0;
+}
+
+.tree-summary-meta b {
+  color: var(--ink);
+  font-size: 12px;
+  line-height: 1;
+}
+
+.tree-status {
+  border: 1px solid var(--line);
+  background: #fff;
+  color: var(--muted);
+  display: inline-flex;
+  align-items: center;
+  min-height: 20px;
+  padding: 2px 6px;
+  font-size: 10px;
+  font-weight: 900;
+  line-height: 1;
+  white-space: nowrap;
+}
+
+.status-active {
+  border-color: rgba(15, 107, 95, 0.35);
+  background: rgba(15, 107, 95, 0.1);
+  color: var(--green);
+}
+
+.status-slow {
+  border-color: rgba(169, 118, 26, 0.36);
+  background: rgba(169, 118, 26, 0.1);
+  color: var(--gold);
+}
+
+.status-paused,
+.status-empty {
+  border-color: rgba(179, 68, 52, 0.3);
+  background: rgba(179, 68, 52, 0.08);
+  color: var(--red);
+}
+
+.status-planned,
+.status-pipeline {
+  border-color: rgba(36, 95, 159, 0.3);
+  background: rgba(36, 95, 159, 0.08);
+  color: var(--blue);
+}
+
+.status-elsewhere {
+  background: rgba(216, 221, 214, 0.35);
+  color: #555b54;
+}
+
 .tree-child > p {
   border-top: 1px solid var(--line);
   padding: 7px 9px;
@@ -1000,6 +1075,10 @@ h2 {
   gap: 7px;
   min-height: 27px;
   padding: 4px 5px;
+}
+
+.tree-leaf > small {
+  grid-column: 1 / -1;
 }
 
 .tree-leaf + .tree-leaf {
