@@ -4,9 +4,12 @@ import { useEffect, useState, useTransition } from "react";
 import {
   DndContext,
   closestCenter,
+  closestCorners,
   KeyboardSensor,
   PointerSensor,
   TouchSensor,
+  useDraggable,
+  useDroppable,
   useSensor,
   useSensors,
   type DragEndEvent,
@@ -1257,6 +1260,82 @@ function CompactDoneSection({
 
 const MAX_VISIBLE_TODOS = 5;
 
+// v6.6.10 — 일자 droppable 컬럼
+function DroppableDayColumn({
+  dateStr,
+  isToday,
+  children,
+}: {
+  dateStr: string;
+  isToday: boolean;
+  children: React.ReactNode;
+}) {
+  const { setNodeRef, isOver } = useDroppable({ id: `day::${dateStr}` });
+  return (
+    <div
+      ref={setNodeRef}
+      className="rounded-md p-2 text-[11px] min-h-[120px] flex flex-col transition"
+      style={{
+        backgroundColor: isOver ? "var(--accent-soft)" : "var(--bg-card-soft)",
+        border: isToday
+          ? "2px solid var(--accent)"
+          : isOver
+          ? "2px dashed var(--accent)"
+          : "1px solid var(--border)",
+      }}
+    >
+      {children}
+    </div>
+  );
+}
+
+// v6.6.10 — 드래그 가능한 todo 항목
+function DraggableTodoItem({
+  dateStr,
+  todo,
+  onToggle,
+}: {
+  dateStr: string;
+  todo: { line: number; text: string; done: boolean };
+  onToggle: () => void;
+}) {
+  const { attributes, listeners, setNodeRef, transform, isDragging } =
+    useDraggable({ id: `todo::${dateStr}::${todo.line}` });
+  const style: React.CSSProperties = {
+    transform: transform
+      ? `translate3d(${transform.x}px, ${transform.y}px, 0)`
+      : undefined,
+    opacity: isDragging ? 0.5 : 1,
+    cursor: "grab",
+    touchAction: "none",
+  };
+  return (
+    <div
+      ref={setNodeRef}
+      style={style}
+      className="flex items-start gap-1.5 group"
+    >
+      <input
+        type="checkbox"
+        checked={!!todo.done}
+        onChange={onToggle}
+        onPointerDown={(e) => e.stopPropagation()}
+        className="mt-[2px] w-3 h-3 rounded shrink-0 cursor-pointer"
+      />
+      <span
+        {...attributes}
+        {...listeners}
+        className={
+          "leading-snug break-keep flex-1 select-none " +
+          (todo.done ? "line-through text-muted" : "")
+        }
+      >
+        {todo.text}
+      </span>
+    </div>
+  );
+}
+
 function WeeklyTodos({ initial }: { initial: any }) {
   const todayIso = iso(new Date());
   const [days, setDays] = useState<any[]>(initial?.days || []);
@@ -1298,6 +1377,63 @@ function WeeklyTodos({ initial }: { initial: any }) {
       label: `${d.weekday} ${parseInt(d.date.split("-")[2], 10)}일`,
     }));
   })();
+
+  // v6.6.10 — 드래그앤드롭으로 다른 날짜 이동
+  const moveSensors = useSensors(
+    useSensor(PointerSensor, { activationConstraint: { distance: 8 } }),
+    useSensor(TouchSensor, {
+      activationConstraint: { delay: 250, tolerance: 8 },
+    })
+  );
+
+  async function handleTodoMove(event: DragEndEvent) {
+    const { active, over } = event;
+    if (!over) return;
+    const activeId = String(active.id);
+    const overId = String(over.id);
+    if (!activeId.startsWith("todo::") || !overId.startsWith("day::")) return;
+    const [, fromDate, lineStr] = activeId.split("::");
+    const line = parseInt(lineStr, 10);
+    const toDate = overId.replace("day::", "");
+    if (fromDate === toDate) return;
+
+    // 낙관적 이동
+    const fromDay = days.find((d) => d.date === fromDate);
+    const moving = fromDay?.todos.find((t: any) => t.line === line);
+    if (!moving) return;
+    setDays((cur) =>
+      cur.map((d) => {
+        if (d.date === fromDate)
+          return { ...d, todos: d.todos.filter((t: any) => t.line !== line) };
+        if (d.date === toDate)
+          return { ...d, todos: [...d.todos, moving] };
+        return d;
+      })
+    );
+
+    try {
+      const r = await callApi(
+        "PATCH",
+        `daily/${fromDate}/todo/${line}/move`,
+        { to_date: toDate }
+      );
+      // 새 line 번호로 갱신
+      setDays((cur) =>
+        cur.map((d) => {
+          if (d.date !== toDate) return d;
+          return {
+            ...d,
+            todos: d.todos.map((t: any) =>
+              t.line === line && t.text === moving.text ? r.item : t
+            ),
+          };
+        })
+      );
+    } catch (e) {
+      alert("이동 실패: " + (e as Error).message);
+      if (typeof window !== "undefined") window.location.reload();
+    }
+  }
 
   // v6.6.3 — 다른 주 fetch
   async function loadWeek(offset: number) {
@@ -1487,93 +1623,79 @@ function WeeklyTodos({ initial }: { initial: any }) {
         </div>
       }
     >
-      <div className="grid grid-cols-7 gap-1">
-        {days.map((d) => {
-          const isToday = d.date === todayIso;
-          const isOpen = !!expanded[d.date];
-          const total = d.todos.length;
-          const visibleTodos: any[] = isOpen
-            ? d.todos
-            : d.todos.slice(0, MAX_VISIBLE_TODOS);
-          const overflow = total - MAX_VISIBLE_TODOS;
-          const dayNum = parseInt(d.date.split("-")[2], 10);
-          return (
-            <div
-              key={d.date}
-              className="rounded-md p-2 text-[11px] min-h-[120px] flex flex-col"
-              style={{
-                backgroundColor: "var(--bg-card-soft)",
-                border: isToday
-                  ? "2px solid var(--accent)"
-                  : "1px solid var(--border)",
-              }}
-            >
-              <div className="flex items-center justify-between mb-1.5">
-                <span
-                  className="font-semibold"
-                  style={{ color: isToday ? "var(--accent)" : undefined }}
-                >
-                  {d.weekday}
-                </span>
-                <span
-                  className="text-muted"
-                  style={{ color: isToday ? "var(--accent)" : undefined }}
-                >
-                  {dayNum}
-                </span>
-              </div>
-              <div className="space-y-1 flex-1">
-                {visibleTodos.map((t: any) => (
-                  <label
-                    key={t.line}
-                    className="flex items-start gap-1.5 cursor-pointer"
+      <DndContext
+        sensors={moveSensors}
+        collisionDetection={closestCorners}
+        onDragEnd={handleTodoMove}
+      >
+        <div className="grid grid-cols-7 gap-1">
+          {days.map((d) => {
+            const isToday = d.date === todayIso;
+            const isOpen = !!expanded[d.date];
+            const total = d.todos.length;
+            const visibleTodos: any[] = isOpen
+              ? d.todos
+              : d.todos.slice(0, MAX_VISIBLE_TODOS);
+            const overflow = total - MAX_VISIBLE_TODOS;
+            const dayNum = parseInt(d.date.split("-")[2], 10);
+            return (
+              <DroppableDayColumn
+                key={d.date}
+                dateStr={d.date}
+                isToday={isToday}
+              >
+                <div className="flex items-center justify-between mb-1.5">
+                  <span
+                    className="font-semibold"
+                    style={{ color: isToday ? "var(--accent)" : undefined }}
                   >
-                    <input
-                      type="checkbox"
-                      checked={!!t.done}
-                      onChange={() =>
+                    {d.weekday}
+                  </span>
+                  <span
+                    className="text-muted"
+                    style={{ color: isToday ? "var(--accent)" : undefined }}
+                  >
+                    {dayNum}
+                  </span>
+                </div>
+                <div className="space-y-1 flex-1">
+                  {visibleTodos.map((t: any) => (
+                    <DraggableTodoItem
+                      key={t.line}
+                      dateStr={d.date}
+                      todo={t}
+                      onToggle={() =>
                         startTransition(() => toggle(d.date, t.line))
                       }
-                      className="mt-[2px] w-3 h-3 rounded shrink-0 cursor-pointer"
                     />
-                    <span
-                      className={
-                        "leading-snug break-keep " +
-                        (t.done ? "line-through text-muted" : "")
-                      }
-                    >
-                      {t.text}
-                    </span>
-                  </label>
-                ))}
-                {total === 0 && (
-                  <p className="text-muted">·</p>
+                  ))}
+                  {total === 0 && <p className="text-muted">·</p>}
+                </div>
+                {!isOpen && overflow > 0 && (
+                  <button
+                    onClick={() =>
+                      setExpanded((cur) => ({ ...cur, [d.date]: true }))
+                    }
+                    className="text-[10px] text-muted hover:opacity-70 mt-1 self-start"
+                  >
+                    + {overflow}개 더 ▼
+                  </button>
                 )}
-              </div>
-              {!isOpen && overflow > 0 && (
-                <button
-                  onClick={() =>
-                    setExpanded((cur) => ({ ...cur, [d.date]: true }))
-                  }
-                  className="text-[10px] text-muted hover:opacity-70 mt-1 self-start"
-                >
-                  + {overflow}개 더 ▼
-                </button>
-              )}
-              {isOpen && overflow > 0 && (
-                <button
-                  onClick={() =>
-                    setExpanded((cur) => ({ ...cur, [d.date]: false }))
-                  }
-                  className="text-[10px] text-muted hover:opacity-70 mt-1 self-start"
-                >
-                  접기 ▲
-                </button>
-              )}
-            </div>
-          );
-        })}
-      </div>
+                {isOpen && overflow > 0 && (
+                  <button
+                    onClick={() =>
+                      setExpanded((cur) => ({ ...cur, [d.date]: false }))
+                    }
+                    className="text-[10px] text-muted hover:opacity-70 mt-1 self-start"
+                  >
+                    접기 ▲
+                  </button>
+                )}
+              </DroppableDayColumn>
+            );
+          })}
+        </div>
+      </DndContext>
     </Card>
   );
 }
