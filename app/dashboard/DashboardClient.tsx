@@ -521,9 +521,10 @@ export default function DashboardClient({ initial }: { initial: Initial }) {
 
         <ActiveTodos data={initial.activeTodos} />
 
-        <ActiveCards data={initial.active} />
-
-        <PaymentFollowups data={initial.paymentFollowups} />
+        <ActiveCards
+          data={initial.active}
+          paymentData={initial.paymentFollowups}
+        />
 
         <IdeasRecent initial={initial.ideasRecent} />
 
@@ -2920,7 +2921,90 @@ function DraggableActiveCard({ item }: { item: any }) {
   );
 }
 
-function ActiveCards({ data }: { data: any }) {
+// v6.6.12 — 입금 대기 작은 row (PaymentFollowups 스타일을 그룹 내부에 흡수)
+function WaitingRow({ item }: { item: any }) {
+  const overdue =
+    typeof item.days_until_payment === "number" && item.days_until_payment < 0;
+  return (
+    <div className="flex flex-wrap items-center gap-x-2 gap-y-1 py-1.5 px-2 text-xs">
+      <ActiveCardTag audience={item.audience} type={item.type} />
+      <span className="font-medium min-w-0 truncate max-w-[180px] sm:max-w-[260px]">
+        {item.title}
+      </span>
+      {item.wait_label && (
+        <span
+          className="font-medium"
+          style={{
+            color: overdue ? "var(--danger-text)" : "var(--text-secondary)",
+          }}
+        >
+          {item.wait_label}
+        </span>
+      )}
+      {item.anchor_label && (
+        <span className="text-muted">
+          {item.anchor_label}{" "}
+          {item.anchor_date ? fmtMonthDayWeekday(item.anchor_date) : "미정"}
+        </span>
+      )}
+      {item.payment_date !== undefined && (
+        <span className="text-muted">
+          입금 {item.payment_date ? fmtMonthDayWeekday(item.payment_date) : "미정"}
+        </span>
+      )}
+      {item.amount_won != null && (
+        <span
+          className="ml-auto font-medium"
+          style={{
+            color: overdue ? "var(--danger-text)" : "var(--text-secondary)",
+          }}
+        >
+          {fmtWon(item.amount_won)}
+        </span>
+      )}
+    </div>
+  );
+}
+
+function DraggableWaitingRow({ item }: { item: any }) {
+  const { attributes, listeners, setNodeRef, transform, isDragging } =
+    useDraggable({ id: item.file });
+  const style: React.CSSProperties = {
+    transform: transform
+      ? `translate3d(${transform.x}px, ${transform.y}px, 0)`
+      : undefined,
+    opacity: isDragging ? 0.5 : 1,
+    cursor: "grab",
+    touchAction: "none",
+  };
+  return (
+    <div ref={setNodeRef} style={style} {...attributes} {...listeners}>
+      <div className="flex flex-wrap items-center gap-x-2 gap-y-1 py-1.5 px-2 text-xs">
+        <ActiveCardTag audience={item.audience} type={item.type} />
+        <span className="font-medium min-w-0 truncate max-w-[180px] sm:max-w-[260px]">
+          {item.title}
+        </span>
+        <span className="text-muted">{item.state}</span>
+        {item.deadline && (
+          <span
+            className="text-muted"
+            style={{ color: deadlineColor(item.deadline) }}
+          >
+            {item.deadline_label || ""} {fmtMonthDayWeekday(item.deadline)}
+          </span>
+        )}
+      </div>
+    </div>
+  );
+}
+
+function ActiveCards({
+  data,
+  paymentData,
+}: {
+  data: any;
+  paymentData?: any;
+}) {
   // v6.5.1 — 광고/공구만. 할 일은 별도 ActiveTodos 영역. 드래그로 순서 변경 가능.
   const [apiItems, setApiItems] = useState<any[]>(() => data?.items || []);
   const [items, setItems] = useState<any[]>(() =>
@@ -2962,8 +3046,13 @@ function ActiveCards({ data }: { data: any }) {
   );
 
   // v6.6.11 — 그룹 분리 + 그룹 간 드래그로 상태 변경
+  // v6.6.12 — payment API의 입금 대기도 통합 (file 기준 중복 제거)
   const activeItems = items.filter((it) => !isWaitingItem(it));
-  const waitingItems = items.filter((it) => isWaitingItem(it));
+  const waitingFromActive = items.filter((it) => isWaitingItem(it));
+  const paymentItems: any[] = paymentData?.items || [];
+  const activeFiles = new Set(waitingFromActive.map((it) => it.file));
+  const waitingFromPayment = paymentItems.filter((p) => !activeFiles.has(p.file));
+  const waitingItems = [...waitingFromActive, ...waitingFromPayment];
 
   async function changeState(item: any, toWaiting: boolean) {
     const newState = nextStateOnMove(item, toWaiting);
@@ -3052,12 +3141,23 @@ function ActiveCards({ data }: { data: any }) {
               </p>
               <DroppableGroup groupId="waiting">
                 {waitingItems.length === 0 ? (
-                  <p className="text-sm text-muted p-2">없음 — 광고는 업로드 후, 공구는 마감 후 여기로 끌어와</p>
+                  <p className="text-sm text-muted p-2">
+                    없음 — 광고는 업로드 후, 공구는 마감 후 여기로 끌어와
+                  </p>
                 ) : (
-                  <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
-                    {waitingItems.map((it) => (
-                      <DraggableActiveCard key={it.file} item={it} />
-                    ))}
+                  <div
+                    className="divide-y"
+                    style={{ borderColor: "var(--border)" }}
+                  >
+                    {waitingItems.map((it) =>
+                      // active 그룹에서 온 카드 = 드래그 가능 (row 형태)
+                      // payment-only 카드 = 단순 row (드래그 X — state 자동 추적)
+                      activeFiles.has(it.file) ? (
+                        <DraggableWaitingRow key={it.file} item={it} />
+                      ) : (
+                        <WaitingRow key={`p::${it.file}`} item={it} />
+                      )
+                    )}
                   </div>
                 )}
               </DroppableGroup>
