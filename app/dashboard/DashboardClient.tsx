@@ -2535,7 +2535,29 @@ function TodayMe({ data }: { data: any }) {
 }
 
 function MealSlot({ label, summary }: { label: string; summary?: string | null }) {
-  const recorded = !!(summary && summary.trim());
+  // v6.6.11 — 끼니별 직접 추가 가능
+  const [localSummary, setLocalSummary] = useState(summary || "");
+  const [editing, setEditing] = useState(false);
+  const [text, setText] = useState("");
+  const [busy, setBusy] = useState(false);
+  const recorded = !!(localSummary && localSummary.trim());
+
+  async function submit() {
+    const t = text.trim();
+    if (!t || busy) return;
+    setBusy(true);
+    try {
+      await callApi("POST", `diet/${encodeURIComponent(label)}`, { text: t });
+      setLocalSummary(localSummary ? `${localSummary}, ${t}` : t);
+      setText("");
+      setEditing(false);
+    } catch (e) {
+      alert("저장 실패: " + (e as Error).message);
+    } finally {
+      setBusy(false);
+    }
+  }
+
   return (
     <div
       className="rounded-md p-2"
@@ -2545,14 +2567,57 @@ function MealSlot({ label, summary }: { label: string; summary?: string | null }
       }}
     >
       <div className="flex items-center gap-1.5">
-        <span className="font-medium" style={{ color: recorded ? "var(--accent)" : "var(--text-secondary)" }}>
+        <span
+          className="font-medium"
+          style={{ color: recorded ? "var(--accent)" : "var(--text-secondary)" }}
+        >
           {label}
         </span>
         <span className="text-[10px] text-muted">{recorded ? "✓" : "─"}</span>
+        <button
+          onClick={() => setEditing((v) => !v)}
+          className="ml-auto text-[10px] hover:opacity-70 transition"
+          style={{ color: "var(--accent)" }}
+          title="추가"
+        >
+          {editing ? "취소" : "+ 추가"}
+        </button>
       </div>
       {recorded && (
         <div className="text-[10px] mt-1 leading-snug text-ink break-keep">
-          {summary}
+          {localSummary}
+        </div>
+      )}
+      {editing && (
+        <div className="mt-1.5 flex gap-1">
+          <input
+            autoFocus
+            value={text}
+            onChange={(e) => setText(e.target.value)}
+            onKeyDown={(e) => {
+              if (e.key === "Enter") submit();
+              if (e.key === "Escape") {
+                setEditing(false);
+                setText("");
+              }
+            }}
+            placeholder={`${label}으로 먹은 거`}
+            disabled={busy}
+            className="flex-1 text-[10px] rounded px-1.5 py-1 outline-none"
+            style={{
+              border: "1px solid var(--border)",
+              backgroundColor: "var(--bg-card)",
+              color: "var(--text-main)",
+            }}
+          />
+          <button
+            onClick={submit}
+            disabled={busy || !text.trim()}
+            className="text-[10px] px-2 py-1 rounded disabled:opacity-50"
+            style={{ backgroundColor: "var(--accent)", color: "#ffffff" }}
+          >
+            {busy ? "..." : "✓"}
+          </button>
         </div>
       )}
     </div>
@@ -2767,6 +2832,94 @@ function saveOrder(key: string, ids: string[]): void {
   }
 }
 
+// v6.6.11 — 입금 대기 판정 룰 (광고/공구별)
+const WAITING_STATES: Record<string, Set<string>> = {
+  광고: new Set(["업로드"]),
+  공구: new Set(["마감", "매출확인"]),
+};
+
+function isWaitingItem(item: any): boolean {
+  return WAITING_STATES[item.type]?.has(item.state) ?? false;
+}
+
+function nextStateOnMove(item: any, toWaiting: boolean): string {
+  if (item.type === "광고") return toWaiting ? "업로드" : "콘텐츠";
+  if (item.type === "공구") return toWaiting ? "마감" : "진행중";
+  return item.state;
+}
+
+// 드래그 가능한 카드 + 드롭 가능한 그룹 영역
+function DroppableGroup({
+  groupId,
+  children,
+}: {
+  groupId: "active" | "waiting";
+  children: React.ReactNode;
+}) {
+  const { setNodeRef, isOver } = useDroppable({ id: `group::${groupId}` });
+  return (
+    <div
+      ref={setNodeRef}
+      className="rounded-lg p-2 transition"
+      style={{
+        minHeight: 80,
+        border: isOver ? "2px dashed var(--accent)" : "1px dashed var(--border)",
+        backgroundColor: isOver
+          ? "var(--accent-soft)"
+          : "var(--bg-card-soft)",
+      }}
+    >
+      {children}
+    </div>
+  );
+}
+
+function DraggableActiveCard({ item }: { item: any }) {
+  const { attributes, listeners, setNodeRef, transform, isDragging } =
+    useDraggable({ id: item.file });
+  const style: React.CSSProperties = {
+    transform: transform
+      ? `translate3d(${transform.x}px, ${transform.y}px, 0)`
+      : undefined,
+    opacity: isDragging ? 0.5 : 1,
+    cursor: "grab",
+    touchAction: "none",
+    border: "1px solid var(--border)",
+    backgroundColor: "var(--bg-card)",
+  };
+  return (
+    <div
+      ref={setNodeRef}
+      style={style}
+      {...attributes}
+      {...listeners}
+      className="rounded-lg p-3 transition"
+    >
+      <div className="mb-1.5">
+        <ActiveCardTag audience={item.audience} type={item.type} />
+      </div>
+      <p className="text-sm font-medium leading-snug">{item.title}</p>
+      <p className="text-xs text-muted mt-1">{item.state}</p>
+      {(item.reels || item.shorts) && (
+        <p className="text-xs text-muted mt-0.5">
+          {item.reels && `릴스 ${item.reels}`}
+          {item.reels && item.shorts && " · "}
+          {item.shorts && `숏 ${item.shorts}`}
+        </p>
+      )}
+      {item.deadline && (
+        <p
+          className="text-xs mt-1 font-medium"
+          style={{ color: deadlineColor(item.deadline) }}
+        >
+          {item.deadline_label ? `${item.deadline_label} ` : ""}
+          {fmtMonthDayWeekday(item.deadline)}
+        </p>
+      )}
+    </div>
+  );
+}
+
 function ActiveCards({ data }: { data: any }) {
   // v6.5.1 — 광고/공구만. 할 일은 별도 ActiveTodos 영역. 드래그로 순서 변경 가능.
   const [apiItems, setApiItems] = useState<any[]>(() => data?.items || []);
@@ -2808,18 +2961,47 @@ function ActiveCards({ data }: { data: any }) {
     useSensor(KeyboardSensor, { coordinateGetter: sortableKeyboardCoordinates })
   );
 
+  // v6.6.11 — 그룹 분리 + 그룹 간 드래그로 상태 변경
+  const activeItems = items.filter((it) => !isWaitingItem(it));
+  const waitingItems = items.filter((it) => isWaitingItem(it));
+
+  async function changeState(item: any, toWaiting: boolean) {
+    const newState = nextStateOnMove(item, toWaiting);
+    // 낙관적: 화면 갱신
+    setItems((cur) =>
+      cur.map((it) =>
+        it.file === item.file ? { ...it, state: newState } : it
+      )
+    );
+    try {
+      const endpoint = item.type === "광고" ? "ad" : "gongu";
+      await callApi(
+        "PATCH",
+        `${endpoint}/${encodeURIComponent(item.file)}/state`,
+        { state: newState }
+      );
+    } catch (e) {
+      alert("상태 변경 실패: " + (e as Error).message);
+      if (typeof window !== "undefined") window.location.reload();
+    }
+  }
+
   function handleDragEnd(event: DragEndEvent) {
     const { active, over } = event;
-    if (!over || active.id === over.id) return;
-    const oldIndex = items.findIndex((it) => it.file === active.id);
-    const newIndex = items.findIndex((it) => it.file === over.id);
-    if (oldIndex === -1 || newIndex === -1) return;
-    const next = arrayMove(items, oldIndex, newIndex);
-    setItems(next);
-    saveOrder(
-      ACTIVE_CARDS_ORDER_KEY,
-      next.map((it) => it.file)
-    );
+    if (!over) return;
+    const activeFile = String(active.id);
+    const overId = String(over.id);
+    const targetItem = items.find((it) => it.file === activeFile);
+    if (!targetItem) return;
+
+    if (overId.startsWith("group::")) {
+      const target = overId.replace("group::", "");
+      const targetIsWaiting = target === "waiting";
+      const sourceIsWaiting = isWaitingItem(targetItem);
+      if (targetIsWaiting !== sourceIsWaiting) {
+        changeState(targetItem, targetIsWaiting);
+      }
+    }
   }
 
   return (
@@ -2829,7 +3011,7 @@ function ActiveCards({ data }: { data: any }) {
       rightSlot={
         <div className="flex items-center gap-2">
           <span className="text-xs text-muted">
-            {items.length}건 · 드래그로 순서 변경
+            {items.length}건 · 드래그로 입금 대기로 옮기기
           </span>
           <RefreshButton storageKey={ACTIVE_CARDS_ORDER_KEY} />
         </div>
@@ -2841,19 +3023,46 @@ function ActiveCards({ data }: { data: any }) {
         <DndContext
           id="active-cards-dnd"
           sensors={sensors}
-          collisionDetection={closestCenter}
+          collisionDetection={closestCorners}
           onDragEnd={handleDragEnd}
         >
-          <SortableContext
-            items={items.map((it) => it.file)}
-            strategy={rectSortingStrategy}
-          >
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
-              {items.map((it) => (
-                <SortableActiveCard key={it.file} item={it} />
-              ))}
+          <div className="space-y-3">
+            <div>
+              <p className="text-xs text-muted mb-1.5">
+                진행 중 ({activeItems.length})
+              </p>
+              <DroppableGroup groupId="active">
+                {activeItems.length === 0 ? (
+                  <p className="text-sm text-muted p-2">없음</p>
+                ) : (
+                  <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
+                    {activeItems.map((it) => (
+                      <DraggableActiveCard key={it.file} item={it} />
+                    ))}
+                  </div>
+                )}
+              </DroppableGroup>
             </div>
-          </SortableContext>
+            <div>
+              <p
+                className="text-xs mb-1.5"
+                style={{ color: "var(--secondary-text)" }}
+              >
+                💰 입금 대기 ({waitingItems.length})
+              </p>
+              <DroppableGroup groupId="waiting">
+                {waitingItems.length === 0 ? (
+                  <p className="text-sm text-muted p-2">없음 — 광고는 업로드 후, 공구는 마감 후 여기로 끌어와</p>
+                ) : (
+                  <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
+                    {waitingItems.map((it) => (
+                      <DraggableActiveCard key={it.file} item={it} />
+                    ))}
+                  </div>
+                )}
+              </DroppableGroup>
+            </div>
+          </div>
         </DndContext>
       )}
     </Card>
