@@ -80,13 +80,13 @@ function YesterdayLearning({
   return (
     <div className="yest-card">
       <div className="yest-head">
-        <span className="yest-title">🕓 어제 학습 ({today.date})</span>
+        <span className="yest-title">어제 학습 · {today.date}</span>
         <div className="yest-meta">
           {summary && (
             <>
               <span>📝 {summary.글자수_오늘.toLocaleString()}자</span>
-              <span>⭐ 평균 {summary.평균_점수.toFixed(1)}/10</span>
-              <span>🔥 연속 {summary.연속_일수}일</span>
+              <span>⭐ {summary.평균_점수.toFixed(1)}/10</span>
+              <span>🔥 {summary.연속_일수}일 연속</span>
             </>
           )}
         </div>
@@ -197,30 +197,40 @@ const PAGE_CSS = `
 
   /* 어제 학습 카드 */
   .yest-card {
-    background: #FFFFFF;
-    border: 1px solid #EFE5DA;
-    border-radius: 12px;
-    padding: 0.85rem 1rem;
+    background: linear-gradient(180deg, #FFFBF1 0%, #FFFFFF 100%);
+    border: 1px solid #FAC775;
+    border-radius: 14px;
+    padding: 0.9rem 1.1rem;
     display: flex;
     flex-direction: column;
-    gap: 0.55rem;
+    gap: 0.6rem;
+    box-shadow: 0 1px 3px rgba(186, 117, 23, 0.08);
   }
   .yest-head {
     display: flex;
     align-items: center;
     flex-wrap: wrap;
     gap: 0.5rem 1rem;
-    padding-bottom: 0.4rem;
-    border-bottom: 1px dashed #EFE5DA;
+    padding-bottom: 0.5rem;
+    border-bottom: 1px dashed #FAC775;
   }
-  .yest-title { font-size: 14px; font-weight: 600; color: #3A2F2A; }
+  .yest-title { font-size: 14px; font-weight: 700; color: #633806; display: inline-flex; align-items: center; gap: 6px; }
+  .yest-title::before { content: "🕓"; font-size: 16px; }
   .yest-meta {
     display: flex;
-    gap: 0.85rem;
+    gap: 0.65rem;
     font-size: 11px;
     color: #8B7D75;
     margin-left: auto;
     flex-wrap: wrap;
+  }
+  .yest-meta span {
+    background: #FFFFFF;
+    border: 1px solid #FAC775;
+    border-radius: 999px;
+    padding: 2px 10px;
+    color: #633806;
+    font-weight: 500;
   }
   .ymom, .yhy {
     display: flex;

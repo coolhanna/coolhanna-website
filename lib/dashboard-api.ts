@@ -81,8 +81,7 @@ export interface HyerinDiaryToday {
   routine_done: string[];
 }
 
-export interface HyerinDiaryWeekChip {
-  section: string;
+export interface HyerinDiaryWeekTodo {
   text: string;
   done: boolean;
   line: number;
@@ -92,7 +91,7 @@ export interface HyerinDiaryWeekDay {
   date: string;
   요일: string;
   is_today: boolean;
-  chips: HyerinDiaryWeekChip[];
+  weekly_todos: HyerinDiaryWeekTodo[];
   note_len: number;
 }
 
