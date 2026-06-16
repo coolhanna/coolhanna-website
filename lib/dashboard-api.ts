@@ -65,7 +65,66 @@ export const dash = {
     api<HyerinTrainingDetailResponse>(
       `/api/dashboard/hyerin/training/${encodeURIComponent(folder)}/${date}`,
     ),
+  hyerinDiaryState: () => api<HyerinDiaryStateResponse>("/api/dashboard/hyerin/diary/state"),
 };
+
+export interface HyerinDiaryTodo {
+  done: boolean;
+  text: string;
+}
+
+export interface HyerinDiaryToday {
+  date: string;
+  요일: string;
+  sections: Record<string, HyerinDiaryTodo[]>;
+  일기: string;
+  routine_done: string[];
+}
+
+export interface HyerinDiaryWeekChip {
+  section: string;
+  text: string;
+  done: boolean;
+  line: number;
+}
+
+export interface HyerinDiaryWeekDay {
+  date: string;
+  요일: string;
+  is_today: boolean;
+  chips: HyerinDiaryWeekChip[];
+  note_len: number;
+}
+
+export interface HyerinDiaryPin {
+  text: string;
+  tone: string;
+  icon: string;
+}
+
+export interface HyerinDiaryStats {
+  today_chars: number;
+  week_chars: number;
+  month_chars: number;
+  today_goal: number;
+}
+
+export interface HyerinDiaryProgress {
+  리스트: { 누적: number; 목표: number; 퍼센트: number };
+  에샤: { chapter: string };
+}
+
+export interface HyerinDiaryStateResponse {
+  today: HyerinDiaryToday;
+  week: { start: string; days: HyerinDiaryWeekDay[] };
+  pins: HyerinDiaryPin[];
+  seeds: string[];
+  seeds_total: number;
+  video: Record<string, string[]>;
+  routine_def: string[];
+  stats: HyerinDiaryStats;
+  progress: HyerinDiaryProgress;
+}
 
 // ─────────────────────────────────────────────────────────────────────
 // 혜린 학습 대시보드 타입 (일별 스냅샷 카드 기반)
