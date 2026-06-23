@@ -1301,13 +1301,17 @@ function DraggableTodoItem({
   dateStr,
   todo,
   onToggle,
+  onToggleImportant,
 }: {
   dateStr: string;
   todo: { line: number; text: string; done: boolean };
   onToggle: () => void;
+  onToggleImportant?: () => void;
 }) {
   const { attributes, listeners, setNodeRef, transform, isDragging } =
     useDraggable({ id: `todo::${dateStr}::${todo.line}` });
+  const important = isImportantTodo(todo.text);
+  const displayText = stripImportant(todo.text);
   const style: React.CSSProperties = {
     transform: transform
       ? `translate3d(${transform.x}px, ${transform.y}px, 0)`
@@ -1329,18 +1333,42 @@ function DraggableTodoItem({
         onPointerDown={(e) => e.stopPropagation()}
         className="mt-[2px] w-3 h-3 rounded shrink-0 cursor-pointer"
       />
+      {onToggleImportant && (
+        <button
+          onClick={onToggleImportant}
+          onPointerDown={(e) => e.stopPropagation()}
+          className={
+            "shrink-0 text-[11px] leading-none mt-[2px] transition " +
+            (important ? "" : "opacity-0 group-hover:opacity-50")
+          }
+          style={important ? { color: "var(--secondary)" } : undefined}
+          aria-label="중요 표시 토글"
+          title="중요 표시"
+        >
+          {important ? "★" : "☆"}
+        </button>
+      )}
       <span
         {...attributes}
         {...listeners}
         className={
           "leading-snug break-keep flex-1 select-none " +
-          (todo.done ? "line-through text-muted" : "")
+          (todo.done ? "line-through text-muted " : "") +
+          (important && !todo.done ? "font-semibold" : "")
         }
       >
-        {todo.text}
+        {displayText}
       </span>
     </div>
   );
+}
+
+const IMPORTANT_MARK = "⭐";
+function isImportantTodo(text: string): boolean {
+  return typeof text === "string" && text.startsWith(IMPORTANT_MARK);
+}
+function stripImportant(text: string): string {
+  return isImportantTodo(text) ? text.slice(IMPORTANT_MARK.length).trim() : text;
 }
 
 function WeeklyTodos({ initial }: { initial: any }) {
@@ -1511,6 +1539,41 @@ function WeeklyTodos({ initial }: { initial: any }) {
     }
   }
 
+  async function toggleImportant(dateStr: string, line: number, text: string) {
+    const next = !isImportantTodo(text);
+    const newText = next ? `${IMPORTANT_MARK} ${stripImportant(text)}` : stripImportant(text);
+    setDays((cur) =>
+      cur.map((d) =>
+        d.date !== dateStr
+          ? d
+          : {
+              ...d,
+              todos: d.todos.map((t: any) =>
+                t.line === line ? { ...t, text: newText } : t
+              ),
+            }
+      )
+    );
+    try {
+      await callApi("PATCH", `daily/${dateStr}/todo/${line}/important`, {
+        important: next,
+      });
+    } catch {
+      setDays((cur) =>
+        cur.map((d) =>
+          d.date !== dateStr
+            ? d
+            : {
+                ...d,
+                todos: d.todos.map((t: any) =>
+                  t.line === line ? { ...t, text } : t
+                ),
+              }
+        )
+      );
+    }
+  }
+
   async function submitAdd() {
     const text = addText.trim();
     if (!text || busy) return;
@@ -1640,9 +1703,14 @@ function WeeklyTodos({ initial }: { initial: any }) {
             const isToday = d.date === todayIso;
             const isOpen = !!expanded[d.date];
             const total = d.todos.length;
+            const sortedTodos: any[] = [...d.todos].sort(
+              (a, b) =>
+                (isImportantTodo(b.text) ? 1 : 0) -
+                (isImportantTodo(a.text) ? 1 : 0)
+            );
             const visibleTodos: any[] = isOpen
-              ? d.todos
-              : d.todos.slice(0, MAX_VISIBLE_TODOS);
+              ? sortedTodos
+              : sortedTodos.slice(0, MAX_VISIBLE_TODOS);
             const overflow = total - MAX_VISIBLE_TODOS;
             const dayNum = parseInt(d.date.split("-")[2], 10);
             return (
@@ -1673,6 +1741,9 @@ function WeeklyTodos({ initial }: { initial: any }) {
                       todo={t}
                       onToggle={() =>
                         startTransition(() => toggle(d.date, t.line))
+                      }
+                      onToggleImportant={() =>
+                        toggleImportant(d.date, t.line, t.text)
                       }
                     />
                   ))}
