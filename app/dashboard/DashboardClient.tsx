@@ -176,7 +176,7 @@ function Card({
   const isSecondary = emphasis === "secondary";
   return (
     <section
-      className={isPrimary ? "rounded-2xl p-5 sm:p-6" : "rounded-2xl p-5"}
+      className={isPrimary ? "rounded-2xl p-4 sm:p-5" : "rounded-2xl p-4"}
       style={{
         backgroundColor: bg || (isSecondary ? "var(--bg-card-soft)" : "var(--bg-card)"),
         borderStyle: "solid",
@@ -189,7 +189,7 @@ function Card({
       }}
     >
       {(title || rightSlot) && (
-        <div className="flex items-center justify-between mb-3">
+        <div className="flex items-center justify-between mb-2.5">
           {title && (
             <h2
               className={
@@ -478,7 +478,7 @@ export default function DashboardClient({ initial }: { initial: Initial }) {
         </div>
       </header>
 
-      <div className="max-w-page mx-auto px-5 sm:px-8 py-6 space-y-4">
+      <div className="max-w-page mx-auto px-5 sm:px-8 py-6 space-y-3">
         {/* 데스크탑(≥md) — 주간달력 + 이번 주 할 일 따로 (7컬럼 가로) */}
         <div className="hidden md:block space-y-4">
           <WeeklyCalendar
@@ -1835,25 +1835,6 @@ function ThoughtColumn({
           />
         ))}
       </div>
-      {done.length > 0 && (
-        <details className="mt-3">
-          <summary className="text-xs text-muted cursor-pointer">
-            닫은 생각 {done.length}개
-          </summary>
-          <div className="space-y-1.5 mt-2">
-            {done.map((it) => (
-              <ThoughtRow
-                key={it.line}
-                item={it}
-                busy={busy}
-                onToggle={() => onToggle(scope, it.line)}
-                onAddNote={(text) => onAddNote(scope, it.line, text)}
-                compact
-              />
-            ))}
-          </div>
-        </details>
-      )}
       <AddInline placeholder={placeholder} onAdd={(text) => onAdd(scope, text)} />
     </div>
   );
@@ -3041,6 +3022,8 @@ function ActiveCards({
     useSensor(KeyboardSensor, { coordinateGetter: sortableKeyboardCoordinates })
   );
 
+  const [showAllWaiting, setShowAllWaiting] = useState(false);
+
   // v6.6.11 — 그룹 분리 + 그룹 간 드래그로 상태 변경
   // v6.6.12 — payment API의 입금 대기도 통합 (file 기준 중복 제거)
   const activeItems = items.filter((it) => !isWaitingItem(it));
@@ -3120,7 +3103,7 @@ function ActiveCards({
                 {activeItems.length === 0 ? (
                   <p className="text-sm text-muted p-2">없음</p>
                 ) : (
-                  <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
+                  <div className="grid grid-cols-2 sm:grid-cols-3 gap-2.5">
                     {activeItems.map((it) => (
                       <DraggableActiveCard key={it.file} item={it} />
                     ))}
@@ -3141,20 +3124,33 @@ function ActiveCards({
                     없음 — 광고는 업로드 후, 공구는 마감 후 여기로 끌어와
                   </p>
                 ) : (
-                  <div
-                    className="divide-y"
-                    style={{ borderColor: "var(--border)" }}
-                  >
-                    {waitingItems.map((it) =>
-                      // active 그룹에서 온 카드 = 드래그 가능 (row 형태)
-                      // payment-only 카드 = 단순 row (드래그 X — state 자동 추적)
-                      activeFiles.has(it.file) ? (
-                        <DraggableWaitingRow key={it.file} item={it} />
-                      ) : (
-                        <WaitingRow key={`p::${it.file}`} item={it} />
-                      )
+                  <>
+                    <div
+                      className="divide-y"
+                      style={{ borderColor: "var(--border)" }}
+                    >
+                      {(showAllWaiting ? waitingItems : waitingItems.slice(0, 2)).map((it) =>
+                        // active 그룹에서 온 카드 = 드래그 가능 (row 형태)
+                        // payment-only 카드 = 단순 row (드래그 X — state 자동 추적)
+                        activeFiles.has(it.file) ? (
+                          <DraggableWaitingRow key={it.file} item={it} />
+                        ) : (
+                          <WaitingRow key={`p::${it.file}`} item={it} />
+                        )
+                      )}
+                    </div>
+                    {waitingItems.length > 2 && (
+                      <button
+                        onClick={() => setShowAllWaiting((v) => !v)}
+                        className="text-xs mt-1.5 transition hover:opacity-70"
+                        style={{ color: "var(--secondary-text)" }}
+                      >
+                        {showAllWaiting
+                          ? "접기 ▲"
+                          : `외 ${waitingItems.length - 2}건 더보기 ▼`}
+                      </button>
                     )}
-                  </div>
+                  </>
                 )}
               </DroppableGroup>
             </div>
@@ -3475,12 +3471,12 @@ function IdeasRecent({ initial }: { initial: any }) {
       {items.length === 0 ? (
         <p className="text-sm text-muted">없음</p>
       ) : (
-        <ul className="space-y-1.5">
+        <ul className="grid grid-cols-1 sm:grid-cols-2 gap-x-4 gap-y-1">
           {items.map((it, i) => (
-            <li key={i} className="text-sm flex items-center gap-2">
+            <li key={i} className="text-[13px] flex items-center gap-2 min-w-0">
               <Pill>{it.category}</Pill>
-              <span>{it.title}</span>
-              <span className="text-[10px] text-muted">
+              <span className="truncate">{it.title}</span>
+              <span className="text-[10px] text-muted ml-auto shrink-0">
                 {/^\d{4}-\d{2}-\d{2}/.test(it.created)
                   ? fmtMonthDayWeekday(it.created.slice(0, 10))
                   : it.created}
