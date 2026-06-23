@@ -1759,7 +1759,7 @@ function ThinkingTracks({ initial }: { initial: any }) {
         </span>
       }
     >
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-3">
+      <div className="grid grid-cols-2 gap-2.5">
         <ThoughtColumn
           title="이번 주에 이어갈 생각"
           scope="week"
@@ -1809,22 +1809,22 @@ function ThoughtColumn({
 
   return (
     <div
-      className="rounded-lg p-3"
+      className="rounded-lg p-2.5"
       style={{
         border: "1px solid var(--border)",
         backgroundColor: "var(--bg-card-soft)",
       }}
     >
-      <div className="flex items-center justify-between gap-2 mb-2">
-        <h3 className="text-sm font-semibold" style={{ color: "var(--text-main)" }}>
+      <div className="flex items-center justify-between gap-2 mb-1.5">
+        <h3 className="text-[13px] font-semibold leading-tight" style={{ color: "var(--text-main)" }}>
           {title}
         </h3>
-        <span className="text-[11px] text-muted">{active.length}개 진행</span>
+        <span className="text-[11px] text-muted shrink-0">{active.length}</span>
       </div>
       {active.length === 0 && done.length === 0 && (
-        <p className="text-sm text-muted">아직 없음</p>
+        <p className="text-xs text-muted">아직 없음</p>
       )}
-      <div className="space-y-2">
+      <div className="space-y-1.5">
         {active.map((it) => (
           <ThoughtRow
             key={it.line}
@@ -2894,29 +2894,25 @@ function DraggableActiveCard({ item }: { item: any }) {
       style={style}
       {...attributes}
       {...listeners}
-      className="rounded-lg p-3 transition"
+      className="rounded-lg p-2.5 transition"
     >
-      <div className="mb-1.5">
+      <div className="flex items-center gap-1.5 mb-1">
         <ActiveCardTag audience={item.audience} type={item.type} />
+        <span className="text-[11px] text-muted ml-auto shrink-0">{item.state}</span>
       </div>
-      <p className="text-sm font-medium leading-snug">{item.title}</p>
-      <p className="text-xs text-muted mt-1">{item.state}</p>
-      {(item.reels || item.shorts) && (
-        <p className="text-xs text-muted mt-0.5">
-          {item.reels && `릴스 ${item.reels}`}
-          {item.reels && item.shorts && " · "}
-          {item.shorts && `숏 ${item.shorts}`}
-        </p>
-      )}
-      {item.deadline && (
-        <p
-          className="text-xs mt-1 font-medium"
-          style={{ color: deadlineColor(item.deadline) }}
-        >
-          {item.deadline_label ? `${item.deadline_label} ` : ""}
-          {fmtMonthDayWeekday(item.deadline)}
-        </p>
-      )}
+      <p className="text-[13px] font-medium leading-snug">{item.title}</p>
+      <p className="text-[11px] text-muted mt-0.5 truncate">
+        {item.deadline && (
+          <span style={{ color: deadlineColor(item.deadline) }} className="font-medium">
+            {item.deadline_label ? `${item.deadline_label} ` : ""}
+            {fmtMonthDayWeekday(item.deadline)}
+          </span>
+        )}
+        {item.deadline && (item.reels || item.shorts) && " · "}
+        {item.reels && `릴스 ${item.reels}`}
+        {item.reels && item.shorts && " · "}
+        {item.shorts && `숏 ${item.shorts}`}
+      </p>
     </div>
   );
 }
@@ -3186,29 +3182,25 @@ function SortableActiveCard({ item }: { item: any }) {
       style={style}
       {...attributes}
       {...listeners}
-      className="rounded-lg p-3 transition"
+      className="rounded-lg p-2.5 transition"
     >
-      <div className="mb-1.5">
+      <div className="flex items-center gap-1.5 mb-1">
         <ActiveCardTag audience={item.audience} type={item.type} />
+        <span className="text-[11px] text-muted ml-auto shrink-0">{item.state}</span>
       </div>
-      <p className="text-sm font-medium leading-snug">{item.title}</p>
-      <p className="text-xs text-muted mt-1">{item.state}</p>
-      {(item.reels || item.shorts) && (
-        <p className="text-xs text-muted mt-0.5">
-          {item.reels && `릴스 ${item.reels}`}
-          {item.reels && item.shorts && " · "}
-          {item.shorts && `숏 ${item.shorts}`}
-        </p>
-      )}
-      {item.deadline && (
-        <p
-          className="text-xs mt-1 font-medium"
-          style={{ color: deadlineColor(item.deadline) }}
-        >
-          {item.deadline_label ? `${item.deadline_label} ` : ""}
-          {fmtMonthDayWeekday(item.deadline)}
-        </p>
-      )}
+      <p className="text-[13px] font-medium leading-snug">{item.title}</p>
+      <p className="text-[11px] text-muted mt-0.5 truncate">
+        {item.deadline && (
+          <span style={{ color: deadlineColor(item.deadline) }} className="font-medium">
+            {item.deadline_label ? `${item.deadline_label} ` : ""}
+            {fmtMonthDayWeekday(item.deadline)}
+          </span>
+        )}
+        {item.deadline && (item.reels || item.shorts) && " · "}
+        {item.reels && `릴스 ${item.reels}`}
+        {item.reels && item.shorts && " · "}
+        {item.shorts && `숏 ${item.shorts}`}
+      </p>
     </div>
   );
 }
