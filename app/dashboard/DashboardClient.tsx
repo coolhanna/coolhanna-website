@@ -3649,6 +3649,27 @@ function IdeasRecent({ initial }: { initial: any }) {
     ]);
   }
 
+  async function done(file: string) {
+    setItems((cur) => cur.filter((x) => x.file !== file));
+    try {
+      await callApi("POST", `idea/${encodeURIComponent(file)}/done`);
+    } catch (e) {
+      alert("완료 실패: " + (e as Error).message);
+    }
+  }
+
+  async function rename(file: string, title: string) {
+    if (!title.trim()) return;
+    setItems((cur) =>
+      cur.map((x) => (x.file === file ? { ...x, title } : x))
+    );
+    try {
+      await callApi("PATCH", `idea/${encodeURIComponent(file)}`, { title });
+    } catch (e) {
+      alert("수정 실패: " + (e as Error).message);
+    }
+  }
+
   async function loadAll() {
     if (loadingMore) return;
     setLoadingMore(true);
@@ -3697,20 +3718,90 @@ function IdeasRecent({ initial }: { initial: any }) {
       ) : (
         <ul className="grid grid-cols-1 sm:grid-cols-2 gap-x-4 gap-y-1">
           {items.map((it, i) => (
-            <li key={i} className="text-[13px] flex items-center gap-2 min-w-0">
-              <Pill>{it.category}</Pill>
-              <span className="truncate">{it.title}</span>
-              <span className="text-[10px] text-muted ml-auto shrink-0">
-                {/^\d{4}-\d{2}-\d{2}/.test(it.created)
-                  ? fmtMonthDayWeekday(it.created.slice(0, 10))
-                  : it.created}
-              </span>
-            </li>
+            <IdeaRow
+              key={it.file || i}
+              item={it}
+              onDone={() => done(it.file)}
+              onRename={(t) => rename(it.file, t)}
+            />
           ))}
         </ul>
       )}
       <AddInline placeholder="떠오른 아이디어" onAdd={add} />
     </Card>
+  );
+}
+
+function IdeaRow({
+  item,
+  onDone,
+  onRename,
+}: {
+  item: any;
+  onDone: () => void;
+  onRename: (title: string) => void;
+}) {
+  const [editing, setEditing] = useState(false);
+  const [text, setText] = useState<string>(item.title || "");
+
+  function saveEdit() {
+    const t = text.trim();
+    if (t && t !== item.title) onRename(t);
+    setEditing(false);
+  }
+
+  const dateLabel = /^\d{4}-\d{2}-\d{2}/.test(item.created)
+    ? fmtMonthDayWeekday(item.created.slice(0, 10))
+    : item.created;
+
+  return (
+    <li className="text-[13px] flex items-center gap-2 min-w-0 group">
+      <Pill>{item.category}</Pill>
+      {editing ? (
+        <input
+          value={text}
+          autoFocus
+          onChange={(e) => setText(e.target.value)}
+          onBlur={saveEdit}
+          onKeyDown={(e) => {
+            if (e.key === "Enter") saveEdit();
+            if (e.key === "Escape") {
+              setText(item.title || "");
+              setEditing(false);
+            }
+          }}
+          className="flex-1 min-w-0 rounded px-1.5 py-0.5 text-[13px]"
+          style={{ border: "1px solid var(--border)", backgroundColor: "var(--bg-page)" }}
+        />
+      ) : (
+        <span className="truncate flex-1">{item.title}</span>
+      )}
+      {!editing && (
+        <span className="text-[10px] text-muted shrink-0 group-hover:hidden">
+          {dateLabel}
+        </span>
+      )}
+      {!editing && (
+        <span className="hidden group-hover:flex items-center gap-1 shrink-0">
+          <button
+            onClick={() => setEditing(true)}
+            className="text-[10px] px-1 rounded hover:opacity-70"
+            style={{ color: "var(--text-secondary)" }}
+            aria-label="수정"
+          >
+            수정
+          </button>
+          <button
+            onClick={onDone}
+            className="text-[10px] px-1 rounded hover:opacity-70"
+            style={{ color: "var(--accent)" }}
+            aria-label="완료"
+          >
+            ✓완료
+          </button>
+        </span>
+      )}
+    </li>
   );
 }
 
