@@ -22,6 +22,12 @@ import {
   useSortable,
 } from "@dnd-kit/sortable";
 import { CSS } from "@dnd-kit/utilities";
+import { CONTACT_CHANNELS } from "@/lib/dashboard-client";
+import {
+  cleanFields,
+  Field as EditField,
+  SelectField as EditSelect,
+} from "@/app/dashboard/components/card-ui";
 
 // 컬러 시스템은 dashboard/layout.tsx의 CSS 변수에서 관리.
 // Pill 컴포넌트 alpha 합성 등에서만 hex 직접 사용 (var(...)는 +"44" 안 됨).
@@ -2856,7 +2862,7 @@ function DroppableGroup({
   );
 }
 
-function DraggableActiveCard({ item }: { item: any }) {
+function DraggableActiveCard({ item, onEdit }: { item: any; onEdit?: () => void }) {
   const { attributes, listeners, setNodeRef, transform, isDragging } =
     useDraggable({ id: item.file });
   const style: React.CSSProperties = {
@@ -2880,6 +2886,20 @@ function DraggableActiveCard({ item }: { item: any }) {
       <div className="flex items-center gap-1.5 mb-1">
         <ActiveCardTag audience={item.audience} type={item.type} />
         <span className="text-[11px] text-muted ml-auto shrink-0">{item.state}</span>
+        {onEdit && (
+          <button
+            onPointerDown={(e) => e.stopPropagation()}
+            onClick={(e) => {
+              e.stopPropagation();
+              onEdit();
+            }}
+            className="text-[11px] px-1.5 py-0.5 rounded transition shrink-0 hover:opacity-70"
+            style={{ border: "1px solid var(--border)", color: "var(--text-secondary)" }}
+            aria-label="수정"
+          >
+            수정
+          </button>
+        )}
       </div>
       <p className="text-[13px] font-medium leading-snug">{item.title}</p>
       <p className="text-[11px] text-muted mt-0.5 truncate">
@@ -3023,6 +3043,19 @@ function ActiveCards({
   );
 
   const [showAllWaiting, setShowAllWaiting] = useState(false);
+  const [editingFile, setEditingFile] = useState<string | null>(null);
+
+  async function reload() {
+    try {
+      const r = await callApi("GET", "active-cards");
+      if (r?.error) return;
+      const next = r.items || [];
+      setApiItems(next);
+      setItems(applySavedOrder(next, loadOrder(ACTIVE_CARDS_ORDER_KEY)));
+    } catch {
+      // 조용히 유지
+    }
+  }
 
   // v6.6.11 — 그룹 분리 + 그룹 간 드래그로 상태 변경
   // v6.6.12 — payment API의 입금 대기도 통합 (file 기준 중복 제거)
@@ -3077,16 +3110,34 @@ function ActiveCards({
       title="진행중 (광고/공구)"
       emphasis="secondary"
       rightSlot={
-        <div className="flex items-center gap-2">
-          <span className="text-xs text-muted">
-            {items.length}건 · 드래그로 입금 대기로 옮기기
-          </span>
+        <div className="flex items-center gap-2 flex-wrap justify-end">
+          <a
+            href="/dashboard/ads"
+            className="text-xs px-2 py-1 rounded-md transition hover:opacity-80"
+            style={{ backgroundColor: "var(--accent-soft)", color: "var(--accent-text)" }}
+          >
+            + 광고
+          </a>
+          <a
+            href="/dashboard/gongu"
+            className="text-xs px-2 py-1 rounded-md transition hover:opacity-80"
+            style={{ backgroundColor: "var(--accent-soft)", color: "var(--accent-text)" }}
+          >
+            + 공구
+          </a>
+          <a
+            href="/dashboard/ads"
+            className="text-xs transition hover:opacity-70"
+            style={{ color: "var(--secondary-text)" }}
+          >
+            완료 보기 →
+          </a>
           <RefreshButton storageKey={ACTIVE_CARDS_ORDER_KEY} />
         </div>
       }
     >
       {items.length === 0 ? (
-        <p className="text-sm text-muted">없음</p>
+        <p className="text-sm text-muted">없음 · 위 “+ 광고/공구”로 추가</p>
       ) : (
         <DndContext
           id="active-cards-dnd"
@@ -3105,7 +3156,11 @@ function ActiveCards({
                 ) : (
                   <div className="grid grid-cols-2 sm:grid-cols-3 gap-2.5">
                     {activeItems.map((it) => (
-                      <DraggableActiveCard key={it.file} item={it} />
+                      <DraggableActiveCard
+                        key={it.file}
+                        item={it}
+                        onEdit={() => setEditingFile(it.file)}
+                      />
                     ))}
                   </div>
                 )}
@@ -3157,46 +3212,144 @@ function ActiveCards({
           </div>
         </DndContext>
       )}
+      {editingFile && (
+        <ActiveCardEditModal
+          item={items.find((it) => it.file === editingFile)}
+          onClose={() => setEditingFile(null)}
+          onSaved={async () => {
+            setEditingFile(null);
+            await reload();
+          }}
+        />
+      )}
     </Card>
   );
 }
 
-function SortableActiveCard({ item }: { item: any }) {
-  const { attributes, listeners, setNodeRef, transform, transition, isDragging } =
-    useSortable({ id: item.file });
-  const style: React.CSSProperties = {
-    transform: CSS.Transform.toString(transform),
-    transition,
-    border: "1px solid var(--border)",
-    opacity: isDragging ? 0.7 : 1,
-    cursor: isDragging ? "grabbing" : "grab",
-    touchAction: "none",
-  };
+// 광고/공구 카드 인라인 수정 모달 (대시보드에서 바로)
+function ActiveCardEditModal({
+  item,
+  onClose,
+  onSaved,
+}: {
+  item: any;
+  onClose: () => void;
+  onSaved: () => void | Promise<void>;
+}) {
+  const isAd = item?.type === "광고";
+  const states: string[] = item?.states || [];
+  const [busy, setBusy] = useState(false);
+  const [err, setErr] = useState<string | null>(null);
+
+  const [state, setState] = useState<string>(item?.state || "");
+  const [kpi, setKpi] = useState<string>(item?.kpi || "");
+  const [manager, setManager] = useState<string>(item?.["담당자"] || "");
+  const [channel, setChannel] = useState<string>(item?.["소통_채널"] || "카톡");
+  const [price, setPrice] = useState<string>(
+    isAd ? item?.["광고비"] || "" : item?.["공구가"] || ""
+  );
+  const [extra, setExtra] = useState<string>(
+    isAd ? item?.["특이사항"] || "" : item?.["실_매출"] || ""
+  );
+
+  if (!item) return null;
+
+  async function save() {
+    setBusy(true);
+    setErr(null);
+    try {
+      const endpoint = isAd ? "ad" : "gongu";
+      const fields = isAd
+        ? cleanFields({
+            목표_KPI: kpi,
+            담당자: manager,
+            소통_채널: channel,
+            광고비: price,
+            특이사항: extra,
+          })
+        : cleanFields({
+            목표_KPI: kpi,
+            업체담당자: manager,
+            소통_채널: channel,
+            공구가: price,
+            실_매출: extra,
+          });
+      await callApi("PATCH", `${endpoint}/${encodeURIComponent(item.file)}`, {
+        state,
+        fields,
+      });
+      await onSaved();
+    } catch (e) {
+      setErr(e instanceof Error ? e.message : "수정 실패");
+    } finally {
+      setBusy(false);
+    }
+  }
+
   return (
     <div
-      ref={setNodeRef}
-      style={style}
-      {...attributes}
-      {...listeners}
-      className="rounded-lg p-2.5 transition"
+      className="fixed inset-0 z-50 flex items-center justify-center p-4"
+      style={{ backgroundColor: "rgba(40,46,40,0.45)" }}
+      onClick={onClose}
     >
-      <div className="flex items-center gap-1.5 mb-1">
-        <ActiveCardTag audience={item.audience} type={item.type} />
-        <span className="text-[11px] text-muted ml-auto shrink-0">{item.state}</span>
-      </div>
-      <p className="text-[13px] font-medium leading-snug">{item.title}</p>
-      <p className="text-[11px] text-muted mt-0.5 truncate">
-        {item.deadline && (
-          <span style={{ color: deadlineColor(item.deadline) }} className="font-medium">
-            {item.deadline_label ? `${item.deadline_label} ` : ""}
-            {fmtMonthDayWeekday(item.deadline)}
-          </span>
+      <div
+        className="w-full max-w-md rounded-xl p-5 space-y-3 max-h-[85vh] overflow-y-auto"
+        style={{ backgroundColor: "var(--bg-card)", border: "1px solid var(--border-strong)" }}
+        onClick={(e) => e.stopPropagation()}
+      >
+        <div className="flex items-center justify-between">
+          <h3 className="font-semibold text-base">
+            {item.type} 수정 · {item.title}
+          </h3>
+          <button onClick={onClose} className="text-muted text-sm hover:opacity-70">
+            ✕
+          </button>
+        </div>
+
+        <div>
+          <label className="text-xs text-muted block mb-1">상태</label>
+          <select
+            value={state}
+            onChange={(e) => setState(e.target.value)}
+            className="w-full rounded-lg px-3 py-2 text-sm"
+            style={{ border: "1px solid var(--border)", backgroundColor: "var(--bg-page)" }}
+          >
+            {states.map((s) => (
+              <option key={s} value={s}>
+                {s}
+              </option>
+            ))}
+          </select>
+        </div>
+
+        <EditField label="목표(KPI)" value={kpi} onChange={setKpi} placeholder="자유롭게" />
+        <div className="grid grid-cols-2 gap-3">
+          <EditField label="담당자" value={manager} onChange={setManager} />
+          <EditSelect
+            label="연락망"
+            value={channel}
+            options={[...CONTACT_CHANNELS]}
+            onChange={setChannel}
+          />
+          <EditField label={isAd ? "광고비" : "공구가"} value={price} onChange={setPrice} />
+          <EditField label={isAd ? "특이사항" : "실 매출"} value={extra} onChange={setExtra} />
+        </div>
+
+        {err && (
+          <p className="text-xs" style={{ color: "var(--danger)" }}>
+            {err}
+          </p>
         )}
-        {item.deadline && (item.reels || item.shorts) && " · "}
-        {item.reels && `릴스 ${item.reels}`}
-        {item.reels && item.shorts && " · "}
-        {item.shorts && `숏 ${item.shorts}`}
-      </p>
+
+        <button
+          disabled={busy}
+          onClick={save}
+          className="w-full py-2.5 rounded-lg font-medium text-sm transition disabled:opacity-40"
+          style={{ backgroundColor: "var(--accent)", color: "#fff" }}
+        >
+          {busy ? "저장 중…" : "저장"}
+        </button>
+      </div>
     </div>
   );
 }
