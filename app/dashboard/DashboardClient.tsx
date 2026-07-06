@@ -1300,30 +1300,41 @@ function DraggableTodoItem({
   todo,
   onToggle,
   onToggleImportant,
+  onEditText,
 }: {
   dateStr: string;
   todo: { line: number; text: string; done: boolean };
   onToggle: () => void;
   onToggleImportant?: () => void;
+  onEditText?: (newText: string) => void;
 }) {
   const { attributes, listeners, setNodeRef, transform, isDragging } =
     useDraggable({ id: `todo::${dateStr}::${todo.line}` });
   const important = isImportantTodo(todo.text);
   const displayText = stripImportant(todo.text);
+  const [editing, setEditing] = useState(false);
+  const [draft, setDraft] = useState(displayText);
   const style: React.CSSProperties = {
     transform: transform
       ? `translate3d(${transform.x}px, ${transform.y}px, 0)`
       : undefined,
     opacity: isDragging ? 0.5 : 1,
-    cursor: "grab",
     touchAction: "none",
   };
+
+  function startEdit() {
+    if (!onEditText) return;
+    setDraft(displayText);
+    setEditing(true);
+  }
+  function saveEdit() {
+    const t = draft.trim();
+    if (t && t !== displayText) onEditText?.(t);
+    setEditing(false);
+  }
+
   return (
-    <div
-      ref={setNodeRef}
-      style={style}
-      className="flex items-start gap-1.5 group"
-    >
+    <div ref={setNodeRef} style={style} className="flex items-start gap-1.5 group">
       <input
         type="checkbox"
         checked={!!todo.done}
@@ -1331,7 +1342,7 @@ function DraggableTodoItem({
         onPointerDown={(e) => e.stopPropagation()}
         className="mt-[2px] w-3 h-3 rounded shrink-0 cursor-pointer"
       />
-      {onToggleImportant && (
+      {onToggleImportant && !editing && (
         <button
           onClick={onToggleImportant}
           onPointerDown={(e) => e.stopPropagation()}
@@ -1346,17 +1357,37 @@ function DraggableTodoItem({
           {important ? "★" : "☆"}
         </button>
       )}
-      <span
-        {...attributes}
-        {...listeners}
-        className={
-          "leading-snug break-keep flex-1 select-none " +
-          (todo.done ? "line-through text-muted " : "") +
-          (important && !todo.done ? "font-semibold" : "")
-        }
-      >
-        {displayText}
-      </span>
+      {editing ? (
+        <input
+          value={draft}
+          autoFocus
+          onChange={(e) => setDraft(e.target.value)}
+          onBlur={saveEdit}
+          onKeyDown={(e) => {
+            if (e.key === "Enter") saveEdit();
+            if (e.key === "Escape") {
+              setDraft(displayText);
+              setEditing(false);
+            }
+          }}
+          className="flex-1 min-w-0 rounded px-1 py-0.5 leading-snug"
+          style={{ border: "1px solid var(--border)", backgroundColor: "var(--bg-page)" }}
+        />
+      ) : (
+        <span
+          {...attributes}
+          {...listeners}
+          onDoubleClick={startEdit}
+          title={onEditText ? "더블클릭해서 수정" : undefined}
+          className={
+            "leading-snug break-keep flex-1 select-none cursor-grab " +
+            (todo.done ? "line-through text-muted " : "") +
+            (important && !todo.done ? "font-semibold" : "")
+          }
+        >
+          {displayText}
+        </span>
+      )}
     </div>
   );
 }
@@ -1571,6 +1602,34 @@ function WeeklyTodos({ initial, calendar }: { initial: any; calendar?: any }) {
               }
         )
       );
+    }
+  }
+
+  async function editTodoText(dateStr: string, line: number, newText: string) {
+    const prev = days
+      .find((d) => d.date === dateStr)
+      ?.todos.find((t: any) => t.line === line);
+    const important = prev && isImportantTodo(prev.text);
+    const optimistic = important ? `${IMPORTANT_MARK} ${newText}` : newText;
+    setDays((cur) =>
+      cur.map((d) =>
+        d.date !== dateStr
+          ? d
+          : {
+              ...d,
+              todos: d.todos.map((t: any) =>
+                t.line === line ? { ...t, text: optimistic } : t
+              ),
+            }
+      )
+    );
+    try {
+      await callApi("PATCH", `daily/${dateStr}/todo/${line}/text`, {
+        text: newText,
+      });
+    } catch (e) {
+      alert("수정 실패: " + (e as Error).message);
+      if (typeof window !== "undefined") window.location.reload();
     }
   }
 
@@ -1792,6 +1851,7 @@ function WeeklyTodos({ initial, calendar }: { initial: any; calendar?: any }) {
                       onToggleImportant={() =>
                         toggleImportant(d.date, t.line, t.text)
                       }
+                      onEditText={(nt) => editTodoText(d.date, t.line, nt)}
                     />
                   ))}
                   {total === 0 && <p className="text-muted">·</p>}
