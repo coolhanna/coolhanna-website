@@ -1283,7 +1283,7 @@ function DroppableDayColumn({
   return (
     <div
       ref={setNodeRef}
-      className="rounded-md p-2 text-[11px] min-h-[170px] flex flex-col transition"
+      className="rounded-md p-2 text-[11px] min-h-[80px] flex flex-col transition"
       style={{
         backgroundColor: isOver ? "var(--accent-soft)" : "var(--bg-card-soft)",
         border: isToday
@@ -1350,7 +1350,7 @@ function DraggableTodoItem({
         <button
           onClick={onToggleImportant}
           onPointerDown={(e) => e.stopPropagation()}
-          className="shrink-0 text-[10px] leading-none mt-[2px] opacity-0 group-hover:opacity-70 transition"
+          className="shrink-0 text-[10px] leading-none mt-[2px] hidden group-hover:inline-block"
           style={{ color: "var(--secondary)" }}
           aria-label="중요 표시 토글"
           title="중요 표시"
