@@ -43,9 +43,9 @@ const SOURCE_META: Record<Source, { label: string; bg: string; fg: string }> = {
 };
 
 const STATUS_LABEL: Record<Status, string> = {
-  new: "새로 들어옴",
-  archived: "보관함",
-  promoted: "승격됨 → 파이프라인",
+  new: "NEW",
+  archived: "보관",
+  promoted: "채택",
 };
 
 const KIND_META: Record<string, { bg: string; fg: string }> = {
@@ -266,13 +266,16 @@ export default function CurationBoard() {
         )}
 
         {!loading && !error && STATUS_ORDER.map((st) => {
-          const group = grouped[st];
-          if (group.length === 0) return null;
+          if (statusFilter !== "all" && statusFilter !== st) return null;
+          const group = [...grouped[st]].sort((a, b) => (a.id < b.id ? 1 : -1)); // 최신 위로
           return (
             <section key={st} className="mb-7">
               <p className="text-[11px] text-muted mb-2 tracking-wide">
-                {STATUS_LABEL[st]} · {group.length}
+                {STATUS_LABEL[st]} ({group.length})
               </p>
+              {group.length === 0 ? (
+                <p className="text-[11px] text-muted px-1 pb-1">비어 있음</p>
+              ) : (
               <div className="rounded-2xl overflow-hidden" style={{ border: "1px solid var(--border)" }}>
                 {group.map((card, i) => (
                   <Row
@@ -289,6 +292,7 @@ export default function CurationBoard() {
                   />
                 ))}
               </div>
+              )}
             </section>
           );
         })}
@@ -397,7 +401,7 @@ function Row({ card, first, expanded, showRaw, onToggle, onToggleRaw, onPromote,
         <span className="flex-1 text-sm leading-snug" style={{ color: isNew ? "var(--text-main)" : "var(--text-secondary)" }}>
           {card.summary}
         </span>
-        {card.status === "promoted" && <span className="text-[10px]" style={{ color: "var(--success)" }}>승격됨 →</span>}
+        {card.status === "promoted" && <span className="text-[10px]" style={{ color: "var(--success)" }}>채택됨</span>}
         <span className="text-[11px] text-muted whitespace-nowrap">{fmtDay(card.createdAt)}</span>
       </button>
 
@@ -429,7 +433,7 @@ function Row({ card, first, expanded, showRaw, onToggle, onToggleRaw, onPromote,
           )}
 
           {card.branches.length > 0 && (
-          <><p className="text-[11px] text-muted mb-1.5">인사이트 · 갈래별로 승격</p>
+          <><p className="text-[11px] text-muted mb-1.5">인사이트 · 갈래별로 채택</p>
           <div className="flex flex-col gap-1.5 mb-4">
             {card.branches.map((b, i) => (
               <div key={b.id} className="flex items-start gap-2 rounded-lg px-3 py-2" style={{ backgroundColor: "var(--bg-card-soft)" }}>
@@ -437,14 +441,14 @@ function Row({ card, first, expanded, showRaw, onToggle, onToggleRaw, onPromote,
                   {b.text}
                 </span>
                 {b.promoted ? (
-                  <span className="text-[10px] whitespace-nowrap mt-0.5" style={{ color: "var(--success)" }}>★ 승격됨</span>
+                  <span className="text-[10px] whitespace-nowrap mt-0.5" style={{ color: "var(--success)" }}>★ 채택됨</span>
                 ) : (
                   <button
                     onClick={() => onPromote(i)}
                     className="text-[11px] px-2 py-0.5 rounded-md whitespace-nowrap mt-0.5 transition"
                     style={{ border: "1px solid var(--accent)", color: "var(--accent-text)", backgroundColor: "var(--accent-soft)" }}
                   >
-                    ★ 승격
+                    ★ 채택
                   </button>
                 )}
               </div>
