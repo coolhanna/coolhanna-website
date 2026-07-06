@@ -66,7 +66,34 @@ export const dash = {
       `/api/dashboard/hyerin/training/${encodeURIComponent(folder)}/${date}`,
     ),
   hyerinDiaryState: () => api<HyerinDiaryStateResponse>("/api/dashboard/hyerin/diary/state"),
+  // Phase 4 — 릴스 분석 노트 (조회수순 + 전사상태)
+  reels: () => api<ReelsResponse>("/api/dashboard/reels"),
 };
+
+export type TranscriptionStatus = "ok" | "no_speech" | "no_audio" | "failed" | "unknown";
+
+export interface ReelItem {
+  account: "한나" | "혜린";
+  shortcode: string;
+  title: string;
+  hook: string;
+  hook_pattern: string;
+  cta_type: string;
+  views: number;
+  likes: number;
+  comments: number;
+  url: string;
+  date: string;
+  transcription_status: TranscriptionStatus;
+  filename: string;
+}
+
+export interface ReelsResponse {
+  items: ReelItem[];
+  total: number;
+  by_account: { 한나: number; 혜린: number };
+  transcription_health: Partial<Record<TranscriptionStatus, number>>;
+}
 
 export interface HyerinDiaryTodo {
   done: boolean;

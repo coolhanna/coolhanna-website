@@ -7,6 +7,7 @@ import { usePathname } from "next/navigation";
 const TABS = [
   { label: "운영", href: "/dashboard" },
   { label: "큐레이션", href: "/dashboard/curation" },
+  { label: "릴스", href: "/dashboard/reels" },
 ];
 
 const PIPELINE_URL = "https://coolhanna-pipeline.vercel.app";
