@@ -64,6 +64,21 @@ function fmtDay(iso: string): string {
   return `${parseInt(parts[1], 10)}/${parseInt(parts[2], 10)}`;
 }
 
+// 카드 id "YYYYMMDD-HHMMSS" → 들어온 지 몇 시간 지났나
+function ageHours(id: string): number {
+  const m = /^(\d{4})(\d{2})(\d{2})-(\d{2})(\d{2})(\d{2})/.exec(id || "");
+  if (!m) return Infinity;
+  const t = new Date(+m[1], +m[2] - 1, +m[3], +m[4], +m[5], +m[6]).getTime();
+  return (Date.now() - t) / 3_600_000;
+}
+
+// 표시 상태: 승격/보관은 그대로, new는 24시간 지나면 보관함으로 자동 이동(표시상)
+function effStatus(card: Card): Status {
+  if (card.status === "promoted") return "promoted";
+  if (card.status === "archived") return "archived";
+  return ageHours(card.id) < 24 ? "new" : "archived";
+}
+
 interface CurationResponse {
   items: Card[];
   total: number;
@@ -104,7 +119,7 @@ export default function CurationBoard() {
     () =>
       cards.filter((c) => {
         if (srcFilter !== "all" && c.source !== srcFilter) return false;
-        if (statusFilter !== "all" && c.status !== statusFilter) return false;
+        if (statusFilter !== "all" && effStatus(c) !== statusFilter) return false;
         return true;
       }),
     [cards, srcFilter, statusFilter],
@@ -112,7 +127,7 @@ export default function CurationBoard() {
 
   const grouped = useMemo(() => {
     const by: Record<Status, Card[]> = { new: [], archived: [], promoted: [] };
-    filtered.forEach((c) => by[c.status].push(c));
+    filtered.forEach((c) => by[effStatus(c)].push(c));
     return by;
   }, [filtered]);
 
@@ -329,6 +344,7 @@ function Row({ card, first, expanded, showRaw, onToggle, onToggleRaw, onPromote,
   const kindMeta = KIND_META[card.kind] || KIND_META["생각 흐름"];
   const [copied, setCopied] = useState(false);
   const isRecord = card.branches.length === 0 && !card.application; // 그대로 기록한 메모
+  const isNew = effStatus(card) === "new"; // 24시간 이내 & 미치움
 
   const [editing, setEditing] = useState(false);
   const [saving, setSaving] = useState(false);
@@ -373,12 +389,12 @@ function Row({ card, first, expanded, showRaw, onToggle, onToggleRaw, onPromote,
     <div
       style={{
         borderTop: first ? "none" : "1px solid var(--border)",
-        backgroundColor: card.status === "new" ? "var(--bg-card)" : "var(--bg-page)",
+        backgroundColor: isNew ? "var(--bg-card)" : "var(--bg-page)",
       }}
     >
       <button onClick={onToggle} className="w-full text-left flex items-center gap-2.5 px-4 py-3">
         <SourceBadge source={card.source} />
-        <span className="flex-1 text-sm leading-snug" style={{ color: card.status === "new" ? "var(--text-main)" : "var(--text-secondary)" }}>
+        <span className="flex-1 text-sm leading-snug" style={{ color: isNew ? "var(--text-main)" : "var(--text-secondary)" }}>
           {card.summary}
         </span>
         {card.status === "promoted" && <span className="text-[10px]" style={{ color: "var(--success)" }}>승격됨 →</span>}
@@ -447,7 +463,7 @@ function Row({ card, first, expanded, showRaw, onToggle, onToggleRaw, onPromote,
             <button onClick={startEdit} className="text-xs px-3 py-1.5 rounded-lg transition" style={{ border: "1px solid var(--border-strong)", color: "var(--text-secondary)" }}>
               ✎ 수정
             </button>
-            {card.status === "new" && (
+            {isNew && (
               <button onClick={onArchive} className="text-xs px-3 py-1.5 rounded-lg transition" style={{ border: "1px solid var(--border-strong)", color: "var(--text-secondary)" }}>
                 보관함으로
               </button>
