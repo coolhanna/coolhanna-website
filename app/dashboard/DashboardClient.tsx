@@ -515,7 +515,7 @@ export default function DashboardClient({ initial }: { initial: Initial }) {
         {/* 3+4. 생각 이어가기 + 빠른 처리·메모 (한 줄 반반) */}
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4 items-start">
           <ThinkingTracks initial={initial.thinkingTracks} />
-          <Card title="빠른 처리 · 메모">
+          <Card>
             <div className="space-y-3">
               <QuickTasks initial={initial.quickTasks} bare />
               <div className="border-t border-rule pt-3">
@@ -1283,7 +1283,7 @@ function DroppableDayColumn({
   return (
     <div
       ref={setNodeRef}
-      className="rounded-md p-2 text-[11px] min-h-[80px] flex flex-col transition"
+      className="rounded-md p-2 text-[11px] min-h-[240px] flex flex-col transition"
       style={{
         backgroundColor: isOver ? "var(--accent-soft)" : "var(--bg-card-soft)",
         border: isToday
@@ -2496,6 +2496,19 @@ function MemoPanel({ initial, bare }: { initial: any; bare?: boolean }) {
     }
   }
 
+  async function addMemo(text: string) {
+    const t = text.trim();
+    if (!t) return;
+    const r = await callApi("POST", `memo/${todayIso}/todo`, { text: t });
+    const wd = ["월", "화", "수", "목", "금", "토", "일"][
+      (new Date().getDay() + 6) % 7
+    ];
+    setItems((cur) => [
+      { date: todayIso, weekday: wd, line: r.item.line, text: r.item.text, done: false },
+      ...cur,
+    ]);
+  }
+
   function dateLabel(it: any): string {
     if (it.date === todayIso) return "오늘";
     const m = it.date.match(/^\d{4}-(\d{2})-(\d{2})$/);
@@ -2617,15 +2630,17 @@ function MemoPanel({ initial, bare }: { initial: any; bare?: boolean }) {
   })();
 
   if (bare) {
+    const pendingCount = items.filter((it) => !it.done).length;
     return (
       <div>
-        <div className="flex items-center justify-between mb-1.5 gap-2">
-          <h3 className="text-[13px] font-semibold shrink-0" style={{ color: "var(--text-main)" }}>
+        <div className="flex items-center justify-between mb-1.5">
+          <h3 className="text-[13px] font-semibold" style={{ color: "var(--text-main)" }}>
             메모
           </h3>
-          {addControls}
+          <span className="text-[11px] text-muted">{pendingCount}</span>
         </div>
         {listContent}
+        <AddInline placeholder="메모" onAdd={addMemo} />
       </div>
     );
   }
