@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import DashboardNav from "./DashboardNav";
 
 export const metadata: Metadata = {
   title: "한나 운영 대시보드",
@@ -67,6 +68,9 @@ export default function DashboardLayout({
           border-color: var(--border-strong) !important;
         }
       `}</style>
+      <div className="dashboard-root">
+        <DashboardNav />
+      </div>
       {children}
     </>
   );

@@ -448,11 +448,10 @@ export default function DashboardClient({ initial }: { initial: Initial }) {
 
   return (
     <main className="dashboard-root min-h-screen bg-paper text-ink">
-      <header className="max-w-page mx-auto px-5 sm:px-8 py-6 border-b border-rule">
-        <p className="text-xs text-muted">{fmtDateKo(now)}</p>
-        <div className="flex items-baseline justify-between flex-wrap gap-2 mt-1">
-          <h1 className="text-2xl font-semibold tracking-tight">
-            한나 운영 대시보드
+      <header className="max-w-page mx-auto px-5 sm:px-8 py-3 border-b border-rule">
+        <div className="flex items-baseline justify-between flex-wrap gap-2">
+          <h1 className="text-sm font-medium text-muted">
+            {fmtDateKo(now)}
           </h1>
           <div className="flex items-center gap-3">
             <button

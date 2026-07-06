@@ -5,7 +5,6 @@
 // 워처가 claude -p(0원)로 분석해 카드로 저장 → 여기 뜸.
 
 import { useCallback, useEffect, useMemo, useState } from "react";
-import Link from "next/link";
 import { callApi } from "@/lib/dashboard-client";
 
 type Source = "video" | "photo" | "voice" | "memo";
@@ -205,14 +204,7 @@ export default function CurationBoard() {
 
   return (
     <main className="dashboard-root min-h-screen bg-paper text-ink">
-      <div className="max-w-3xl mx-auto px-5 py-8">
-        <div className="mb-2">
-          <Link href="/dashboard" className="text-xs text-muted hover:underline">
-            ← 대시보드
-          </Link>
-        </div>
-        <h1 className="text-lg font-semibold tracking-tight mb-4">큐레이션 인풋함</h1>
-
+      <div className="max-w-3xl mx-auto px-5 pt-3 pb-8">
         {/* 입력 입구 */}
         <div className="rounded-2xl p-4 mb-6" style={{ backgroundColor: "var(--bg-card)", border: "1px solid var(--border)" }}>
           <textarea
