@@ -484,13 +484,12 @@ export default function DashboardClient({ initial }: { initial: Initial }) {
       </header>
 
       <div className="max-w-page mx-auto px-5 sm:px-8 py-6 space-y-3">
-        {/* 데스크탑(≥md) — 주간달력 + 이번 주 할 일 따로 (7컬럼 가로) */}
-        <div className="hidden md:block space-y-4">
-          <WeeklyCalendar
-            initialEvents={initial.calendar}
-            initialActive={initial.active}
+        {/* 데스크탑(≥md) — 일정 + 할일 통합 주간뷰 (7컬럼: 위 일정 / 아래 할일) */}
+        <div className="hidden md:block">
+          <WeeklyTodos
+            initial={initial.weeklyTodos}
+            calendar={initial.calendar}
           />
-          <WeeklyTodos initial={initial.weeklyTodos} />
         </div>
 
         {/* 모바일(<md) — 합쳐서 7줄 컴팩트 */}
@@ -1370,7 +1369,9 @@ function stripImportant(text: string): string {
   return isImportantTodo(text) ? text.slice(IMPORTANT_MARK.length).trim() : text;
 }
 
-function WeeklyTodos({ initial }: { initial: any }) {
+function WeeklyTodos({ initial, calendar }: { initial: any; calendar?: any }) {
+  const eventsByDate: Record<string, any[]> = calendar?.events_by_date || {};
+  const deadlinesByDate: Record<string, any[]> = calendar?.deadlines_by_date || {};
   const todayIso = iso(new Date());
   const [days, setDays] = useState<any[]>(initial?.days || []);
   const [weekStart, setWeekStart] = useState<string>(
@@ -1497,14 +1498,14 @@ function WeeklyTodos({ initial }: { initial: any }) {
 
   const weekLabel =
     weekOffset === 0
-      ? "이번 주 할 일"
+      ? "이번 주 · 일정 & 할 일"
       : weekOffset === 1
-      ? "다음 주 할 일"
+      ? "다음 주 · 일정 & 할 일"
       : weekOffset === -1
-      ? "지난 주 할 일"
+      ? "지난 주 · 일정 & 할 일"
       : weekOffset > 0
-      ? `${weekOffset}주 후 할 일`
-      : `${-weekOffset}주 전 할 일`;
+      ? `${weekOffset}주 후 · 일정 & 할 일`
+      : `${-weekOffset}주 전 · 일정 & 할 일`;
 
   async function toggle(dateStr: string, line: number) {
     setDays((cur) =>
@@ -1732,6 +1733,53 @@ function WeeklyTodos({ initial }: { initial: any }) {
                     {dayNum}
                   </span>
                 </div>
+                {(() => {
+                  const evs = eventsByDate[d.date] || [];
+                  const dls = deadlinesByDate[d.date] || [];
+                  if (evs.length + dls.length === 0) return null;
+                  return (
+                    <div
+                      className="space-y-0.5 mb-1.5 pb-1.5"
+                      style={{ borderBottom: "1px dashed var(--border)" }}
+                    >
+                      {evs.slice(0, 3).map((ev: any, idx: number) => (
+                        <div
+                          key={`e${idx}`}
+                          className="truncate px-1 py-0.5 rounded text-[10px]"
+                          style={{
+                            backgroundColor: ev.all_day
+                              ? "var(--secondary-soft)"
+                              : "var(--accent-soft)",
+                            color: ev.all_day
+                              ? "var(--secondary-text)"
+                              : "var(--accent-text)",
+                          }}
+                          title={cleanEventSummary(ev.summary)}
+                        >
+                          {!ev.all_day && ev.time && (
+                            <span className="mr-0.5 opacity-70">
+                              {fmtShortTime(ev.time)}
+                            </span>
+                          )}
+                          {cleanEventSummary(ev.summary)}
+                        </div>
+                      ))}
+                      {dls.slice(0, 2).map((dl: any, idx: number) => (
+                        <div
+                          key={`d${idx}`}
+                          className="truncate px-1 py-0.5 rounded text-[10px]"
+                          style={{
+                            backgroundColor: "var(--danger-soft)",
+                            color: "var(--danger-text)",
+                          }}
+                          title={`${dl.type}: ${dl.title}`}
+                        >
+                          {dl.title}
+                        </div>
+                      ))}
+                    </div>
+                  );
+                })()}
                 <div className="space-y-1 flex-1">
                   {visibleTodos.map((t: any) => (
                     <DraggableTodoItem
@@ -2998,15 +3046,6 @@ function WaitingRow({ item, onEdit }: { item: any; onEdit?: () => void }) {
       <span className="font-medium min-w-0 truncate max-w-[160px] sm:max-w-[240px]">
         {item.title}
       </span>
-      {onEdit && (
-        <button
-          onClick={onEdit}
-          className="text-[11px] px-1.5 py-0.5 rounded shrink-0 hover:opacity-70"
-          style={{ border: "1px solid var(--border)", color: "var(--text-secondary)" }}
-        >
-          수정
-        </button>
-      )}
       {item.wait_label && (
         <span
           className="font-medium"
@@ -3028,16 +3067,27 @@ function WaitingRow({ item, onEdit }: { item: any; onEdit?: () => void }) {
           입금 {item.payment_date ? fmtMonthDayWeekday(item.payment_date) : "미정"}
         </span>
       )}
-      {item.amount_won != null && (
-        <span
-          className="ml-auto font-medium"
-          style={{
-            color: overdue ? "var(--danger-text)" : "var(--text-secondary)",
-          }}
-        >
-          {fmtWon(item.amount_won)}
-        </span>
-      )}
+      <span className="ml-auto flex items-center gap-2 shrink-0">
+        {item.amount_won != null && (
+          <span
+            className="font-medium"
+            style={{
+              color: overdue ? "var(--danger-text)" : "var(--text-secondary)",
+            }}
+          >
+            {fmtWon(item.amount_won)}
+          </span>
+        )}
+        {onEdit && (
+          <button
+            onClick={onEdit}
+            className="text-[11px] px-1.5 py-0.5 rounded hover:opacity-70"
+            style={{ border: "1px solid var(--border)", color: "var(--text-secondary)" }}
+          >
+            수정
+          </button>
+        )}
+      </span>
     </div>
   );
 }
