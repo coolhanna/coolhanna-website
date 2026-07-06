@@ -530,8 +530,6 @@ export default function DashboardClient({ initial }: { initial: Initial }) {
           paymentData={initial.paymentFollowups}
         />
 
-        <IdeasRecent initial={initial.ideasRecent} />
-
         <Chores initialTodo={initial.choresTodo} initialShop={initial.choresShop} />
 
         <MonthlyCalendar data={initial.calendar} />
@@ -1279,7 +1277,7 @@ function DroppableDayColumn({
   return (
     <div
       ref={setNodeRef}
-      className="rounded-md p-2 text-[11px] min-h-[120px] flex flex-col transition"
+      className="rounded-md p-2 text-[11px] min-h-[170px] flex flex-col transition"
       style={{
         backgroundColor: isOver ? "var(--accent-soft)" : "var(--bg-card-soft)",
         border: isToday
@@ -1346,11 +1344,8 @@ function DraggableTodoItem({
         <button
           onClick={onToggleImportant}
           onPointerDown={(e) => e.stopPropagation()}
-          className={
-            "shrink-0 text-[11px] leading-none mt-[2px] transition " +
-            (important ? "" : "opacity-0 group-hover:opacity-50")
-          }
-          style={important ? { color: "var(--secondary)" } : undefined}
+          className="shrink-0 text-[10px] leading-none mt-[2px] opacity-0 group-hover:opacity-70 transition"
+          style={{ color: "var(--secondary)" }}
           aria-label="중요 표시 토글"
           title="중요 표시"
         >
@@ -1378,9 +1373,9 @@ function DraggableTodoItem({
           {...attributes}
           {...listeners}
           onDoubleClick={startEdit}
-          title={onEditText ? "더블클릭해서 수정" : undefined}
+          title={displayText}
           className={
-            "leading-snug break-keep flex-1 select-none cursor-grab " +
+            "leading-snug flex-1 min-w-0 truncate select-none cursor-grab " +
             (todo.done ? "line-through text-muted " : "") +
             (important && !todo.done ? "font-semibold" : "")
           }
@@ -1933,38 +1928,37 @@ function ThinkingTracks({ initial }: { initial: any }) {
     }
   }
 
+  // 주간 + 월간 합쳐 하나로 (각 항목에 scope 태깅). 완료는 숨김.
+  const allActive = [
+    ...tracks.week.map((x) => ({ ...x, __scope: "week" as ThinkingScope })),
+    ...tracks.month.map((x) => ({ ...x, __scope: "month" as ThinkingScope })),
+  ].filter((x) => !x.done);
+
   return (
     <Card
       title="생각 이어가기"
       rightSlot={
-        <span className="text-xs text-muted">
-          월간 {tracks.month.filter((x) => !x.done).length} · 주간{" "}
-          {tracks.week.filter((x) => !x.done).length}
-        </span>
+        <span className="text-xs text-muted">{allActive.length}개</span>
       }
     >
-      <div className="grid grid-cols-2 gap-2.5">
-        <ThoughtColumn
-          title="이번 주에 이어갈 생각"
-          scope="week"
-          items={tracks.week}
-          busy={busy}
-          placeholder="이번 주에 놓치면 아쉬운 생각"
-          onAdd={add}
-          onToggle={toggle}
-          onAddNote={addNote}
-        />
-        <ThoughtColumn
-          title="이번 달에 붙잡을 생각"
-          scope="month"
-          items={tracks.month}
-          busy={busy}
-          placeholder="이번 달 내내 굴릴 질문"
-          onAdd={add}
-          onToggle={toggle}
-          onAddNote={addNote}
-        />
+      {allActive.length === 0 && (
+        <p className="text-sm text-muted mb-1">아직 없음</p>
+      )}
+      <div className="space-y-1.5">
+        {allActive.map((it) => (
+          <ThoughtRow
+            key={`${it.__scope}-${it.line}`}
+            item={it}
+            busy={busy}
+            onToggle={() => toggle(it.__scope, it.line)}
+            onAddNote={(text) => addNote(it.__scope, it.line, text)}
+          />
+        ))}
       </div>
+      <AddInline
+        placeholder="이어갈 생각 추가"
+        onAdd={(text) => add("week", text)}
+      />
     </Card>
   );
 }
@@ -3995,22 +3989,26 @@ function Chores({
   initialShop: any;
 }) {
   return (
-    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-      <CheckList
-        title="집안일 — 할 일"
-        endpointAdd="chore-todo"
-        endpointToggle="chore-todo/toggle"
-        initial={initialTodo}
-        placeholder="화장실 청소, 빨래 등"
-      />
-      <CheckList
-        title="집안일 — 살 것"
-        endpointAdd="chore-shop"
-        endpointToggle="chore-shop/toggle"
-        initial={initialShop}
-        placeholder="휴지, 세제 등 (음식료는 쿠팡)"
-      />
-    </div>
+    <Card title="집안일">
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-x-5 gap-y-2">
+        <CheckList
+          bare
+          title="할 일"
+          endpointAdd="chore-todo"
+          endpointToggle="chore-todo/toggle"
+          initial={initialTodo}
+          placeholder="화장실 청소, 빨래 등"
+        />
+        <CheckList
+          bare
+          title="살 것"
+          endpointAdd="chore-shop"
+          endpointToggle="chore-shop/toggle"
+          initial={initialShop}
+          placeholder="휴지, 세제 등 (음식료는 쿠팡)"
+        />
+      </div>
+    </Card>
   );
 }
 
@@ -4020,12 +4018,14 @@ function CheckList({
   endpointToggle,
   initial,
   placeholder,
+  bare,
 }: {
   title: string;
   endpointAdd: string;
   endpointToggle: string;
   initial: any;
   placeholder: string;
+  bare?: boolean;
 }) {
   // v6.4.10 — done 항목 hide. backend index(it.index) 보존.
   const [items, setItems] = useState<any[]>(
@@ -4046,11 +4046,8 @@ function CheckList({
       setItems(snapshot);
     }
   }
-  return (
-    <Card
-      title={title}
-      rightSlot={<span className="text-xs text-muted">{items.length}건</span>}
-    >
+  const inner = (
+    <>
       {items.length === 0 && <p className="text-sm text-muted">없음</p>}
       <div className="space-y-1.5">
         {items.map((it) => (
@@ -4063,6 +4060,29 @@ function CheckList({
         ))}
       </div>
       <AddInline placeholder={placeholder} onAdd={add} />
+    </>
+  );
+
+  if (bare) {
+    return (
+      <div>
+        <div className="flex items-center justify-between mb-1.5">
+          <h3 className="text-[13px] font-semibold" style={{ color: "var(--text-main)" }}>
+            {title}
+          </h3>
+          <span className="text-[11px] text-muted">{items.length}</span>
+        </div>
+        {inner}
+      </div>
+    );
+  }
+
+  return (
+    <Card
+      title={title}
+      rightSlot={<span className="text-xs text-muted">{items.length}건</span>}
+    >
+      {inner}
     </Card>
   );
 }
