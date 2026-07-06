@@ -107,8 +107,8 @@ export default function CurationBoard() {
   const [capturing, setCapturing] = useState(false);
   const [notice, setNotice] = useState<string | null>(null);
 
-  const [srcFilter, setSrcFilter] = useState<Source | "all">("all");
-  const [statusFilter, setStatusFilter] = useState<Status | "all">("all");
+  const [platFilter, setPlatFilter] = useState<string>("all");
+  const statusFilter = "all" as const; // 상태는 아래 섹션이 담당 (필터 칩 제거)
 
   const refresh = useCallback(async () => {
     try {
@@ -129,11 +129,10 @@ export default function CurationBoard() {
   const filtered = useMemo(
     () =>
       cards.filter((c) => {
-        if (srcFilter !== "all" && c.source !== srcFilter) return false;
-        if (statusFilter !== "all" && effStatus(c) !== statusFilter) return false;
+        if (platFilter !== "all" && (c.platform || SOURCE_META[c.source].label) !== platFilter) return false;
         return true;
       }),
-    [cards, srcFilter, statusFilter],
+    [cards, platFilter],
   );
 
   const grouped = useMemo(() => {
@@ -141,6 +140,13 @@ export default function CurationBoard() {
     filtered.forEach((c) => by[effStatus(c)].push(c));
     return by;
   }, [filtered]);
+
+  // 실제 존재하는 플랫폼만 필터 칩으로 (고정 순서)
+  const PLATFORMS = useMemo(() => {
+    const order = ["유튜브", "롱블랙", "글", "사진", "음성", "메모"];
+    const present = new Set(cards.map((c) => c.platform || SOURCE_META[c.source].label));
+    return order.filter((p) => present.has(p));
+  }, [cards]);
 
   async function capture(mode: "record" | "analyze") {
     const text = pasteText.trim();
@@ -242,7 +248,7 @@ export default function CurationBoard() {
             </div>
           </div>
           <p className="text-[11px] text-muted mt-2">
-            <b style={{ fontWeight: 600 }}>기록</b> = 그대로 저장 (내 생각·메모) · <b style={{ fontWeight: 600 }}>분석</b> = 요약·인사이트·적용 (링크·자료). 사진·음성은 폴더에 던지면 자동 분석.
+            <b style={{ fontWeight: 600 }}>기록</b> 그대로 저장 · <b style={{ fontWeight: 600 }}>분석</b> 요약·적용 · 사진·음성은 폴더로
           </p>
           {notice && (
             <p className="text-[12px] mt-2" style={{ color: "var(--accent-text)" }}>
@@ -251,20 +257,14 @@ export default function CurationBoard() {
           )}
         </div>
 
-        {/* 필터 */}
+        {/* 필터 — 플랫폼 한 줄 (상태는 아래 섹션이 담당) */}
         <div className="flex flex-wrap gap-1.5 mb-6">
-          <FilterChip active={srcFilter === "all" && statusFilter === "all"} onClick={() => { setSrcFilter("all"); setStatusFilter("all"); }}>
+          <FilterChip active={platFilter === "all"} onClick={() => setPlatFilter("all")}>
             전체
           </FilterChip>
-          {(Object.keys(SOURCE_META) as Source[]).map((s) => (
-            <FilterChip key={s} active={srcFilter === s} onClick={() => setSrcFilter(srcFilter === s ? "all" : s)}>
-              {SOURCE_META[s].label}
-            </FilterChip>
-          ))}
-          <span className="w-px my-1 mx-1" style={{ backgroundColor: "var(--border)" }} />
-          {STATUS_ORDER.map((st) => (
-            <FilterChip key={st} active={statusFilter === st} onClick={() => setStatusFilter(statusFilter === st ? "all" : st)}>
-              {STATUS_LABEL[st]}
+          {PLATFORMS.map((p) => (
+            <FilterChip key={p} active={platFilter === p} onClick={() => setPlatFilter(platFilter === p ? "all" : p)}>
+              {p}
             </FilterChip>
           ))}
         </div>
