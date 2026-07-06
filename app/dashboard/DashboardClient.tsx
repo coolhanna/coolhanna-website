@@ -512,16 +512,18 @@ export default function DashboardClient({ initial }: { initial: Initial }) {
           />
         </div>
 
-        {/* 3. 생각 이어가기 */}
-        <ThinkingTracks initial={initial.thinkingTracks} />
-
-        {/* 4. 빠른 처리 · 메모 (통일) */}
-        <Card title="빠른 처리 · 메모">
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-x-5 gap-y-3">
-            <QuickTasks initial={initial.quickTasks} bare />
-            <MemoPanel initial={initial.memosRecent} bare />
-          </div>
-        </Card>
+        {/* 3+4. 생각 이어가기 + 빠른 처리·메모 (한 줄 반반) */}
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4 items-start">
+          <ThinkingTracks initial={initial.thinkingTracks} />
+          <Card title="빠른 처리 · 메모">
+            <div className="space-y-3">
+              <QuickTasks initial={initial.quickTasks} bare />
+              <div className="border-t border-rule pt-3">
+                <MemoPanel initial={initial.memosRecent} bare />
+              </div>
+            </div>
+          </Card>
+        </div>
 
         {/* 5. 오늘의 나 */}
         <TodayMe data={initial.todayMe} />
