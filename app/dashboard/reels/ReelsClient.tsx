@@ -71,11 +71,14 @@ export default function ReelsClient({ data }: ReelsClientProps) {
   const all: ReelItem[] = isError ? [] : data.items;
   const [account, setAccount] = useState<AccountFilter>("전체");
   const [sortKey, setSortKey] = useState<SortKey>("latest");
+  const [visualOnly, setVisualOnly] = useState(false);
 
-  const filtered = useMemo(
-    () => (account === "전체" ? all : all.filter((r) => r.account === account)),
-    [account, all],
-  );
+  const visualCount = useMemo(() => all.filter((r) => r.has_visual).length, [all]);
+  const filtered = useMemo(() => {
+    let rows = account === "전체" ? all : all.filter((r) => r.account === account);
+    if (visualOnly) rows = rows.filter((r) => r.has_visual);
+    return rows;
+  }, [account, visualOnly, all]);
   const agg = useMemo(() => aggregate(filtered), [filtered]);
   const sorted = useMemo(() => {
     const arr = [...filtered];
@@ -102,6 +105,7 @@ export default function ReelsClient({ data }: ReelsClientProps) {
           <h1 className="text-2xl sm:text-3xl font-semibold tracking-tight">릴스 분석</h1>
           <p className="mt-1 text-[13px]" style={{ color: "var(--color-muted)" }}>
             게시된 릴스 {all.length}개를 훅·구조·성과로 분석
+            {visualCount > 0 && ` · 🎬 장면분석 ${visualCount}개`}
           </p>
         </div>
         <div className="flex items-center gap-1 text-[13px]">
@@ -151,6 +155,20 @@ export default function ReelsClient({ data }: ReelsClientProps) {
             {SORT_LABEL[k]}
           </button>
         ))}
+        {visualCount > 0 && (
+          <button
+            type="button"
+            onClick={() => setVisualOnly((v) => !v)}
+            className="ml-auto text-[12px] px-2.5 py-1 rounded-md transition"
+            style={{
+              backgroundColor: visualOnly ? "var(--color-ink)" : "transparent",
+              color: visualOnly ? "var(--color-paper)" : "var(--color-muted)",
+              border: visualOnly ? "1px solid var(--color-ink)" : "1px solid var(--color-rule)",
+            }}
+          >
+            🎬 장면분석만
+          </button>
+        )}
       </div>
 
       <ol>
@@ -346,6 +364,7 @@ function ReelRow({ reel, rank, sortKey }: { reel: ReelItem; rank: number; sortKe
             <span>{reel.posted_date || "-"}</span>
             {reel.hook_pattern_short && <span>훅 · {reel.hook_pattern_short}</span>}
             {reel.has_transcript && <span>대본 있음</span>}
+            {reel.has_visual && <span style={{ color: "var(--color-ink)", fontWeight: 500 }}>🎬 장면분석</span>}
             {failed && <span style={{ color: "#b3261e" }}>⚠️ 전사실패</span>}
           </div>
         </div>
@@ -437,6 +456,92 @@ function ReelDetail({ reel }: { reel: ReelItem }) {
           대본 없음 {reel.transcription_status === "failed" ? "(전사 실패 — 재분석 필요)" : "(음악/무음성 영상이거나 옛 분석)"}
         </p>
       )}
+
+      {/* Codex 장면(비주얼) 분석 */}
+      {reel.visual && reel.visual.sections.length > 0 && (
+        <div className="rounded-xl p-4" style={{ backgroundColor: "#f3f0e9", border: "1px solid var(--color-rule)" }}>
+          <div className="flex items-center gap-2 mb-3">
+            <h4 className="font-semibold">🎬 장면 분석</h4>
+            <span className="text-[11px] px-1.5 py-0.5 rounded" style={{ backgroundColor: "var(--color-ink)", color: "var(--color-paper)" }}>
+              {reel.visual.author}
+            </span>
+            <span className="text-[11px]" style={{ color: "var(--color-muted)" }}>
+              프레임 캡처 기반 화면 분석
+            </span>
+          </div>
+          <div className="grid gap-4">
+            {reel.visual.sections.map((s, i) => (
+              <div key={i}>
+                <h5 className="text-[13px] font-semibold mb-1">{s.title}</h5>
+                <VisualContent text={s.content} />
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
+
+// 비주얼 노트 섹션 본문 렌더 — 마크다운 파이프 표는 실제 표로, 나머지는 문단으로.
+function VisualContent({ text }: { text: string }) {
+  const blocks = text.split(/\n{2,}/);
+  return (
+    <div className="grid gap-2 text-[12.5px] leading-relaxed">
+      {blocks.map((block, i) => {
+        const lines = block.split("\n").filter((l) => l.trim());
+        const isTable =
+          lines.length >= 2 &&
+          lines.every((l) => l.includes("|")) &&
+          /^[\s|:-]+$/.test(lines[1]);
+        if (isTable) {
+          const rows = lines
+            .filter((l, idx) => idx !== 1)
+            .map((l) => l.split("|").map((c) => c.trim()).filter((c, idx, arr) => !(idx === 0 && c === "") && !(idx === arr.length - 1 && c === "")));
+          const [head, ...body] = rows;
+          return (
+            <div key={i} className="overflow-x-auto">
+              <table className="w-full text-[12px] border-collapse">
+                <thead>
+                  <tr>
+                    {head.map((c, ci) => (
+                      <th key={ci} className="text-left font-semibold py-1 pr-3 border-b" style={{ borderColor: "var(--color-rule)" }}>
+                        {c}
+                      </th>
+                    ))}
+                  </tr>
+                </thead>
+                <tbody>
+                  {body.map((r, ri) => (
+                    <tr key={ri}>
+                      {r.map((c, ci) => (
+                        <td key={ci} className="align-top py-1 pr-3 border-b" style={{ borderColor: "var(--color-rule)" }}>
+                          {c}
+                        </td>
+                      ))}
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          );
+        }
+        // 불릿 리스트
+        if (lines.every((l) => l.trim().startsWith("- "))) {
+          return (
+            <ul key={i} className="list-disc pl-5 space-y-1">
+              {lines.map((l, li) => (
+                <li key={li}>{l.replace(/^\s*-\s*/, "")}</li>
+              ))}
+            </ul>
+          );
+        }
+        return (
+          <p key={i} className="whitespace-pre-wrap">
+            {block}
+          </p>
+        );
+      })}
     </div>
   );
 }

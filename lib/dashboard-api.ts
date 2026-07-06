@@ -78,6 +78,15 @@ export interface ReelStructureStep {
   content: string;
 }
 
+export interface ReelVisualSection {
+  title: string;
+  content: string;
+}
+export interface ReelVisual {
+  author: string;
+  sections: ReelVisualSection[];
+}
+
 export interface ReelItem {
   account: "한나" | "혜린";
   shortcode: string;
@@ -102,6 +111,8 @@ export interface ReelItem {
   transcript: string;
   has_transcript: boolean;
   transcription_status: TranscriptionStatus;
+  visual: ReelVisual | null;
+  has_visual: boolean;
 }
 
 export interface ReelsResponse {
