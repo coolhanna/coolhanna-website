@@ -30,6 +30,7 @@ interface Card {
   origin?: string;
   rawKind: string;
   rawExcerpt: string;
+  platform?: string;
   file?: string;
 }
 
@@ -40,6 +41,16 @@ const SOURCE_META: Record<Source, { label: string; bg: string; fg: string }> = {
   photo: { label: "사진", bg: "var(--accent-soft)", fg: "var(--accent-text)" },
   voice: { label: "음성", bg: "var(--danger-soft)", fg: "var(--danger-text)" },
   memo: { label: "메모", bg: "var(--bg-card-soft)", fg: "var(--text-secondary)" },
+};
+
+// 플랫폼 배지 색 (백엔드 platform 값 기준). 없으면 SOURCE_META로 폴백.
+const PLATFORM_META: Record<string, { bg: string; fg: string }> = {
+  "유튜브": { bg: "#FBEAF0", fg: "#72243E" },
+  "롱블랙": { bg: "#2C342C", fg: "#F4F2EC" },
+  "글": { bg: "var(--secondary-soft)", fg: "var(--secondary-text)" },
+  "사진": { bg: "var(--accent-soft)", fg: "var(--accent-text)" },
+  "음성": { bg: "var(--danger-soft)", fg: "var(--danger-text)" },
+  "메모": { bg: "var(--bg-card-soft)", fg: "var(--text-secondary)" },
 };
 
 const STATUS_LABEL: Record<Status, string> = {
@@ -323,11 +334,12 @@ function FilterChip({ active, onClick, children }: { active: boolean; onClick: (
   );
 }
 
-function SourceBadge({ source }: { source: Source }) {
-  const m = SOURCE_META[source];
+function SourceBadge({ card }: { card: Card }) {
+  const label = card.platform || SOURCE_META[card.source].label;
+  const m = PLATFORM_META[label] || SOURCE_META[card.source];
   return (
     <span className="text-[10px] px-2 py-0.5 rounded-md font-semibold whitespace-nowrap" style={{ backgroundColor: m.bg, color: m.fg }}>
-      {m.label}
+      {label}
     </span>
   );
 }
@@ -397,7 +409,7 @@ function Row({ card, first, expanded, showRaw, onToggle, onToggleRaw, onPromote,
       }}
     >
       <button onClick={onToggle} className="w-full text-left flex items-center gap-2.5 px-4 py-3">
-        <SourceBadge source={card.source} />
+        <SourceBadge card={card} />
         <span className="flex-1 text-[13px] leading-snug" style={{ color: isNew ? "var(--text-main)" : "var(--text-secondary)" }}>
           {card.summary}
         </span>
