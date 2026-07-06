@@ -484,15 +484,13 @@ export default function DashboardClient({ initial }: { initial: Initial }) {
       </header>
 
       <div className="max-w-page mx-auto px-5 sm:px-8 py-6 space-y-3">
-        {/* 데스크탑(≥md) — 일정 + 할일 통합 주간뷰 (7컬럼: 위 일정 / 아래 할일) */}
+        {/* 1. 이번 주 — 일정+할일 통합 주간뷰 (데스크탑) / 컴팩트(모바일) */}
         <div className="hidden md:block">
           <WeeklyTodos
             initial={initial.weeklyTodos}
             calendar={initial.calendar}
           />
         </div>
-
-        {/* 모바일(<md) — 합쳐서 7줄 컴팩트 */}
         <div className="md:hidden">
           <WeeklyCompact
             calendar={initial.calendar}
@@ -501,8 +499,7 @@ export default function DashboardClient({ initial }: { initial: Initial }) {
           />
         </div>
 
-        <ThinkingTracks initial={initial.thinkingTracks} />
-
+        {/* 2. 오늘 / 내일 */}
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
           <DailyPanel
             kind="today"
@@ -515,23 +512,30 @@ export default function DashboardClient({ initial }: { initial: Initial }) {
           />
         </div>
 
-        {/* v6.4.10 — PC(≥md)에서 빠른처리 + 메모 좌우 2단, 모바일은 세로 */}
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-          <QuickTasks initial={initial.quickTasks} />
-          <MemoPanel initial={initial.memosRecent} />
-        </div>
+        {/* 3. 생각 이어가기 */}
+        <ThinkingTracks initial={initial.thinkingTracks} />
 
+        {/* 4. 빠른 처리 · 메모 (통일) */}
+        <Card title="빠른 처리 · 메모">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-x-5 gap-y-3">
+            <QuickTasks initial={initial.quickTasks} bare />
+            <MemoPanel initial={initial.memosRecent} bare />
+          </div>
+        </Card>
+
+        {/* 5. 오늘의 나 */}
         <TodayMe data={initial.todayMe} />
 
-        <ActiveTodos data={initial.activeTodos} />
-
+        {/* 6. 광고 / 공구 */}
         <ActiveCards
           data={initial.active}
           paymentData={initial.paymentFollowups}
         />
 
+        {/* 7. 집안일 */}
         <Chores initialTodo={initial.choresTodo} initialShop={initial.choresShop} />
 
+        {/* 8. 월간 캘린더 */}
         <MonthlyCalendar data={initial.calendar} />
 
         <DetailLinks />
@@ -2425,7 +2429,7 @@ function DailyTodoRow({
 // 추가 폼은 항상 헤더 우측에 노출 (WeeklyTodos와 같은 패턴). 오늘 카드에 추가.
 // ─────────────────────────────────────────────────────────────────────
 
-function MemoPanel({ initial }: { initial: any }) {
+function MemoPanel({ initial, bare }: { initial: any; bare?: boolean }) {
   const todayIso = iso(new Date());
   const [items, setItems] = useState<any[]>(initial?.items || []);
   const [addText, setAddText] = useState("");
@@ -2497,48 +2501,38 @@ function MemoPanel({ initial }: { initial: any }) {
     return it.date;
   }
 
-  return (
-    <Card
-      title="📝 메모"
-      rightSlot={
-        <div className="flex items-center gap-1.5 flex-wrap justify-end">
-          <input
-            value={addText}
-            onChange={(e) => setAddText(e.target.value)}
-            onKeyDown={(e) => {
-              if (e.key === "Enter") submitAdd();
-              if (e.key === "Escape") setAddText("");
-            }}
-            placeholder="메모"
-            disabled={busy}
-            className="text-xs rounded px-2 py-1 outline-none"
-            style={{
-              border: "1px solid var(--border)",
-              backgroundColor: "var(--bg-card)",
-              color: "var(--text-main)",
-              width: 200,
-            }}
-          />
-          <button
-            onClick={submitAdd}
-            disabled={busy || !addText.trim()}
-            className="text-xs px-2 py-1 rounded disabled:opacity-50"
-            style={{ backgroundColor: "var(--accent)", color: "#ffffff" }}
-          >
-            {busy ? "..." : "Enter"}
-          </button>
-          <button
-            onClick={() => setAddText("")}
-            disabled={!addText}
-            className="text-xs px-2 py-1 rounded text-muted disabled:opacity-50"
-            style={{ border: "1px solid var(--border)" }}
-          >
-            취소
-          </button>
-        </div>
-      }
-    >
-      {(() => {
+  const addControls = (
+    <div className="flex items-center gap-1.5 flex-wrap justify-end">
+      <input
+        value={addText}
+        onChange={(e) => setAddText(e.target.value)}
+        onKeyDown={(e) => {
+          if (e.key === "Enter") submitAdd();
+          if (e.key === "Escape") setAddText("");
+        }}
+        placeholder="메모"
+        disabled={busy}
+        className="text-xs rounded px-2 py-1 outline-none min-w-0"
+        style={{
+          border: "1px solid var(--border)",
+          backgroundColor: "var(--bg-card)",
+          color: "var(--text-main)",
+          width: bare ? undefined : 200,
+          flex: bare ? 1 : undefined,
+        }}
+      />
+      <button
+        onClick={submitAdd}
+        disabled={busy || !addText.trim()}
+        className="text-xs px-2 py-1 rounded disabled:opacity-50 shrink-0"
+        style={{ backgroundColor: "var(--accent)", color: "#ffffff" }}
+      >
+        {busy ? "..." : "추가"}
+      </button>
+    </div>
+  );
+
+  const listContent = (() => {
         const pending = items.filter((it) => !it.done);
         const done = items.filter((it) => it.done);
         return (
@@ -2618,7 +2612,25 @@ function MemoPanel({ initial }: { initial: any }) {
             )}
           </>
         );
-      })()}
+  })();
+
+  if (bare) {
+    return (
+      <div>
+        <div className="flex items-center justify-between mb-1.5 gap-2">
+          <h3 className="text-[13px] font-semibold shrink-0" style={{ color: "var(--text-main)" }}>
+            메모
+          </h3>
+          {addControls}
+        </div>
+        {listContent}
+      </div>
+    );
+  }
+
+  return (
+    <Card title="📝 메모" rightSlot={addControls}>
+      {listContent}
     </Card>
   );
 }
@@ -2788,7 +2800,7 @@ function MealSlot({ label, summary }: { label: string; summary?: string | null }
 // 빠른 처리
 // ─────────────────────────────────────────────────────────────────────
 
-function QuickTasks({ initial }: { initial: any }) {
+function QuickTasks({ initial, bare }: { initial: any; bare?: boolean }) {
   // v6.4.10 — done 항목 즉시 hide. backend index 보존(it.index).
   const [items, setItems] = useState<any[]>(
     (initial?.items || []).filter((it: any) => !it.done)
@@ -2809,15 +2821,9 @@ function QuickTasks({ initial }: { initial: any }) {
     }
   }
 
-  return (
-    <Card
-      title="빠른 처리"
-      bg="var(--secondary-soft)"
-      borderColor="var(--secondary)"
-    >
-      {items.length === 0 && (
-        <p className="text-sm text-muted">없음</p>
-      )}
+  const inner = (
+    <>
+      {items.length === 0 && <p className="text-sm text-muted">없음</p>}
       <div className="space-y-1.5">
         {items.map((it) => (
           <Checkbox
@@ -2829,6 +2835,26 @@ function QuickTasks({ initial }: { initial: any }) {
         ))}
       </div>
       <AddInline placeholder="메시지/연락/잡일" onAdd={add} />
+    </>
+  );
+
+  if (bare) {
+    return (
+      <div>
+        <div className="flex items-center justify-between mb-1.5">
+          <h3 className="text-[13px] font-semibold" style={{ color: "var(--text-main)" }}>
+            빠른 처리
+          </h3>
+          <span className="text-[11px] text-muted">{items.length}</span>
+        </div>
+        {inner}
+      </div>
+    );
+  }
+
+  return (
+    <Card title="빠른 처리" bg="var(--secondary-soft)" borderColor="var(--secondary)">
+      {inner}
     </Card>
   );
 }
