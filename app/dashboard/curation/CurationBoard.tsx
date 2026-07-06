@@ -252,8 +252,8 @@ export default function CurationBoard() {
           )}
         </div>
 
-        {/* 상태 필터 — 기본 전체, NEW/KEEP/PICK 누르면 그것만 */}
-        <div className="flex flex-wrap gap-1.5 mb-2">
+        {/* 필터 — 한 줄로 (상태 + 플랫폼) */}
+        <div className="flex flex-wrap items-center gap-1.5 mb-6">
           <FilterChip active={statusFilter === "all"} onClick={() => setStatusFilter("all")}>
             전체
           </FilterChip>
@@ -262,17 +262,13 @@ export default function CurationBoard() {
               {STATUS_LABEL[st]} {statusCounts[st]}
             </FilterChip>
           ))}
+          {PLATFORMS.length > 0 && <span className="w-px h-4 mx-1" style={{ backgroundColor: "var(--border)" }} />}
+          {PLATFORMS.map((p) => (
+            <FilterChip key={p} active={platFilter === p} onClick={() => setPlatFilter(platFilter === p ? "all" : p)}>
+              {p}
+            </FilterChip>
+          ))}
         </div>
-        {/* 플랫폼 필터 (있을 때만) */}
-        {PLATFORMS.length > 0 && (
-          <div className="flex flex-wrap gap-1.5 mb-6">
-            {PLATFORMS.map((p) => (
-              <FilterChip key={p} active={platFilter === p} onClick={() => setPlatFilter(platFilter === p ? "all" : p)}>
-                {p}
-              </FilterChip>
-            ))}
-          </div>
-        )}
 
         {loading && <p className="text-[13px] text-muted text-center py-10">불러오는 중…</p>}
         {error && !loading && (
