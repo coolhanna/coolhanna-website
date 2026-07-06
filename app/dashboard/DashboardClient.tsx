@@ -2990,15 +2990,24 @@ function DraggableActiveCard({ item, onEdit }: { item: any; onEdit?: () => void 
 }
 
 // v6.6.12 — 입금 대기 작은 row (PaymentFollowups 스타일을 그룹 내부에 흡수)
-function WaitingRow({ item }: { item: any }) {
+function WaitingRow({ item, onEdit }: { item: any; onEdit?: () => void }) {
   const overdue =
     typeof item.days_until_payment === "number" && item.days_until_payment < 0;
   return (
     <div className="flex flex-wrap items-center gap-x-2 gap-y-1 py-1.5 px-2 text-xs">
       <ActiveCardTag audience={item.audience} type={item.type} />
-      <span className="font-medium min-w-0 truncate max-w-[180px] sm:max-w-[260px]">
+      <span className="font-medium min-w-0 truncate max-w-[160px] sm:max-w-[240px]">
         {item.title}
       </span>
+      {onEdit && (
+        <button
+          onClick={onEdit}
+          className="text-[11px] px-1.5 py-0.5 rounded shrink-0 hover:opacity-70"
+          style={{ border: "1px solid var(--border)", color: "var(--text-secondary)" }}
+        >
+          수정
+        </button>
+      )}
       {item.wait_label && (
         <span
           className="font-medium"
@@ -3034,7 +3043,7 @@ function WaitingRow({ item }: { item: any }) {
   );
 }
 
-function DraggableWaitingRow({ item }: { item: any }) {
+function DraggableWaitingRow({ item, onEdit }: { item: any; onEdit?: () => void }) {
   const { attributes, listeners, setNodeRef, transform, isDragging } =
     useDraggable({ id: item.file });
   const style: React.CSSProperties = {
@@ -3042,15 +3051,16 @@ function DraggableWaitingRow({ item }: { item: any }) {
       ? `translate3d(${transform.x}px, ${transform.y}px, 0)`
       : undefined,
     opacity: isDragging ? 0.5 : 1,
-    cursor: "grab",
     touchAction: "none",
   };
   return (
-    <div ref={setNodeRef} style={style} {...attributes} {...listeners}>
+    <div ref={setNodeRef} style={style}>
       <div className="flex flex-wrap items-center gap-x-2 gap-y-1 py-1.5 px-2 text-xs">
-        <ActiveCardTag audience={item.audience} type={item.type} />
-        <span className="font-medium min-w-0 truncate max-w-[180px] sm:max-w-[260px]">
-          {item.title}
+        <span {...attributes} {...listeners} style={{ cursor: "grab" }} className="flex items-center gap-2 min-w-0">
+          <ActiveCardTag audience={item.audience} type={item.type} />
+          <span className="font-medium min-w-0 truncate max-w-[150px] sm:max-w-[220px]">
+            {item.title}
+          </span>
         </span>
         <span className="text-muted">{item.state}</span>
         {item.deadline && (
@@ -3060,6 +3070,15 @@ function DraggableWaitingRow({ item }: { item: any }) {
           >
             {item.deadline_label || ""} {fmtMonthDayWeekday(item.deadline)}
           </span>
+        )}
+        {onEdit && (
+          <button
+            onClick={onEdit}
+            className="text-[11px] px-1.5 py-0.5 rounded shrink-0 hover:opacity-70 ml-auto"
+            style={{ border: "1px solid var(--border)", color: "var(--text-secondary)" }}
+          >
+            수정
+          </button>
         )}
       </div>
     </div>
@@ -3114,7 +3133,7 @@ function ActiveCards({
   );
 
   const [showAllWaiting, setShowAllWaiting] = useState(false);
-  const [editingFile, setEditingFile] = useState<string | null>(null);
+  const [editingItem, setEditingItem] = useState<any | null>(null);
 
   async function reload() {
     try {
@@ -3230,7 +3249,7 @@ function ActiveCards({
                       <DraggableActiveCard
                         key={it.file}
                         item={it}
-                        onEdit={() => setEditingFile(it.file)}
+                        onEdit={() => setEditingItem(it)}
                       />
                     ))}
                   </div>
@@ -3259,9 +3278,17 @@ function ActiveCards({
                         // active 그룹에서 온 카드 = 드래그 가능 (row 형태)
                         // payment-only 카드 = 단순 row (드래그 X — state 자동 추적)
                         activeFiles.has(it.file) ? (
-                          <DraggableWaitingRow key={it.file} item={it} />
+                          <DraggableWaitingRow
+                            key={it.file}
+                            item={it}
+                            onEdit={() => setEditingItem(it)}
+                          />
                         ) : (
-                          <WaitingRow key={`p::${it.file}`} item={it} />
+                          <WaitingRow
+                            key={`p::${it.file}`}
+                            item={it}
+                            onEdit={() => setEditingItem(it)}
+                          />
                         )
                       )}
                     </div>
@@ -3283,13 +3310,18 @@ function ActiveCards({
           </div>
         </DndContext>
       )}
-      {editingFile && (
+      {editingItem && (
         <ActiveCardEditModal
-          item={items.find((it) => it.file === editingFile)}
-          onClose={() => setEditingFile(null)}
+          item={editingItem}
+          onClose={() => setEditingItem(null)}
           onSaved={async () => {
-            setEditingFile(null);
+            setEditingItem(null);
             await reload();
+          }}
+          onDeleted={async () => {
+            setEditingItem(null);
+            await reload();
+            if (typeof window !== "undefined") window.location.reload();
           }}
         />
       )}
@@ -3298,17 +3330,26 @@ function ActiveCards({
 }
 
 // 광고/공구 카드 인라인 수정 모달 (대시보드에서 바로)
+const AD_STATES = ["제안", "협의", "계약", "제품수령", "콘텐츠", "업로드", "입금완료"];
+const GONGU_STATES = [
+  "제안", "검토", "계약", "제품수령", "콘텐츠준비",
+  "오픈전", "진행중", "마감", "매출확인", "입금완료",
+];
+
 function ActiveCardEditModal({
   item,
   onClose,
   onSaved,
+  onDeleted,
 }: {
   item: any;
   onClose: () => void;
   onSaved: () => void | Promise<void>;
+  onDeleted: () => void | Promise<void>;
 }) {
   const isAd = item?.type === "광고";
-  const states: string[] = item?.states || [];
+  const states: string[] =
+    item?.states?.length ? item.states : isAd ? AD_STATES : GONGU_STATES;
   const [busy, setBusy] = useState(false);
   const [err, setErr] = useState<string | null>(null);
 
@@ -3353,6 +3394,24 @@ function ActiveCardEditModal({
     } catch (e) {
       setErr(e instanceof Error ? e.message : "수정 실패");
     } finally {
+      setBusy(false);
+    }
+  }
+
+  async function remove() {
+    if (
+      typeof window !== "undefined" &&
+      !window.confirm(`"${item.title}" 삭제할까요? (취소 폴더로 이동 — 되돌릴 수 있어요)`)
+    )
+      return;
+    setBusy(true);
+    setErr(null);
+    try {
+      const endpoint = isAd ? "ad" : "gongu";
+      await callApi("DELETE", `${endpoint}/${encodeURIComponent(item.file)}`);
+      await onDeleted();
+    } catch (e) {
+      setErr(e instanceof Error ? e.message : "삭제 실패");
       setBusy(false);
     }
   }
@@ -3412,14 +3471,24 @@ function ActiveCardEditModal({
           </p>
         )}
 
-        <button
-          disabled={busy}
-          onClick={save}
-          className="w-full py-2.5 rounded-lg font-medium text-sm transition disabled:opacity-40"
-          style={{ backgroundColor: "var(--accent)", color: "#fff" }}
-        >
-          {busy ? "저장 중…" : "저장"}
-        </button>
+        <div className="flex items-center gap-2 pt-1">
+          <button
+            disabled={busy}
+            onClick={remove}
+            className="px-3 py-2.5 rounded-lg text-sm transition disabled:opacity-40 shrink-0"
+            style={{ border: "1px solid var(--danger)", color: "var(--danger)" }}
+          >
+            삭제
+          </button>
+          <button
+            disabled={busy}
+            onClick={save}
+            className="flex-1 py-2.5 rounded-lg font-medium text-sm transition disabled:opacity-40"
+            style={{ backgroundColor: "var(--accent)", color: "#fff" }}
+          >
+            {busy ? "저장 중…" : "저장"}
+          </button>
+        </div>
       </div>
     </div>
   );
