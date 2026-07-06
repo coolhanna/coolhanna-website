@@ -205,6 +205,18 @@ export default function CurationBoard() {
   return (
     <main className="dashboard-root min-h-screen bg-paper text-ink">
       <div className="max-w-3xl mx-auto px-5 pt-3 pb-8">
+        <div className="flex justify-end mb-2">
+          <button
+            onClick={refresh}
+            aria-label="새로고침"
+            title="새로고침"
+            className="inline-flex items-center justify-center rounded-md transition hover:opacity-70"
+            style={{ width: 30, height: 30, border: "1px solid var(--border)", backgroundColor: "var(--bg-card)", color: "var(--accent)", fontSize: 16, lineHeight: 1 }}
+          >
+            ⟳
+          </button>
+        </div>
+
         {/* 입력 입구 */}
         <div className="rounded-2xl p-4 mb-6" style={{ backgroundColor: "var(--bg-card)", border: "1px solid var(--border)" }}>
           <textarea
