@@ -154,6 +154,11 @@ export default function CurationBoard() {
     }
   }
 
+  async function saveEdit(cardId: string, patch: Record<string, string>) {
+    await callApi("PATCH", `curation/${cardId}/edit`, patch);
+    await refresh();
+  }
+
   async function archiveCard(cardId: string) {
     setCards((prev) => prev.map((c) => (c.id === cardId ? { ...c, status: "archived" } : c)));
     try {
@@ -265,6 +270,7 @@ export default function CurationBoard() {
                     onToggleRaw={() => setShowRawId(showRawId === card.id ? null : card.id)}
                     onPromote={(idx) => promoteBranch(card.id, idx)}
                     onArchive={() => archiveCard(card.id)}
+                    onSaveEdit={(patch) => saveEdit(card.id, patch)}
                   />
                 ))}
               </div>
@@ -316,12 +322,43 @@ interface RowProps {
   onToggleRaw: () => void;
   onPromote: (branchIndex: number) => void;
   onArchive: () => void;
+  onSaveEdit: (patch: Record<string, string>) => Promise<void>;
 }
 
-function Row({ card, first, expanded, showRaw, onToggle, onToggleRaw, onPromote, onArchive }: RowProps) {
+function Row({ card, first, expanded, showRaw, onToggle, onToggleRaw, onPromote, onArchive, onSaveEdit }: RowProps) {
   const kindMeta = KIND_META[card.kind] || KIND_META["생각 흐름"];
   const [copied, setCopied] = useState(false);
   const isRecord = card.branches.length === 0 && !card.application; // 그대로 기록한 메모
+
+  const [editing, setEditing] = useState(false);
+  const [saving, setSaving] = useState(false);
+  const [edSummary, setEdSummary] = useState("");
+  const [edBranches, setEdBranches] = useState("");
+  const [edApplication, setEdApplication] = useState("");
+  const [edRaw, setEdRaw] = useState("");
+
+  function startEdit() {
+    setEdSummary(card.summary);
+    setEdBranches(card.branches.map((b) => b.text).join("\n"));
+    setEdApplication(card.application);
+    setEdRaw(card.rawExcerpt);
+    setEditing(true);
+  }
+
+  async function submitEdit() {
+    setSaving(true);
+    try {
+      await onSaveEdit({
+        summary: edSummary,
+        branches_text: edBranches,
+        application: edApplication,
+        raw: edRaw,
+      });
+      setEditing(false);
+    } finally {
+      setSaving(false);
+    }
+  }
 
   async function copyRaw() {
     try {
@@ -348,7 +385,7 @@ function Row({ card, first, expanded, showRaw, onToggle, onToggleRaw, onPromote,
         <span className="text-[11px] text-muted whitespace-nowrap">{fmtDay(card.createdAt)}</span>
       </button>
 
-      {expanded && (
+      {expanded && !editing && (
         <div className="px-4 pb-4 pt-1">
           <div className="flex flex-wrap items-center gap-x-2.5 gap-y-1 mb-3 text-[11px]">
             <span className="px-2 py-0.5 rounded-md font-semibold" style={{ backgroundColor: kindMeta.bg, color: kindMeta.fg }}>
@@ -407,6 +444,9 @@ function Row({ card, first, expanded, showRaw, onToggle, onToggleRaw, onPromote,
           )}
 
           <div className="flex items-center gap-2">
+            <button onClick={startEdit} className="text-xs px-3 py-1.5 rounded-lg transition" style={{ border: "1px solid var(--border-strong)", color: "var(--text-secondary)" }}>
+              ✎ 수정
+            </button>
             {card.status === "new" && (
               <button onClick={onArchive} className="text-xs px-3 py-1.5 rounded-lg transition" style={{ border: "1px solid var(--border-strong)", color: "var(--text-secondary)" }}>
                 보관함으로
@@ -436,6 +476,47 @@ function Row({ card, first, expanded, showRaw, onToggle, onToggleRaw, onPromote,
           )}
         </div>
       )}
+
+      {expanded && editing && (
+        <div className="px-4 pb-4 pt-1 flex flex-col gap-3">
+          <EditField label="요약" value={edSummary} onChange={setEdSummary} rows={2} />
+          {!isRecord && (
+            <EditField label="인사이트 (한 줄에 하나)" value={edBranches} onChange={setEdBranches} rows={5} />
+          )}
+          {!isRecord && (
+            <EditField label="어떻게 쓸지" value={edApplication} onChange={setEdApplication} rows={3} />
+          )}
+          <EditField label={isRecord ? "내용 (원문)" : `원본 (${card.rawKind})`} value={edRaw} onChange={setEdRaw} rows={isRecord ? 5 : 8} />
+          <div className="flex items-center gap-2">
+            <button
+              onClick={submitEdit}
+              disabled={saving}
+              className="text-xs px-4 py-1.5 rounded-lg font-medium transition"
+              style={{ backgroundColor: "var(--accent)", color: "#fff", opacity: saving ? 0.6 : 1 }}
+            >
+              {saving ? "저장 중…" : "저장"}
+            </button>
+            <button onClick={() => setEditing(false)} className="text-xs px-4 py-1.5 rounded-lg transition" style={{ border: "1px solid var(--border-strong)", color: "var(--text-secondary)" }}>
+              취소
+            </button>
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
+
+function EditField({ label, value, onChange, rows }: { label: string; value: string; onChange: (v: string) => void; rows: number }) {
+  return (
+    <div>
+      <label className="text-[11px] text-muted block mb-1">{label}</label>
+      <textarea
+        value={value}
+        onChange={(e) => onChange(e.target.value)}
+        rows={rows}
+        className="w-full rounded-lg px-3 py-2 text-[13px] leading-relaxed"
+        style={{ border: "1px solid var(--border)", backgroundColor: "var(--bg-page)", color: "var(--text-main)" }}
+      />
     </div>
   );
 }
