@@ -72,27 +72,41 @@ export const dash = {
 
 export type TranscriptionStatus = "ok" | "no_speech" | "no_audio" | "failed" | "unknown";
 
+export interface ReelStructureStep {
+  section: string;
+  duration: number;
+  content: string;
+}
+
 export interface ReelItem {
   account: "한나" | "혜린";
   shortcode: string;
   title: string;
-  hook: string;
-  hook_pattern: string;
-  cta_type: string;
+  url: string;
+  posted_at: string;
+  posted_date: string;
   views: number;
   likes: number;
   comments: number;
-  url: string;
-  date: string;
+  engagement: number;
+  engagement_rate: number;
+  hook: string;
+  hook_pattern: string;
+  hook_pattern_short: string;
+  cta_type: string;
+  cta_short: string;
+  structure: ReelStructureStep[];
+  viral_factors: string[];
+  applicable: string;
+  warning: string;
+  transcript: string;
+  has_transcript: boolean;
   transcription_status: TranscriptionStatus;
-  filename: string;
 }
 
 export interface ReelsResponse {
   items: ReelItem[];
-  total: number;
-  by_account: { 한나: number; 혜린: number };
-  transcription_health: Partial<Record<TranscriptionStatus, number>>;
+  overview: unknown; // 서버 집계(전체 기준). UI는 계정필터 반영 위해 items에서 재집계.
 }
 
 export interface HyerinDiaryTodo {
