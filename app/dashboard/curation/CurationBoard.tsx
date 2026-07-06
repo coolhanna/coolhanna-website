@@ -108,7 +108,7 @@ export default function CurationBoard() {
   const [notice, setNotice] = useState<string | null>(null);
 
   const [platFilter, setPlatFilter] = useState<string>("all");
-  const statusFilter = "all" as const; // 상태는 아래 섹션이 담당 (필터 칩 제거)
+  const [statusFilter, setStatusFilter] = useState<Status | "all">("all");
 
   const refresh = useCallback(async () => {
     try {
@@ -128,18 +128,21 @@ export default function CurationBoard() {
 
   const filtered = useMemo(
     () =>
-      cards.filter((c) => {
-        if (platFilter !== "all" && (c.platform || SOURCE_META[c.source].label) !== platFilter) return false;
-        return true;
-      }),
-    [cards, platFilter],
+      cards
+        .filter((c) => {
+          if (platFilter !== "all" && (c.platform || SOURCE_META[c.source].label) !== platFilter) return false;
+          if (statusFilter !== "all" && effStatus(c) !== statusFilter) return false;
+          return true;
+        })
+        .sort((a, b) => (a.id < b.id ? 1 : -1)), // 최신 위로
+    [cards, platFilter, statusFilter],
   );
 
-  const grouped = useMemo(() => {
-    const by: Record<Status, Card[]> = { new: [], archived: [], promoted: [] };
-    filtered.forEach((c) => by[effStatus(c)].push(c));
-    return by;
-  }, [filtered]);
+  const statusCounts = useMemo(() => {
+    const c: Record<Status, number> = { new: 0, archived: 0, promoted: 0 };
+    cards.forEach((card) => { c[effStatus(card)]++; });
+    return c;
+  }, [cards]);
 
   // 실제 존재하는 플랫폼만 필터 칩으로 (고정 순서)
   const PLATFORMS = useMemo(() => {
@@ -257,17 +260,27 @@ export default function CurationBoard() {
           )}
         </div>
 
-        {/* 필터 — 플랫폼 한 줄 (상태는 아래 섹션이 담당) */}
-        <div className="flex flex-wrap gap-1.5 mb-6">
-          <FilterChip active={platFilter === "all"} onClick={() => setPlatFilter("all")}>
+        {/* 상태 필터 — 기본 전체, NEW/KEEP/PICK 누르면 그것만 */}
+        <div className="flex flex-wrap gap-1.5 mb-2">
+          <FilterChip active={statusFilter === "all"} onClick={() => setStatusFilter("all")}>
             전체
           </FilterChip>
-          {PLATFORMS.map((p) => (
-            <FilterChip key={p} active={platFilter === p} onClick={() => setPlatFilter(platFilter === p ? "all" : p)}>
-              {p}
+          {STATUS_ORDER.map((st) => (
+            <FilterChip key={st} active={statusFilter === st} onClick={() => setStatusFilter(statusFilter === st ? "all" : st)}>
+              {STATUS_LABEL[st]} {statusCounts[st]}
             </FilterChip>
           ))}
         </div>
+        {/* 플랫폼 필터 (있을 때만) */}
+        {PLATFORMS.length > 0 && (
+          <div className="flex flex-wrap gap-1.5 mb-6">
+            {PLATFORMS.map((p) => (
+              <FilterChip key={p} active={platFilter === p} onClick={() => setPlatFilter(platFilter === p ? "all" : p)}>
+                {p}
+              </FilterChip>
+            ))}
+          </div>
+        )}
 
         {loading && <p className="text-[13px] text-muted text-center py-10">불러오는 중…</p>}
         {error && !loading && (
@@ -276,37 +289,29 @@ export default function CurationBoard() {
           </p>
         )}
 
-        {!loading && !error && STATUS_ORDER.map((st) => {
-          if (statusFilter !== "all" && statusFilter !== st) return null;
-          const group = [...grouped[st]].sort((a, b) => (a.id < b.id ? 1 : -1)); // 최신 위로
-          return (
-            <section key={st} className="mb-7">
-              <p className="text-[11px] text-muted mb-2 tracking-wide">
-                {STATUS_LABEL[st]} ({group.length})
-              </p>
-              {group.length === 0 ? (
-                <p className="text-[11px] text-muted px-1 pb-1">비어 있음</p>
-              ) : (
-              <div className="rounded-2xl overflow-hidden" style={{ border: "1px solid var(--border)" }}>
-                {group.map((card, i) => (
-                  <Row
-                    key={card.id}
-                    card={card}
-                    first={i === 0}
-                    expanded={expandedId === card.id}
-                    showRaw={showRawId === card.id}
-                    onToggle={() => setExpandedId(expandedId === card.id ? null : card.id)}
-                    onToggleRaw={() => setShowRawId(showRawId === card.id ? null : card.id)}
-                    onPromote={(idx) => promoteBranch(card.id, idx)}
-                    onArchive={() => archiveCard(card.id)}
-                    onSaveEdit={(patch) => saveEdit(card.id, patch)}
-                  />
-                ))}
-              </div>
-              )}
-            </section>
-          );
-        })}
+        {!loading && !error && filtered.length > 0 && (
+          <section className="mb-7">
+            <p className="text-[11px] text-muted mb-2 tracking-wide">
+              {statusFilter === "all" ? "전체" : STATUS_LABEL[statusFilter]} ({filtered.length})
+            </p>
+            <div className="rounded-2xl overflow-hidden" style={{ border: "1px solid var(--border)" }}>
+              {filtered.map((card, i) => (
+                <Row
+                  key={card.id}
+                  card={card}
+                  first={i === 0}
+                  expanded={expandedId === card.id}
+                  showRaw={showRawId === card.id}
+                  onToggle={() => setExpandedId(expandedId === card.id ? null : card.id)}
+                  onToggleRaw={() => setShowRawId(showRawId === card.id ? null : card.id)}
+                  onPromote={(idx) => promoteBranch(card.id, idx)}
+                  onArchive={() => archiveCard(card.id)}
+                  onSaveEdit={(patch) => saveEdit(card.id, patch)}
+                />
+              ))}
+            </div>
+          </section>
+        )}
 
         {!loading && !error && filtered.length === 0 && (
           <p className="text-[13px] text-muted text-center py-10">
