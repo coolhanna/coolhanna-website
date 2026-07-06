@@ -39,7 +39,7 @@ export default function DashboardNav() {
         className="px-3 py-1.5 rounded-lg transition hover:opacity-70"
         style={{ color: "var(--text-secondary)" }}
       >
-        파이프라인 ↗
+        진행 ↗
       </a>
     </nav>
   );
