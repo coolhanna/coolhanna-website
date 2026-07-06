@@ -308,6 +308,17 @@ interface RowProps {
 
 function Row({ card, first, expanded, showRaw, onToggle, onToggleRaw, onPromote, onArchive }: RowProps) {
   const kindMeta = KIND_META[card.kind] || KIND_META["생각 흐름"];
+  const [copied, setCopied] = useState(false);
+
+  async function copyRaw() {
+    try {
+      await navigator.clipboard.writeText(card.rawExcerpt);
+      setCopied(true);
+      setTimeout(() => setCopied(false), 1500);
+    } catch {
+      /* 클립보드 차단 시 무시 */
+    }
+  }
   return (
     <div
       style={{
@@ -378,6 +389,16 @@ function Row({ card, first, expanded, showRaw, onToggle, onToggleRaw, onPromote,
 
           {showRaw && card.rawExcerpt && (
             <div className="mt-3 rounded-lg px-3 py-2.5" style={{ backgroundColor: "var(--bg-page)", border: "1px solid var(--border)" }}>
+              <div className="flex justify-between items-center mb-1.5">
+                <span className="text-[10px] text-muted">원본 ({card.rawKind})</span>
+                <button
+                  onClick={copyRaw}
+                  className="text-[10px] px-1.5 py-0.5 rounded transition"
+                  style={{ border: "1px solid var(--border)", color: copied ? "var(--success)" : "var(--text-secondary)" }}
+                >
+                  {copied ? "복사됨 ✓" : "⧉ 복사"}
+                </button>
+              </div>
               <p className="text-[13px] leading-relaxed text-muted whitespace-pre-wrap">{card.rawExcerpt}</p>
             </div>
           )}
