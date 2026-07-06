@@ -44,8 +44,8 @@ const SOURCE_META: Record<Source, { label: string; bg: string; fg: string }> = {
 
 const STATUS_LABEL: Record<Status, string> = {
   new: "NEW",
-  archived: "보관",
-  promoted: "채택",
+  archived: "KEEP",
+  promoted: "PICK",
 };
 
 const KIND_META: Record<string, { bg: string; fg: string }> = {
@@ -191,7 +191,7 @@ export default function CurationBoard() {
             ← 대시보드
           </Link>
         </div>
-        <h1 className="text-2xl font-semibold tracking-tight mb-5">큐레이션 인풋함</h1>
+        <h1 className="text-lg font-semibold tracking-tight mb-4">큐레이션 인풋함</h1>
 
         {/* 입력 입구 */}
         <div className="rounded-2xl p-4 mb-6" style={{ backgroundColor: "var(--bg-card)", border: "1px solid var(--border)" }}>
@@ -200,7 +200,7 @@ export default function CurationBoard() {
             onChange={(e) => setPasteText(e.target.value)}
             rows={2}
             placeholder="유튜브 링크나 메모를 툭 붙여넣기"
-            className="w-full rounded-lg px-3 py-2 text-sm mb-2"
+            className="w-full rounded-lg px-3 py-2 text-[13px] mb-2"
             style={{ border: "1px solid var(--border)", backgroundColor: "var(--bg-page)" }}
           />
           <div className="flex flex-col sm:flex-row gap-2 sm:items-center">
@@ -208,14 +208,14 @@ export default function CurationBoard() {
               value={whySaved}
               onChange={(e) => setWhySaved(e.target.value)}
               placeholder="왜 저장? (선택 — 한 마디면 분석이 정확해져요)"
-              className="flex-1 rounded-lg px-3 py-2 text-sm"
+              className="flex-1 rounded-lg px-3 py-2 text-[13px]"
               style={{ border: "1px solid var(--border)", backgroundColor: "var(--bg-page)" }}
             />
             <div className="flex gap-2">
               <button
                 onClick={() => capture("record")}
                 disabled={capturing}
-                className="flex-1 sm:flex-none px-5 py-2 rounded-lg text-sm font-medium whitespace-nowrap transition"
+                className="flex-1 sm:flex-none px-5 py-2 rounded-lg text-[13px] font-medium whitespace-nowrap transition"
                 style={{ backgroundColor: "var(--accent)", color: "#fff", opacity: capturing ? 0.6 : 1 }}
               >
                 기록
@@ -223,7 +223,7 @@ export default function CurationBoard() {
               <button
                 onClick={() => capture("analyze")}
                 disabled={capturing}
-                className="flex-1 sm:flex-none px-5 py-2 rounded-lg text-sm font-medium whitespace-nowrap transition"
+                className="flex-1 sm:flex-none px-5 py-2 rounded-lg text-[13px] font-medium whitespace-nowrap transition"
                 style={{ border: "1px solid var(--border-strong)", color: "var(--text-secondary)", opacity: capturing ? 0.6 : 1 }}
               >
                 분석
@@ -258,9 +258,9 @@ export default function CurationBoard() {
           ))}
         </div>
 
-        {loading && <p className="text-sm text-muted text-center py-10">불러오는 중…</p>}
+        {loading && <p className="text-[13px] text-muted text-center py-10">불러오는 중…</p>}
         {error && !loading && (
-          <p className="text-sm text-center py-10" style={{ color: "var(--danger)" }}>
+          <p className="text-[13px] text-center py-10" style={{ color: "var(--danger)" }}>
             {error}
           </p>
         )}
@@ -298,7 +298,7 @@ export default function CurationBoard() {
         })}
 
         {!loading && !error && filtered.length === 0 && (
-          <p className="text-sm text-muted text-center py-10">
+          <p className="text-[13px] text-muted text-center py-10">
             아직 없어요. 위에 링크·메모를 넣거나 <code>~/curation_input</code> 폴더에 사진을 던져보세요.
           </p>
         )}
@@ -398,10 +398,10 @@ function Row({ card, first, expanded, showRaw, onToggle, onToggleRaw, onPromote,
     >
       <button onClick={onToggle} className="w-full text-left flex items-center gap-2.5 px-4 py-3">
         <SourceBadge source={card.source} />
-        <span className="flex-1 text-sm leading-snug" style={{ color: isNew ? "var(--text-main)" : "var(--text-secondary)" }}>
+        <span className="flex-1 text-[13px] leading-snug" style={{ color: isNew ? "var(--text-main)" : "var(--text-secondary)" }}>
           {card.summary}
         </span>
-        {card.status === "promoted" && <span className="text-[10px]" style={{ color: "var(--success)" }}>채택됨</span>}
+        {card.status === "promoted" && <span className="text-[10px]" style={{ color: "var(--success)" }}>PICKED</span>}
         <span className="text-[11px] text-muted whitespace-nowrap">{fmtDay(card.createdAt)}</span>
       </button>
 
@@ -426,14 +426,14 @@ function Row({ card, first, expanded, showRaw, onToggle, onToggleRaw, onPromote,
                   {copied ? "복사됨 ✓" : "⧉ 복사"}
                 </button>
               </div>
-              <p className="text-[14px] leading-relaxed whitespace-pre-wrap" style={{ color: "var(--text-main)" }}>
+              <p className="text-[13px] leading-relaxed whitespace-pre-wrap" style={{ color: "var(--text-main)" }}>
                 {card.rawExcerpt || card.summary}
               </p>
             </div>
           )}
 
           {card.branches.length > 0 && (
-          <><p className="text-[11px] text-muted mb-1.5">인사이트 · 갈래별로 채택</p>
+          <><p className="text-[11px] text-muted mb-1.5">인사이트 · 갈래별 PICK</p>
           <div className="flex flex-col gap-1.5 mb-4">
             {card.branches.map((b, i) => (
               <div key={b.id} className="flex items-start gap-2 rounded-lg px-3 py-2" style={{ backgroundColor: "var(--bg-card-soft)" }}>
@@ -441,14 +441,14 @@ function Row({ card, first, expanded, showRaw, onToggle, onToggleRaw, onPromote,
                   {b.text}
                 </span>
                 {b.promoted ? (
-                  <span className="text-[10px] whitespace-nowrap mt-0.5" style={{ color: "var(--success)" }}>★ 채택됨</span>
+                  <span className="text-[10px] whitespace-nowrap mt-0.5" style={{ color: "var(--success)" }}>★ PICKED</span>
                 ) : (
                   <button
                     onClick={() => onPromote(i)}
                     className="text-[11px] px-2 py-0.5 rounded-md whitespace-nowrap mt-0.5 transition"
                     style={{ border: "1px solid var(--accent)", color: "var(--accent-text)", backgroundColor: "var(--accent-soft)" }}
                   >
-                    ★ 채택
+                    ★ PICK
                   </button>
                 )}
               </div>
@@ -469,7 +469,7 @@ function Row({ card, first, expanded, showRaw, onToggle, onToggleRaw, onPromote,
             </button>
             {isNew && (
               <button onClick={onArchive} className="text-xs px-3 py-1.5 rounded-lg transition" style={{ border: "1px solid var(--border-strong)", color: "var(--text-secondary)" }}>
-                보관함으로
+                KEEP
               </button>
             )}
             {!isRecord && card.rawExcerpt && (
