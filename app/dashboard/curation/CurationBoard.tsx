@@ -321,6 +321,7 @@ interface RowProps {
 function Row({ card, first, expanded, showRaw, onToggle, onToggleRaw, onPromote, onArchive }: RowProps) {
   const kindMeta = KIND_META[card.kind] || KIND_META["생각 흐름"];
   const [copied, setCopied] = useState(false);
+  const isRecord = card.branches.length === 0 && !card.application; // 그대로 기록한 메모
 
   async function copyRaw() {
     try {
@@ -356,6 +357,23 @@ function Row({ card, first, expanded, showRaw, onToggle, onToggleRaw, onPromote,
             {card.whySaved && <span className="text-muted">{card.whySaved}</span>}
             {card.origin && <span className="text-muted">· {card.origin}</span>}
           </div>
+
+          {isRecord && (
+            <div className="rounded-lg px-3 py-2.5 mb-3" style={{ backgroundColor: "var(--bg-card-soft)" }}>
+              <div className="flex justify-end mb-1">
+                <button
+                  onClick={copyRaw}
+                  className="text-[10px] px-1.5 py-0.5 rounded transition"
+                  style={{ border: "1px solid var(--border)", color: copied ? "var(--success)" : "var(--text-secondary)" }}
+                >
+                  {copied ? "복사됨 ✓" : "⧉ 복사"}
+                </button>
+              </div>
+              <p className="text-[14px] leading-relaxed whitespace-pre-wrap" style={{ color: "var(--text-main)" }}>
+                {card.rawExcerpt || card.summary}
+              </p>
+            </div>
+          )}
 
           {card.branches.length > 0 && (
           <><p className="text-[11px] text-muted mb-1.5">인사이트 · 갈래별로 승격</p>
@@ -394,7 +412,7 @@ function Row({ card, first, expanded, showRaw, onToggle, onToggleRaw, onPromote,
                 보관함으로
               </button>
             )}
-            {card.rawExcerpt && (
+            {!isRecord && card.rawExcerpt && (
               <button onClick={onToggleRaw} className="text-xs px-3 py-1.5 rounded-lg transition" style={{ border: "1px solid var(--border-strong)", color: "var(--text-secondary)" }}>
                 {showRaw ? "원본 접기" : `원본 보기 (${card.rawKind})`}
               </button>
