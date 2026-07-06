@@ -116,16 +116,16 @@ export default function CurationBoard() {
     return by;
   }, [filtered]);
 
-  async function capture() {
+  async function capture(mode: "record" | "analyze") {
     const text = pasteText.trim();
     if (!text || capturing) return;
     setCapturing(true);
     setNotice(null);
     try {
-      await callApi("POST", "curation/capture", { text, why: whySaved.trim() });
+      await callApi("POST", "curation/capture", { text, why: whySaved.trim(), mode });
       setPasteText("");
       setWhySaved("");
-      setNotice("넣었어! 분석되면 잠시 후 카드로 떠 — 곧 자동으로 새로고침돼.");
+      setNotice(mode === "record" ? "기록했어! 잠시 후 그대로 카드로 떠." : "분석 중 — 잠시 후 카드로 떠. 곧 자동 새로고침돼.");
       // 워처(약 1분 주기) 처리 대기 → 몇 번 폴링
       [8000, 20000, 40000, 65000].forEach((ms) => setTimeout(refresh, ms));
     } catch (e) {
@@ -191,16 +191,28 @@ export default function CurationBoard() {
               className="flex-1 rounded-lg px-3 py-2 text-sm"
               style={{ border: "1px solid var(--border)", backgroundColor: "var(--bg-page)" }}
             />
-            <button
-              onClick={capture}
-              disabled={capturing}
-              className="px-5 py-2 rounded-lg text-sm font-medium whitespace-nowrap transition"
-              style={{ backgroundColor: "var(--accent)", color: "#fff", opacity: capturing ? 0.6 : 1 }}
-            >
-              {capturing ? "넣는 중…" : "넣기"}
-            </button>
+            <div className="flex gap-2">
+              <button
+                onClick={() => capture("record")}
+                disabled={capturing}
+                className="flex-1 sm:flex-none px-5 py-2 rounded-lg text-sm font-medium whitespace-nowrap transition"
+                style={{ backgroundColor: "var(--accent)", color: "#fff", opacity: capturing ? 0.6 : 1 }}
+              >
+                기록
+              </button>
+              <button
+                onClick={() => capture("analyze")}
+                disabled={capturing}
+                className="flex-1 sm:flex-none px-5 py-2 rounded-lg text-sm font-medium whitespace-nowrap transition"
+                style={{ border: "1px solid var(--border-strong)", color: "var(--text-secondary)", opacity: capturing ? 0.6 : 1 }}
+              >
+                분석
+              </button>
+            </div>
           </div>
-          <p className="text-[11px] text-muted mt-2">사진·음성은 폴더에 던지면 자동으로 들어와요.</p>
+          <p className="text-[11px] text-muted mt-2">
+            <b style={{ fontWeight: 600 }}>기록</b> = 그대로 저장 (내 생각·메모) · <b style={{ fontWeight: 600 }}>분석</b> = 요약·인사이트·적용 (링크·자료). 사진·음성은 폴더에 던지면 자동 분석.
+          </p>
           {notice && (
             <p className="text-[12px] mt-2" style={{ color: "var(--accent-text)" }}>
               {notice}
@@ -345,7 +357,8 @@ function Row({ card, first, expanded, showRaw, onToggle, onToggleRaw, onPromote,
             {card.origin && <span className="text-muted">· {card.origin}</span>}
           </div>
 
-          <p className="text-[11px] text-muted mb-1.5">인사이트 · 갈래별로 승격</p>
+          {card.branches.length > 0 && (
+          <><p className="text-[11px] text-muted mb-1.5">인사이트 · 갈래별로 승격</p>
           <div className="flex flex-col gap-1.5 mb-4">
             {card.branches.map((b, i) => (
               <div key={b.id} className="flex items-start gap-2 rounded-lg px-3 py-2" style={{ backgroundColor: "var(--bg-card-soft)" }}>
@@ -365,7 +378,8 @@ function Row({ card, first, expanded, showRaw, onToggle, onToggleRaw, onPromote,
                 )}
               </div>
             ))}
-          </div>
+          </div></>
+          )}
 
           {card.application && (
             <div className="rounded-lg px-3 py-2.5 mb-4" style={{ backgroundColor: "var(--accent-soft)" }}>
