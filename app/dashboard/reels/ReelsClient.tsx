@@ -3,6 +3,7 @@
 // 릴스 "분석" 대시보드 — 나열이 아니라: 뭐가 왜 터졌나(훅패턴별 성과), 추이(게시일순),
 // 개별 심층(구조·바이럴요인·대본·적용포인트). 계정 필터는 모든 집계에 반영됨.
 import { useMemo, useState } from "react";
+import { useRouter } from "next/navigation";
 import type { ReelItem, ReelsResponse } from "@/lib/dashboard-api";
 
 type AccountFilter = "전체" | "한나" | "혜린";
@@ -20,6 +21,12 @@ const VERDICT_STYLE: Record<string, { bg: string; fg: string }> = {
   성공: { bg: "#3a7d3a", fg: "#fff" },
   평타: { bg: "var(--color-rule)", fg: "var(--color-muted)" },
   부진: { bg: "#f3ddda", fg: "#b3261e" },
+};
+
+// 콘텐츠 유형 딱지 — 캡션 첫줄 기준 (공구/광고는 조회 목적이 달라 분리해서 봐야 함)
+const CONTENT_TYPE_STYLE: Record<string, { bg: string; fg: string }> = {
+  공구: { bg: "#e8b84b", fg: "#3d2e00" },
+  광고: { bg: "#7a94c9", fg: "#fff" },
 };
 
 function fmtViews(n: number): string {
@@ -77,9 +84,17 @@ interface ReelsClientProps {
 export default function ReelsClient({ data }: ReelsClientProps) {
   const isError = "error" in data;
   const all: ReelItem[] = isError ? [] : data.items;
+  const router = useRouter();
   const [account, setAccount] = useState<AccountFilter>("전체");
   const [sortKey, setSortKey] = useState<SortKey>("latest");
   const [visualOnly, setVisualOnly] = useState(false);
+  const [refreshing, setRefreshing] = useState(false);
+
+  const handleRefresh = () => {
+    setRefreshing(true);
+    router.refresh();
+    setTimeout(() => setRefreshing(false), 1500);
+  };
 
   const visualCount = useMemo(() => all.filter((r) => r.has_visual).length, [all]);
   const filtered = useMemo(() => {
@@ -132,6 +147,20 @@ export default function ReelsClient({ data }: ReelsClientProps) {
               {f}
             </button>
           ))}
+          <button
+            type="button"
+            onClick={handleRefresh}
+            disabled={refreshing}
+            className="ml-2 px-3 py-1.5 rounded-lg transition"
+            style={{
+              border: "1px solid var(--color-rule)",
+              color: "var(--color-muted)",
+              opacity: refreshing ? 0.5 : 1,
+            }}
+            title="최신 데이터 다시 불러오기"
+          >
+            {refreshing ? "⟳ 갱신 중…" : "⟳ 새로고침"}
+          </button>
         </div>
       </header>
 
@@ -348,7 +377,7 @@ function ReelRow({ reel, rank, sortKey }: { reel: ReelItem; rank: number; sortKe
             {fmtViews(reel.views)}
           </div>
           <div className="mt-1 text-[11px]" style={{ color: "var(--color-muted)" }}>
-            참여 {reel.engagement_rate}%
+            {reel.shares != null ? `공유 ${fmtInt(reel.shares)}` : `참여 ${reel.engagement_rate}%`}
           </div>
         </div>
 
@@ -369,6 +398,17 @@ function ReelRow({ reel, rank, sortKey }: { reel: ReelItem; rank: number; sortKe
                 }}
               >
                 {reel.verdict}
+              </span>
+            )}
+            {CONTENT_TYPE_STYLE[reel.content_type] && (
+              <span
+                className="text-[11px] px-1.5 py-0.5 rounded shrink-0 font-semibold"
+                style={{
+                  backgroundColor: CONTENT_TYPE_STYLE[reel.content_type].bg,
+                  color: CONTENT_TYPE_STYLE[reel.content_type].fg,
+                }}
+              >
+                {reel.content_type}
               </span>
             )}
             <h3 className="font-medium truncate">{reel.title}</h3>
@@ -405,10 +445,16 @@ function ReelDetail({ reel }: { reel: ReelItem }) {
       <div className="flex flex-wrap gap-x-5 gap-y-1 text-[12px]" style={{ color: "var(--color-muted)" }}>
         <span>조회 {fmtInt(reel.views)}</span>
         {reel.views_d1 != null && <span>D+1 {fmtViews(reel.views_d1)}</span>}
+        {reel.views_d3 != null && <span>D+3 {fmtViews(reel.views_d3)}</span>}
         {reel.views_d7 != null && <span>D+7 {fmtViews(reel.views_d7)}</span>}
         <span>♥ {fmtInt(reel.likes)}</span>
         <span>💬 {fmtInt(reel.comments)}</span>
-        <span>참여율 {reel.engagement_rate}%</span>
+        <span style={{ fontWeight: 600, color: "var(--color-ink)" }}>
+          공유 {reel.shares != null ? fmtInt(reel.shares) : "— (인사이트 연동 대기)"}
+        </span>
+        <span title="(좋아요+댓글)÷조회수 — 공유·저장은 인스타 비공개라 미포함">
+          참여율 {reel.engagement_rate}% (♥+💬÷조회)
+        </span>
         {reel.duration_sec > 0 && <span>{reel.duration_sec}초</span>}
         {reel.music && <span>♪ {reel.music}</span>}
         {reel.url && (
@@ -475,6 +521,29 @@ function ReelDetail({ reel }: { reel: ReelItem }) {
         </div>
       )}
 
+      {/* 🎬 Codex 장면(비주얼) 분석 — 릴스는 비주얼이 절반이라 성과요인 바로 옆에 */}
+      {reel.visual && reel.visual.sections.length > 0 && (
+        <div className="rounded-xl p-4" style={{ backgroundColor: "#f3f0e9", border: "1px solid var(--color-rule)" }}>
+          <div className="flex items-center gap-2 mb-3">
+            <h4 className="font-semibold">🎬 장면 분석</h4>
+            <span className="text-[11px] px-1.5 py-0.5 rounded" style={{ backgroundColor: "var(--color-ink)", color: "var(--color-paper)" }}>
+              {reel.visual.author}
+            </span>
+            <span className="text-[11px]" style={{ color: "var(--color-muted)" }}>
+              프레임 캡처 기반 화면 분석
+            </span>
+          </div>
+          <div className="grid gap-4">
+            {reel.visual.sections.map((s, i) => (
+              <div key={i}>
+                <h5 className="text-[13px] font-semibold mb-1">{s.title}</h5>
+                <VisualContent text={s.content} />
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+
       {/* 💬 댓글 반응 (v2) */}
       {reel.comment_insight && (
         <div>
@@ -521,28 +590,6 @@ function ReelDetail({ reel }: { reel: ReelItem }) {
         </p>
       )}
 
-      {/* Codex 장면(비주얼) 분석 */}
-      {reel.visual && reel.visual.sections.length > 0 && (
-        <div className="rounded-xl p-4" style={{ backgroundColor: "#f3f0e9", border: "1px solid var(--color-rule)" }}>
-          <div className="flex items-center gap-2 mb-3">
-            <h4 className="font-semibold">🎬 장면 분석</h4>
-            <span className="text-[11px] px-1.5 py-0.5 rounded" style={{ backgroundColor: "var(--color-ink)", color: "var(--color-paper)" }}>
-              {reel.visual.author}
-            </span>
-            <span className="text-[11px]" style={{ color: "var(--color-muted)" }}>
-              프레임 캡처 기반 화면 분석
-            </span>
-          </div>
-          <div className="grid gap-4">
-            {reel.visual.sections.map((s, i) => (
-              <div key={i}>
-                <h5 className="text-[13px] font-semibold mb-1">{s.title}</h5>
-                <VisualContent text={s.content} />
-              </div>
-            ))}
-          </div>
-        </div>
-      )}
     </div>
   );
 }

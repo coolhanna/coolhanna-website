@@ -124,7 +124,10 @@ export interface ReelItem {
   music: string;
   metrics_captured_at: string;
   views_d1: number | null;
+  views_d3: number | null;
   views_d7: number | null;
+  shares: number | null;
+  content_type: "공구" | "광고" | "일반";
   snapshot_count: number;
 }
 
