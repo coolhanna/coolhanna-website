@@ -23,11 +23,8 @@ const VERDICT_STYLE: Record<string, { bg: string; fg: string }> = {
   부진: { bg: "#f3ddda", fg: "#b3261e" },
 };
 
-// 콘텐츠 유형 딱지 — 캡션 첫줄 기준 (공구/광고는 조회 목적이 달라 분리해서 봐야 함)
-const CONTENT_TYPE_STYLE: Record<string, { bg: string; fg: string }> = {
-  공구: { bg: "#e8b84b", fg: "#3d2e00" },
-  광고: { bg: "#7a94c9", fg: "#fff" },
-};
+// 콘텐츠 유형 딱지 — 무채색 텍스트만 (한나: 눈에 띌 필요 없음)
+const CONTENT_TYPES = new Set(["공구", "광고"]);
 
 function fmtViews(n: number): string {
   if (n >= 10000) return `${(n / 10000).toFixed(1)}만`;
@@ -400,13 +397,10 @@ function ReelRow({ reel, rank, sortKey }: { reel: ReelItem; rank: number; sortKe
                 {reel.verdict}
               </span>
             )}
-            {CONTENT_TYPE_STYLE[reel.content_type] && (
+            {CONTENT_TYPES.has(reel.content_type) && (
               <span
-                className="text-[11px] px-1.5 py-0.5 rounded shrink-0 font-semibold"
-                style={{
-                  backgroundColor: CONTENT_TYPE_STYLE[reel.content_type].bg,
-                  color: CONTENT_TYPE_STYLE[reel.content_type].fg,
-                }}
+                className="text-[11px] px-1.5 py-0.5 rounded shrink-0"
+                style={{ border: "1px solid var(--color-rule)", color: "var(--color-muted)" }}
               >
                 {reel.content_type}
               </span>
@@ -441,17 +435,36 @@ function ReelRow({ reel, rank, sortKey }: { reel: ReelItem; rank: number; sortKe
 function ReelDetail({ reel }: { reel: ReelItem }) {
   return (
     <div className="pb-6 pl-0 sm:pl-[4.5rem] grid gap-5 text-[13px] leading-relaxed">
-      {/* 지표 */}
+      {/* 조회수 추이 + 공유 — 제일 중요한 두 지표라 크게 (한나 지침) */}
+      <div
+        className="rounded-xl px-4 py-3 flex flex-wrap items-end gap-x-6 gap-y-2"
+        style={{ border: "1.5px solid var(--color-ink)" }}
+      >
+        <TrajectoryCell label="D+1" value={reel.views_d1} />
+        <span className="pb-1" style={{ color: "var(--color-muted)" }}>→</span>
+        <TrajectoryCell label="D+3" value={reel.views_d3} />
+        <span className="pb-1" style={{ color: "var(--color-muted)" }}>→</span>
+        <TrajectoryCell label="D+7" value={reel.views_d7} />
+        <span className="pb-1" style={{ color: "var(--color-muted)" }}>·</span>
+        <TrajectoryCell label="지금" value={reel.views} />
+        <div className="ml-auto text-right">
+          <div className="text-[11px]" style={{ color: "var(--color-muted)" }}>공유 / 저장</div>
+          <div className="text-xl font-semibold tabular-nums leading-tight">
+            {reel.shares != null ? fmtInt(reel.shares) : "—"}
+            <span className="text-[13px] font-normal" style={{ color: "var(--color-muted)" }}>
+              {" / "}{reel.saves != null ? fmtInt(reel.saves) : "—"}
+            </span>
+          </div>
+          {reel.shares == null && (
+            <div className="text-[10px]" style={{ color: "var(--color-muted)" }}>인사이트 수집 대기</div>
+          )}
+        </div>
+      </div>
+
+      {/* 보조 지표 */}
       <div className="flex flex-wrap gap-x-5 gap-y-1 text-[12px]" style={{ color: "var(--color-muted)" }}>
-        <span>조회 {fmtInt(reel.views)}</span>
-        {reel.views_d1 != null && <span>D+1 {fmtViews(reel.views_d1)}</span>}
-        {reel.views_d3 != null && <span>D+3 {fmtViews(reel.views_d3)}</span>}
-        {reel.views_d7 != null && <span>D+7 {fmtViews(reel.views_d7)}</span>}
         <span>♥ {fmtInt(reel.likes)}</span>
         <span>💬 {fmtInt(reel.comments)}</span>
-        <span style={{ fontWeight: 600, color: "var(--color-ink)" }}>
-          공유 {reel.shares != null ? fmtInt(reel.shares) : "— (인사이트 연동 대기)"}
-        </span>
         <span title="(좋아요+댓글)÷조회수 — 공유·저장은 인스타 비공개라 미포함">
           참여율 {reel.engagement_rate}% (♥+💬÷조회)
         </span>
@@ -464,13 +477,21 @@ function ReelDetail({ reel }: { reel: ReelItem }) {
         )}
       </div>
 
-      {/* 🧭 성과 판정 — 베이스라인 대비 왜 이 성과인가 (v2) */}
+      {/* 🧭 성과 판정 (v2) */}
       {reel.verdict_reason && (
         <div>
           <h4 className="font-semibold mb-1">
             🧭 성과 판정{reel.verdict ? `: ${reel.verdict}` : ""}
           </h4>
           <p>{reel.verdict_reason}</p>
+        </div>
+      )}
+
+      {/* 🎯 주제 평가 (v2.2) — 소재 자체가 통했나 */}
+      {reel.topic_verdict && (
+        <div>
+          <h4 className="font-semibold mb-1">🎯 주제 평가{reel.topic ? `: ${reel.topic}` : ""}</h4>
+          <p>{reel.topic_verdict}</p>
         </div>
       )}
 
@@ -509,8 +530,34 @@ function ReelDetail({ reel }: { reel: ReelItem }) {
         </div>
       )}
 
-      {/* 성과 요인 (v1: 바이럴 요인) */}
-      {reel.viral_factors.length > 0 && (
+      {/* ✅/❌ 좋았던 것 · 아쉬운 것 (v2.2) */}
+      {(reel.good.length > 0 || reel.bad.length > 0) && (
+        <div className="grid sm:grid-cols-2 gap-4">
+          {reel.good.length > 0 && (
+            <div>
+              <h4 className="font-semibold mb-2">✅ 좋았던 것</h4>
+              <ul className="space-y-1.5 list-disc pl-5">
+                {reel.good.map((g, i) => (
+                  <li key={i}>{g}</li>
+                ))}
+              </ul>
+            </div>
+          )}
+          {reel.bad.length > 0 && (
+            <div>
+              <h4 className="font-semibold mb-2">❌ 아쉬운 것</h4>
+              <ul className="space-y-1.5 list-disc pl-5">
+                {reel.bad.map((b, i) => (
+                  <li key={i}>{b}</li>
+                ))}
+              </ul>
+            </div>
+          )}
+        </div>
+      )}
+
+      {/* 성과 요인 (구버전 노트) */}
+      {reel.good.length === 0 && reel.bad.length === 0 && reel.viral_factors.length > 0 && (
         <div>
           <h4 className="font-semibold mb-2">🔥 성과 요인 — 왜 이 결과가 나왔나</h4>
           <ul className="space-y-1.5 list-disc pl-5">
@@ -590,6 +637,70 @@ function ReelDetail({ reel }: { reel: ReelItem }) {
         </p>
       )}
 
+      {/* 📝 내 메모 — 한나의 피드백 창구. 사이드카 저장이라 재분석에도 안 날아감 */}
+      <MemoBox shortcode={reel.shortcode} initial={reel.memo} />
+    </div>
+  );
+}
+
+function TrajectoryCell({ label, value }: { label: string; value: number | null }) {
+  return (
+    <div>
+      <div className="text-[11px]" style={{ color: "var(--color-muted)" }}>{label}</div>
+      <div className="text-xl font-semibold tabular-nums leading-tight">
+        {value != null ? fmtViews(value) : "—"}
+      </div>
+    </div>
+  );
+}
+
+function MemoBox({ shortcode, initial }: { shortcode: string; initial: string }) {
+  const [text, setText] = useState(initial);
+  const [status, setStatus] = useState<"idle" | "saving" | "saved" | "error">("idle");
+
+  const save = async () => {
+    setStatus("saving");
+    try {
+      const r = await fetch("/api/dashboard/proxy/reels/memo", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ shortcode, memo: text }),
+      });
+      setStatus(r.ok ? "saved" : "error");
+    } catch {
+      setStatus("error");
+    }
+    setTimeout(() => setStatus("idle"), 2000);
+  };
+
+  return (
+    <div>
+      <h4 className="font-semibold mb-1">📝 내 메모</h4>
+      <textarea
+        value={text}
+        onChange={(e) => setText(e.target.value)}
+        placeholder="이 릴스에 대한 내 생각, 다음에 해볼 것…"
+        rows={3}
+        className="w-full rounded-lg p-3 text-[13px] resize-y"
+        style={{ border: "1px solid var(--color-rule)", backgroundColor: "var(--color-paper)" }}
+      />
+      <div className="mt-1.5 flex items-center gap-3">
+        <button
+          type="button"
+          onClick={save}
+          disabled={status === "saving"}
+          className="text-[12px] px-3 py-1.5 rounded-lg font-medium transition"
+          style={{
+            backgroundColor: "var(--color-ink)",
+            color: "var(--color-paper)",
+            opacity: status === "saving" ? 0.4 : 1,
+          }}
+        >
+          {status === "saving" ? "저장 중…" : "메모 저장"}
+        </button>
+        {status === "saved" && <span className="text-[12px]" style={{ color: "#3a7d3a" }}>✓ 저장됨</span>}
+        {status === "error" && <span className="text-[12px]" style={{ color: "#b3261e" }}>저장 실패 — 다시 시도</span>}
+      </div>
     </div>
   );
 }

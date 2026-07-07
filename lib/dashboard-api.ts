@@ -127,8 +127,15 @@ export interface ReelItem {
   views_d3: number | null;
   views_d7: number | null;
   shares: number | null;
+  saves: number | null;
   content_type: "공구" | "광고" | "일반";
   snapshot_count: number;
+  // v2.2 — 주제 평가·좋았던/아쉬운·메모
+  topic: string;
+  topic_verdict: string;
+  good: string[];
+  bad: string[];
+  memo: string;
 }
 
 export interface ReelsResponse {
