@@ -14,6 +14,14 @@ const SORT_LABEL: Record<SortKey, string> = {
   engagement: "참여율순",
 };
 
+// 성과 판정 칩 색 — 계정 베이스라인 백분위 기반 (reels-monitor v2가 산출)
+const VERDICT_STYLE: Record<string, { bg: string; fg: string }> = {
+  대박: { bg: "var(--color-ink)", fg: "var(--color-paper)" },
+  성공: { bg: "#3a7d3a", fg: "#fff" },
+  평타: { bg: "var(--color-rule)", fg: "var(--color-muted)" },
+  부진: { bg: "#f3ddda", fg: "#b3261e" },
+};
+
 function fmtViews(n: number): string {
   if (n >= 10000) return `${(n / 10000).toFixed(1)}만`;
   return n.toLocaleString("ko-KR");
@@ -352,6 +360,17 @@ function ReelRow({ reel, rank, sortKey }: { reel: ReelItem; rank: number; sortKe
             >
               {reel.account}
             </span>
+            {reel.verdict && VERDICT_STYLE[reel.verdict] && (
+              <span
+                className="text-[11px] px-1.5 py-0.5 rounded shrink-0 font-semibold"
+                style={{
+                  backgroundColor: VERDICT_STYLE[reel.verdict].bg,
+                  color: VERDICT_STYLE[reel.verdict].fg,
+                }}
+              >
+                {reel.verdict}
+              </span>
+            )}
             <h3 className="font-medium truncate">{reel.title}</h3>
           </div>
           {reel.hook && (
@@ -385,15 +404,44 @@ function ReelDetail({ reel }: { reel: ReelItem }) {
       {/* 지표 */}
       <div className="flex flex-wrap gap-x-5 gap-y-1 text-[12px]" style={{ color: "var(--color-muted)" }}>
         <span>조회 {fmtInt(reel.views)}</span>
+        {reel.views_d1 != null && <span>D+1 {fmtViews(reel.views_d1)}</span>}
+        {reel.views_d7 != null && <span>D+7 {fmtViews(reel.views_d7)}</span>}
         <span>♥ {fmtInt(reel.likes)}</span>
         <span>💬 {fmtInt(reel.comments)}</span>
         <span>참여율 {reel.engagement_rate}%</span>
+        {reel.duration_sec > 0 && <span>{reel.duration_sec}초</span>}
+        {reel.music && <span>♪ {reel.music}</span>}
         {reel.url && (
           <a href={reel.url} target="_blank" rel="noreferrer" className="underline-grow" style={{ color: "var(--color-ink)" }}>
             인스타에서 보기 ↗
           </a>
         )}
       </div>
+
+      {/* 🧭 성과 판정 — 베이스라인 대비 왜 이 성과인가 (v2) */}
+      {reel.verdict_reason && (
+        <div>
+          <h4 className="font-semibold mb-1">
+            🧭 성과 판정{reel.verdict ? `: ${reel.verdict}` : ""}
+          </h4>
+          <p>{reel.verdict_reason}</p>
+        </div>
+      )}
+
+      {/* 🔁 다음 변주 훅 — 이 대시보드의 존재 이유 (v2) */}
+      {reel.next_hooks.length > 0 && (
+        <div className="rounded-xl p-4" style={{ backgroundColor: "var(--color-ink)", color: "var(--color-paper)" }}>
+          <h4 className="font-semibold mb-2">🔁 다음 영상용 변주 훅</h4>
+          <ol className="space-y-1.5 list-decimal pl-5">
+            {reel.next_hooks.map((h, i) => (
+              <li key={i}>“{h}”</li>
+            ))}
+          </ol>
+          {reel.formula && (
+            <p className="mt-3 text-[12px] opacity-80">공식: {reel.formula}</p>
+          )}
+        </div>
+      )}
 
       {/* 구조 */}
       {reel.structure.length > 0 && (
@@ -415,15 +463,31 @@ function ReelDetail({ reel }: { reel: ReelItem }) {
         </div>
       )}
 
-      {/* 바이럴 요인 */}
+      {/* 성과 요인 (v1: 바이럴 요인) */}
       {reel.viral_factors.length > 0 && (
         <div>
-          <h4 className="font-semibold mb-2">🔥 왜 터졌나 (바이럴 요인)</h4>
+          <h4 className="font-semibold mb-2">🔥 성과 요인 — 왜 이 결과가 나왔나</h4>
           <ul className="space-y-1.5 list-disc pl-5">
             {reel.viral_factors.map((f, i) => (
               <li key={i}>{f}</li>
             ))}
           </ul>
+        </div>
+      )}
+
+      {/* 💬 댓글 반응 (v2) */}
+      {reel.comment_insight && (
+        <div>
+          <h4 className="font-semibold mb-1">💬 댓글이 말해주는 것</h4>
+          <VisualContent text={reel.comment_insight} />
+        </div>
+      )}
+
+      {/* 📈 트렌드 적합도 (v2) */}
+      {reel.trend_fit && (
+        <div>
+          <h4 className="font-semibold mb-1">📈 트렌드 적합도</h4>
+          <p>{reel.trend_fit}</p>
         </div>
       )}
 

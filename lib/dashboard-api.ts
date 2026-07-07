@@ -113,6 +113,19 @@ export interface ReelItem {
   transcription_status: TranscriptionStatus;
   visual: ReelVisual | null;
   has_visual: boolean;
+  // v2 — 성과 판정·댓글·트렌드·변주 훅·지표 시계열
+  verdict: "대박" | "성공" | "평타" | "부진" | "";
+  verdict_reason: string;
+  comment_insight: string;
+  trend_fit: string;
+  next_hooks: string[];
+  formula: string;
+  duration_sec: number;
+  music: string;
+  metrics_captured_at: string;
+  views_d1: number | null;
+  views_d7: number | null;
+  snapshot_count: number;
 }
 
 export interface ReelsResponse {
