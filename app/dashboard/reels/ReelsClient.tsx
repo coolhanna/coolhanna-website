@@ -37,7 +37,8 @@ function fmtInt(n: number): string {
 interface HookPerf {
   label: string;
   count: number;
-  avgViews: number;
+  avgViews: number;   // 단일 계정 모드: 평균 조회수
+  avgMult: number;    // 전체 모드: 자기 계정 평균 대비 배수 (규모가 다른 두 계정을 공정 비교)
   avgEng: number;
 }
 interface Aggregate {
@@ -46,13 +47,23 @@ interface Aggregate {
   avgEng: number;
   hookPerf: HookPerf[];
   best: ReelItem | null;
+  acctAvg: Map<string, number>; // 계정별 평균 (전체 모드 KPI 분리 표기용)
+  mixed: boolean;
 }
 
-function aggregate(items: ReelItem[]): Aggregate | null {
+function aggregate(items: ReelItem[], mixed: boolean): Aggregate | null {
   const n = items.length;
   if (!n) return null;
   const avgViews = Math.round(items.reduce((s, r) => s + r.views, 0) / n);
   const avgEng = Math.round((items.reduce((s, r) => s + r.engagement_rate, 0) / n) * 100) / 100;
+
+  // 계정별 평균 — 한나/혜린은 규모가 달라 생평균 비교가 거짓말이 됨
+  const acctAvg = new Map<string, number>();
+  for (const acct of ["한나", "혜린"]) {
+    const g = items.filter((r) => r.account === acct);
+    if (g.length) acctAvg.set(acct, g.reduce((s, r) => s + r.views, 0) / g.length);
+  }
+  const mult = (r: ReelItem) => r.views / (acctAvg.get(r.account) || r.views || 1);
 
   const buckets = new Map<string, ReelItem[]>();
   for (const r of items) {
@@ -66,12 +77,13 @@ function aggregate(items: ReelItem[]): Aggregate | null {
       label,
       count: g.length,
       avgViews: Math.round(g.reduce((s, r) => s + r.views, 0) / g.length),
+      avgMult: Math.round((g.reduce((s, r) => s + mult(r), 0) / g.length) * 10) / 10,
       avgEng: Math.round((g.reduce((s, r) => s + r.engagement_rate, 0) / g.length) * 100) / 100,
     }))
-    .sort((a, b) => b.avgViews - a.avgViews);
+    .sort((a, b) => (mixed ? b.avgMult - a.avgMult : b.avgViews - a.avgViews));
 
   const best = items.reduce((m, r) => (r.views > m.views ? r : m), items[0]);
-  return { n, avgViews, avgEng, hookPerf, best };
+  return { n, avgViews, avgEng, hookPerf, best, acctAvg, mixed };
 }
 
 interface ReelsClientProps {
@@ -99,7 +111,7 @@ export default function ReelsClient({ data }: ReelsClientProps) {
     if (visualOnly) rows = rows.filter((r) => r.has_visual);
     return rows;
   }, [account, visualOnly, all]);
-  const agg = useMemo(() => aggregate(filtered), [filtered]);
+  const agg = useMemo(() => aggregate(filtered, account === "전체"), [filtered, account]);
   const sorted = useMemo(() => {
     const arr = [...filtered];
     if (sortKey === "views") arr.sort((a, b) => b.views - a.views);
@@ -164,7 +176,11 @@ export default function ReelsClient({ data }: ReelsClientProps) {
       {agg && (
         <>
           <KpiRow agg={agg} />
-          <HookPerformance rows={agg.hookPerf} topViews={agg.hookPerf[0]?.avgViews ?? 1} />
+          <HookPerformance
+            rows={agg.hookPerf}
+            mixed={agg.mixed}
+            top={agg.mixed ? agg.hookPerf[0]?.avgMult ?? 1 : agg.hookPerf[0]?.avgViews ?? 1}
+          />
           <TrendChart items={filtered} />
         </>
       )}
@@ -221,9 +237,16 @@ export default function ReelsClient({ data }: ReelsClientProps) {
 }
 
 function KpiRow({ agg }: { agg: Aggregate }) {
+  // 전체 모드에선 두 계정 규모가 달라 생평균이 거짓말 → 계정별로 쪼개 표기
+  const hanna = agg.acctAvg.get("한나");
+  const hyerin = agg.acctAvg.get("혜린");
+  const avgCell =
+    agg.mixed && hanna && hyerin
+      ? { label: "평균 조회수 (계정별)", value: `${fmtViews(Math.round(hanna))} · ${fmtViews(Math.round(hyerin))}`, sub: "한나 · 혜린 — 계정 규모가 달라 분리 표기" }
+      : { label: "평균 조회수", value: fmtViews(agg.avgViews), sub: "" };
   const cells = [
     { label: "릴스", value: fmtInt(agg.n), sub: "개" },
-    { label: "평균 조회수", value: fmtViews(agg.avgViews), sub: "" },
+    avgCell,
     { label: "평균 참여율", value: `${agg.avgEng}%`, sub: "좋아요+댓글÷조회" },
     { label: "최고 조회", value: agg.best ? fmtViews(agg.best.views) : "-", sub: agg.best?.title ?? "" },
   ];
@@ -246,7 +269,7 @@ function KpiRow({ agg }: { agg: Aggregate }) {
   );
 }
 
-function HookPerformance({ rows, topViews }: { rows: HookPerf[]; topViews: number }) {
+function HookPerformance({ rows, mixed, top }: { rows: HookPerf[]; mixed: boolean; top: number }) {
   // 표본 2개 이상만 = 의미있는 인사이트 (단발 대박 제외)
   const meaningful = rows.filter((r) => r.count >= 2).slice(0, 6);
   if (meaningful.length === 0) return null;
@@ -255,35 +278,40 @@ function HookPerformance({ rows, topViews }: { rows: HookPerf[]; topViews: numbe
       <div className="flex items-baseline justify-between">
         <h2 className="text-[15px] font-semibold">훅 패턴별 평균 성과</h2>
         <span className="text-[11px]" style={{ color: "var(--color-muted)" }}>
-          어떤 훅이 잘 먹히나 (표본 2개↑)
+          {mixed
+            ? "자기 계정 평균 대비 배수 — 두 계정 규모가 달라 배수로 비교 (표본 2개↑)"
+            : "어떤 훅이 잘 먹히나 (표본 2개↑)"}
         </span>
       </div>
       <div className="mt-3 space-y-2.5">
-        {meaningful.map((r, i) => (
-          <div key={r.label} className="flex items-center gap-3">
-            <div className="w-28 sm:w-36 shrink-0 text-[13px] truncate" title={r.label}>
-              {r.label}
-              <span className="ml-1 text-[11px]" style={{ color: "var(--color-muted)" }}>
-                ·{r.count}
-              </span>
-            </div>
-            <div className="flex-1 h-6 rounded" style={{ backgroundColor: "var(--color-rule)" }}>
-              <div
-                className="h-6 rounded flex items-center justify-end pr-2 text-[11px] font-medium tabular-nums"
-                style={{
-                  width: `${Math.max(12, (r.avgViews / topViews) * 100)}%`,
-                  backgroundColor: i === 0 ? "var(--color-ink)" : "#c9c9c2",
-                  color: i === 0 ? "var(--color-paper)" : "var(--color-ink)",
-                }}
-              >
-                {fmtViews(r.avgViews)}
+        {meaningful.map((r, i) => {
+          const value = mixed ? r.avgMult : r.avgViews;
+          return (
+            <div key={r.label} className="flex items-center gap-3">
+              <div className="w-28 sm:w-36 shrink-0 text-[13px] truncate" title={r.label}>
+                {r.label}
+                <span className="ml-1 text-[11px]" style={{ color: "var(--color-muted)" }}>
+                  ·{r.count}
+                </span>
+              </div>
+              <div className="flex-1 h-6 rounded" style={{ backgroundColor: "var(--color-rule)" }}>
+                <div
+                  className="h-6 rounded flex items-center justify-end pr-2 text-[11px] font-medium tabular-nums"
+                  style={{
+                    width: `${Math.max(12, (value / top) * 100)}%`,
+                    backgroundColor: i === 0 ? "var(--color-ink)" : "#c9c9c2",
+                    color: i === 0 ? "var(--color-paper)" : "var(--color-ink)",
+                  }}
+                >
+                  {mixed ? `×${r.avgMult}` : fmtViews(r.avgViews)}
+                </div>
+              </div>
+              <div className="w-12 shrink-0 text-right text-[11px] tabular-nums" style={{ color: "var(--color-muted)" }}>
+                {r.avgEng}%
               </div>
             </div>
-            <div className="w-12 shrink-0 text-right text-[11px] tabular-nums" style={{ color: "var(--color-muted)" }}>
-              {r.avgEng}%
-            </div>
-          </div>
-        ))}
+          );
+        })}
       </div>
     </section>
   );
