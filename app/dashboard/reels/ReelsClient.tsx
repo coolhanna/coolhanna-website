@@ -4,7 +4,7 @@
 // 개별 심층(구조·바이럴요인·대본·적용포인트). 계정 필터는 모든 집계에 반영됨.
 import { useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
-import type { ReelItem, ReelsResponse } from "@/lib/dashboard-api";
+import type { AccountSummary, ReelItem, ReelsResponse } from "@/lib/dashboard-api";
 
 type AccountFilter = "전체" | "한나" | "혜린";
 type SortKey = "latest" | "views" | "engagement";
@@ -173,6 +173,16 @@ export default function ReelsClient({ data }: ReelsClientProps) {
         </div>
       </header>
 
+      {!isError && data.accounts && data.accounts.length > 0 && (
+        <AccountCards
+          accounts={
+            account === "전체"
+              ? data.accounts
+              : data.accounts.filter((a) => a.display_name === account)
+          }
+        />
+      )}
+
       {agg && (
         <>
           <KpiRow agg={agg} />
@@ -236,6 +246,62 @@ export default function ReelsClient({ data }: ReelsClientProps) {
   );
 }
 
+function AcctStat({ label, value, highlight }: { label: string; value: string; highlight?: boolean }) {
+  return (
+    <div className="flex items-baseline justify-between">
+      <span style={{ color: "var(--color-muted)" }}>{label}</span>
+      <span
+        className="tabular-nums"
+        style={highlight ? { color: "var(--color-ink)", fontWeight: 600 } : { fontWeight: 500 }}
+      >
+        {value}
+      </span>
+    </div>
+  );
+}
+
+function AccountCards({ accounts }: { accounts: AccountSummary[] }) {
+  return (
+    <div
+      className="grid gap-px rounded-xl overflow-hidden mb-4"
+      style={{
+        backgroundColor: "var(--color-rule)",
+        gridTemplateColumns: `repeat(${accounts.length}, minmax(0, 1fr))`,
+      }}
+    >
+      {accounts.map((a) => (
+        <div key={a.username} className="p-4" style={{ backgroundColor: "var(--color-paper)" }}>
+          <div className="flex items-baseline justify-between">
+            <span className="text-[13px] font-semibold">{a.display_name}</span>
+            <span className="text-[11px]" style={{ color: "var(--color-muted)" }}>
+              계정 지표 · {a.date}
+            </span>
+          </div>
+          <div className="mt-2 flex items-end gap-2">
+            <span className="text-2xl font-semibold tabular-nums leading-none">{fmtInt(a.followers)}</span>
+            <span className="text-[12px]" style={{ color: "var(--color-muted)" }}>팔로워</span>
+            {a.followers_change_1d !== 0 && (
+              <span
+                className="text-[12px]"
+                style={{ color: a.followers_change_1d > 0 ? "#3a7d3a" : "#b3261e" }}
+              >
+                {a.followers_change_1d > 0 ? "▲" : "▼"}
+                {fmtInt(Math.abs(a.followers_change_1d))}
+              </span>
+            )}
+          </div>
+          <div className="mt-3 grid grid-cols-2 gap-y-1.5 gap-x-4 text-[12px]">
+            <AcctStat label="도달(1일)" value={fmtInt(a.reach)} />
+            <AcctStat label="프로필 방문" value={fmtInt(a.profile_views)} />
+            <AcctStat label="참여 계정" value={fmtInt(a.accounts_engaged)} />
+            <AcctStat label="링크 클릭" value={fmtInt(a.website_clicks + a.profile_links_taps)} highlight />
+          </div>
+        </div>
+      ))}
+    </div>
+  );
+}
+
 function KpiRow({ agg }: { agg: Aggregate }) {
   // 전체 모드에선 두 계정 규모가 달라 생평균이 거짓말 → 계정별로 쪼개 표기
   const hanna = agg.acctAvg.get("한나");
@@ -247,7 +313,7 @@ function KpiRow({ agg }: { agg: Aggregate }) {
   const cells = [
     { label: "릴스", value: fmtInt(agg.n), sub: "개" },
     avgCell,
-    { label: "평균 참여율", value: `${agg.avgEng}%`, sub: "좋아요+댓글÷조회" },
+    { label: "평균 참여율", value: `${agg.avgEng}%`, sub: "♥+💬+공유+저장÷조회" },
     { label: "최고 조회", value: agg.best ? fmtViews(agg.best.views) : "-", sub: agg.best?.title ?? "" },
   ];
   return (
@@ -493,9 +559,32 @@ function ReelDetail({ reel }: { reel: ReelItem }) {
       <div className="flex flex-wrap gap-x-5 gap-y-1 text-[12px]" style={{ color: "var(--color-muted)" }}>
         <span>♥ {fmtInt(reel.likes)}</span>
         <span>💬 {fmtInt(reel.comments)}</span>
-        <span title="(좋아요+댓글)÷조회수 — 공유·저장은 인스타 비공개라 미포함">
-          참여율 {reel.engagement_rate}% (♥+💬÷조회)
+        <span
+          title={
+            reel.engagement_includes_saves_shares
+              ? "(♥+💬+공유+저장)÷조회수 — 인스타 공식 API"
+              : "(♥+💬)÷조회수 — 공유·저장 수집 대기"
+          }
+        >
+          참여율 {reel.engagement_rate}%{" "}
+          {reel.engagement_includes_saves_shares ? "(♥+💬+공유+저장)" : "(♥+💬)"}
         </span>
+        {reel.avg_watch_sec != null && (
+          <span title="인스타 공식 평균 시청시간">
+            👀 평균 {reel.avg_watch_sec}초 시청
+            {reel.completion_rate != null && ` · 완주율 ${reel.completion_rate}%`}
+          </span>
+        )}
+        {reel.save_rate != null && <span title="저장÷조회">💾 저장률 {reel.save_rate}%</span>}
+        {reel.share_rate != null && <span title="공유÷조회">🔁 공유률 {reel.share_rate}%</span>}
+        {reel.views_per_follower != null && (
+          <span
+            title="조회÷팔로워 — 1↓ 팔로워 내부 / 3↑ 비팔로워로 확산(바이럴)"
+            style={reel.views_per_follower >= 3 ? { color: "var(--color-ink)", fontWeight: 600 } : undefined}
+          >
+            🚀 팔로워 대비 {reel.views_per_follower}배
+          </span>
+        )}
         {reel.duration_sec > 0 && <span>{reel.duration_sec}초</span>}
         {reel.music && <span>♪ {reel.music}</span>}
         {reel.url && (

@@ -136,11 +136,41 @@ export interface ReelItem {
   good: string[];
   bad: string[];
   memo: string;
+  // v3 — 인스타 공식 API 파생지표 (그래프 API 전환 후)
+  engagement_includes_saves_shares: boolean; // 참여율에 공유·저장 포함 여부
+  save_rate: number | null;                  // 저장 ÷ 조회 (%)
+  share_rate: number | null;                 // 공유 ÷ 조회 (%)
+  avg_watch_sec: number | null;              // 평균 시청시간(초)
+  completion_rate: number | null;            // 완주율(추정, %) = 시청 ÷ 길이
+  views_per_follower: number | null;         // 조회 ÷ 팔로워 (비팔로워 확산 배수)
+  views_source?: "note" | "graph_snapshot";
+  views_updated_at?: string;
+}
+
+export interface AccountSummary {
+  display_name: "한나" | "혜린";
+  username: string;
+  date: string;
+  followers: number;
+  followers_change_1d: number;
+  reach: number;
+  views: number;
+  profile_views: number;
+  accounts_engaged: number;
+  website_clicks: number;
+  profile_links_taps: number;
+  history: Array<{
+    date: string;
+    followers: number;
+    reach: number;
+    website_clicks: number;
+  }>;
 }
 
 export interface ReelsResponse {
   items: ReelItem[];
   overview: unknown; // 서버 집계(전체 기준). UI는 계정필터 반영 위해 items에서 재집계.
+  accounts?: AccountSummary[];
 }
 
 export interface HyerinDiaryTodo {
