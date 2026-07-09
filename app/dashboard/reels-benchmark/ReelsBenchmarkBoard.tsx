@@ -189,9 +189,9 @@ function CardView({ card, expanded, onToggle }: { card: BenchmarkCard; expanded:
   const plat = platformOf(card.url);
   return (
     <div className="rounded-xl overflow-hidden flex flex-col" style={{ border: "1px solid var(--border)", backgroundColor: "var(--bg-card)" }}>
-      {/* 커버 (첫 훅 프레임) */}
-      <button onClick={onToggle} className="relative block w-full" style={{ height: 150, backgroundColor: "var(--bg-card-soft)" }}>
-        {cover && <img src={cover} alt="" className="w-full h-full object-cover object-top" />}
+      {/* 커버 (첫 훅 프레임) — 세로 릴스라 훅 텍스트·인물이 보이게 상단 30% 지점 크롭 */}
+      <button onClick={onToggle} className="relative block w-full" style={{ height: 168, backgroundColor: "var(--bg-card-soft)" }}>
+        {cover && <img src={cover} alt="" className="w-full h-full object-cover" style={{ objectPosition: "50% 28%" }} />}
         <span className="absolute top-2 left-2 text-[9px] px-1.5 py-0.5 rounded font-bold" style={{ backgroundColor: plat.bg, color: plat.fg }}>{plat.label}</span>
         <span className="absolute bottom-2 right-2 text-[10px] px-1.5 py-0.5 rounded font-semibold tabular-nums" style={{ backgroundColor: "rgba(0,0,0,0.6)", color: "#fff" }}>조회 {fmtInt(card.views)}</span>
       </button>
