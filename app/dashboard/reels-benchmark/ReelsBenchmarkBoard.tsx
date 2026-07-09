@@ -83,8 +83,8 @@ export default function ReelsBenchmarkBoard() {
   async function analyze() {
     const u = url.trim();
     if (!u || busy) return;
-    if (!u.includes("instagram.com")) {
-      setNotice("인스타그램 릴스 URL을 붙여넣어줘.");
+    if (!/instagram\.com|youtube\.com|youtu\.be/.test(u)) {
+      setNotice("인스타 릴스 또는 유튜브 링크를 붙여넣어줘.");
       return;
     }
     setBusy(true);
@@ -133,7 +133,7 @@ export default function ReelsBenchmarkBoard() {
               value={url}
               onChange={(e) => setUrl(e.target.value)}
               onKeyDown={(e) => e.key === "Enter" && analyze()}
-              placeholder="인스타 릴스 링크 툭 붙여넣기 (https://www.instagram.com/reel/…)"
+              placeholder="릴스·유튜브(쇼츠) 링크 툭 붙여넣기"
               className="flex-1 rounded-lg px-3 py-2 text-[13px]"
               style={{ border: "1px solid var(--border)", backgroundColor: "var(--bg-page)" }}
             />
@@ -158,7 +158,7 @@ export default function ReelsBenchmarkBoard() {
         )}
 
         {!loading && !error && (
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 items-start">
             {sorted.map((c) => (
               <CardView key={c.shortcode} card={c} expanded={expanded === c.shortcode} onToggle={() => setExpanded(expanded === c.shortcode ? null : c.shortcode)} />
             ))}
@@ -175,69 +175,67 @@ export default function ReelsBenchmarkBoard() {
   );
 }
 
-function Stat({ label, value }: { label: string; value: string }) {
-  return (
-    <span className="text-[11px] text-muted">
-      {label} <b className="tabular-nums" style={{ color: "var(--text-main)", fontWeight: 600 }}>{value}</b>
-    </span>
-  );
+function platformOf(url: string): { label: string; bg: string; fg: string } {
+  if (/youtube\.com|youtu\.be/.test(url)) return { label: "YT", bg: "#FBEAF0", fg: "#72243E" };
+  return { label: "IG", bg: "#E7EFE0", fg: "#2E5B2E" };
+}
+
+function clamp(lines: number): React.CSSProperties {
+  return { display: "-webkit-box", WebkitLineClamp: lines, WebkitBoxOrient: "vertical", overflow: "hidden" };
 }
 
 function CardView({ card, expanded, onToggle }: { card: BenchmarkCard; expanded: boolean; onToggle: () => void }) {
+  const cover = card.frames[0]?.img;
+  const plat = platformOf(card.url);
   return (
-    <div className="rounded-2xl overflow-hidden flex flex-col" style={{ border: "1px solid var(--border)", backgroundColor: "var(--bg-card)" }}>
-      {/* 헤더 */}
-      <div className="px-4 pt-3 pb-2">
+    <div className="rounded-xl overflow-hidden flex flex-col" style={{ border: "1px solid var(--border)", backgroundColor: "var(--bg-card)" }}>
+      {/* 커버 (첫 훅 프레임) */}
+      <button onClick={onToggle} className="relative block w-full" style={{ height: 150, backgroundColor: "var(--bg-card-soft)" }}>
+        {cover && <img src={cover} alt="" className="w-full h-full object-cover object-top" />}
+        <span className="absolute top-2 left-2 text-[9px] px-1.5 py-0.5 rounded font-bold" style={{ backgroundColor: plat.bg, color: plat.fg }}>{plat.label}</span>
+        <span className="absolute bottom-2 right-2 text-[10px] px-1.5 py-0.5 rounded font-semibold tabular-nums" style={{ backgroundColor: "rgba(0,0,0,0.6)", color: "#fff" }}>조회 {fmtInt(card.views)}</span>
+      </button>
+
+      {/* 본문 (컴팩트) */}
+      <div className="px-3 pt-2 pb-1 flex flex-col gap-1.5">
         <div className="flex items-center justify-between gap-2">
-          <span className="text-[12px] font-semibold">@{card.owner}</span>
-          <span className="text-[10px] text-muted">{card.date?.slice(0, 10)}</span>
+          <span className="text-[11px] text-muted truncate">@{card.owner}</span>
+          <span className="text-[10px] text-muted whitespace-nowrap">❤️{fmtInt(card.likes)} · {engRate(card)}</span>
         </div>
-        <p className="text-[14px] font-semibold mt-0.5 leading-snug">{card.title}</p>
-        <div className="flex flex-wrap gap-x-3 gap-y-0.5 mt-1.5">
-          <Stat label="조회" value={fmtInt(card.views)} />
-          <Stat label="❤️" value={fmtInt(card.likes)} />
-          <Stat label="💬" value={fmtInt(card.comments)} />
-          <Stat label="참여율" value={engRate(card)} />
-          {card.duration_sec ? <Stat label="길이" value={`${Math.round(Number(card.duration_sec))}s`} /> : null}
+        <button onClick={onToggle} className="text-left">
+          <p className="text-[13.5px] font-semibold leading-snug" style={clamp(2)}>{card.title}</p>
+        </button>
+        <div className="flex items-center gap-1.5">
+          <span className="text-[9px] px-1.5 py-0.5 rounded font-semibold shrink-0" style={{ backgroundColor: "var(--secondary-soft)", color: "var(--secondary-text)" }}>{card.hook_pattern || "훅"}</span>
+          <p className="text-[11.5px] leading-snug text-muted" style={clamp(1)}>🎣 {card.hook}</p>
         </div>
+        {card.steal_formula && (
+          <div className="rounded-lg px-2.5 py-1.5" style={{ backgroundColor: "var(--accent-soft)" }}>
+            <p className="text-[11px] leading-relaxed" style={{ color: "var(--accent-text)", ...clamp(expanded ? 10 : 2) }}>
+              <b style={{ fontWeight: 600 }}>🎯 </b>{card.steal_formula}
+            </p>
+          </div>
+        )}
       </div>
 
-      {/* 🎬 화면 (훅 프레임) — 가로 스크롤 */}
-      {card.frames.length > 0 && (
-        <div className="flex gap-1 overflow-x-auto px-4 pb-2" style={{ scrollbarWidth: "thin" }}>
-          {card.frames.map((f, i) => (
-            <div key={i} className="relative shrink-0">
-              <img src={f.img} alt={`${f.t}s`} className="rounded-md" style={{ height: 132, width: "auto", border: "1px solid var(--border)" }} />
-              <span className="absolute bottom-1 left-1 text-[9px] px-1 rounded" style={{ backgroundColor: "rgba(0,0,0,0.55)", color: "#fff" }}>{f.t}s</span>
-            </div>
-          ))}
-        </div>
-      )}
-
-      {/* 훅 */}
-      <div className="px-4 py-2">
-        <div className="flex items-center gap-1.5 mb-1">
-          <span className="text-[10px] px-1.5 py-0.5 rounded-md font-semibold" style={{ backgroundColor: "var(--secondary-soft)", color: "var(--secondary-text)" }}>
-            {card.hook_pattern || "훅"}
-          </span>
-        </div>
-        <p className="text-[13px] leading-snug" style={{ color: "var(--text-main)" }}>🎣 {card.hook}</p>
-      </div>
-
-      {/* 훔쳐올 공식 (항상 보임 — 핵심) */}
-      {card.steal_formula && (
-        <div className="mx-4 mb-2 rounded-lg px-3 py-2" style={{ backgroundColor: "var(--accent-soft)" }}>
-          <p className="text-[11px] mb-0.5" style={{ color: "var(--accent-text)", fontWeight: 600 }}>🎯 훔쳐올 공식</p>
-          <p className="text-[12px] leading-relaxed" style={{ color: "var(--accent-text)" }}>{card.steal_formula}</p>
-        </div>
-      )}
-
-      <button onClick={onToggle} className="text-[12px] px-4 py-2 text-left mt-auto transition hover:opacity-70" style={{ color: "var(--accent)", borderTop: "1px solid var(--border)" }}>
-        {expanded ? "접기 ▲" : "왜 터졌나 · 구조 · 대본 · 변주 훅 ▼"}
+      <button onClick={onToggle} className="text-[11.5px] px-3 py-2 text-left transition hover:opacity-70" style={{ color: "var(--accent)", borderTop: "1px solid var(--border)" }}>
+        {expanded ? "접기 ▲" : "화면 · 왜터졌나 · 대본 · 변주 훅 ▼"}
       </button>
 
       {expanded && (
-        <div className="px-4 pb-4 flex flex-col gap-3 text-[13px]">
+        <div className="px-3 pb-4 flex flex-col gap-3 text-[13px]">
+          {/* 🎬 화면 (훅 프레임 전체) — 가로 스크롤 */}
+          {card.frames.length > 0 && (
+            <div className="flex gap-1 overflow-x-auto -mx-1 px-1" style={{ scrollbarWidth: "thin" }}>
+              {card.frames.map((f, i) => (
+                <div key={i} className="relative shrink-0">
+                  <img src={f.img} alt={`${f.t}s`} className="rounded-md" style={{ height: 150, width: "auto", border: "1px solid var(--border)" }} />
+                  <span className="absolute bottom-1 left-1 text-[9px] px-1 rounded" style={{ backgroundColor: "rgba(0,0,0,0.55)", color: "#fff" }}>{f.t}s</span>
+                </div>
+              ))}
+            </div>
+          )}
+
           {card.why_viral.length > 0 && (
             <Section title="🔥 왜 터졌나">
               <ul className="flex flex-col gap-1">
