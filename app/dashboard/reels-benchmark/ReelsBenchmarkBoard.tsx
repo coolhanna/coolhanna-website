@@ -61,6 +61,7 @@ export default function ReelsBenchmarkBoard() {
   const [busy, setBusy] = useState(false);
   const [notice, setNotice] = useState<string | null>(null);
   const [cat, setCat] = useState<Category | "전체">("전체");
+  const [mode, setMode] = useState<string>("benchmark");
 
   const refresh = useCallback(async () => {
     try {
@@ -88,7 +89,7 @@ export default function ReelsBenchmarkBoard() {
     setBusy(true);
     setNotice(null);
     try {
-      await callApi("POST", "reels-benchmark/analyze", { url: u });
+      await callApi("POST", "reels-benchmark/analyze", { url: u, mode });
       setUrl("");
       setNotice("분석 중 — 대본 뽑고 화면 캡처하는 중이야. 40초쯤 뒤 카드로 떠(자동 새로고침).");
       [15000, 30000, 50000, 75000].forEach((ms) => setTimeout(refresh, ms));
@@ -144,6 +145,16 @@ export default function ReelsBenchmarkBoard() {
               className="flex-1 rounded-lg px-3 py-2 text-[13px]"
               style={{ border: "1px solid var(--border)", backgroundColor: "var(--bg-page)" }}
             />
+            <select
+              value={mode}
+              onChange={(e) => setMode(e.target.value)}
+              className="rounded-lg px-2 py-2 text-[13px]"
+              style={{ border: "1px solid var(--border)", backgroundColor: "var(--bg-page)" }}
+            >
+              <option value="benchmark">레퍼런스</option>
+              <option value="recipe">요리</option>
+              <option value="info">AI 정보</option>
+            </select>
             <button
               onClick={analyze}
               disabled={busy}
