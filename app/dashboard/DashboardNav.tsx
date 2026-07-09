@@ -8,6 +8,7 @@ const TABS = [
   { label: "운영", href: "/dashboard" },
   { label: "큐레이션", href: "/dashboard/curation" },
   { label: "릴스", href: "/dashboard/reels" },
+  { label: "벤치마크", href: "/dashboard/reels-benchmark" },
 ];
 
 const PIPELINE_URL = "https://coolhanna-pipeline.vercel.app";
@@ -19,7 +20,10 @@ export default function DashboardNav() {
   return (
     <nav className="max-w-page mx-auto px-5 sm:px-8 pt-3 pb-1 flex items-center gap-1 text-[13px]">
       {TABS.map((t) => {
-        const active = t.href === "/dashboard" ? path === "/dashboard" : path.startsWith(t.href);
+        const active =
+          t.href === "/dashboard"
+            ? path === "/dashboard"
+            : path === t.href || path.startsWith(t.href + "/");
         return (
           <Link
             key={t.href}
