@@ -11,31 +11,28 @@ interface Frame {
   img: string; // data:image/jpeg;base64,...
 }
 
-interface StructureStep {
-  section: string;
-  content: string;
-  sec: number;
+interface Block {
+  h: string;
+  items: string[];
 }
+
+type Category = "레퍼런스" | "요리" | "AI";
 
 interface BenchmarkCard {
   shortcode: string;
   url: string;
   owner: string;
   date: string;
+  category: Category;
+  mode: string;
   title: string;
+  summary: string;
+  blocks: Block[];
   views: number;
   likes: number;
   comments: number;
   duration_sec: number | string;
   caption: string;
-  hook: string;
-  hook_pattern: string;
-  structure: StructureStep[];
-  why_viral: string[];
-  comment_insight: string;
-  steal_formula: string;
-  next_hooks: string[];
-  warning: string;
   transcript: string;
   frames: Frame[];
 }
@@ -63,6 +60,7 @@ export default function ReelsBenchmarkBoard() {
   const [url, setUrl] = useState("");
   const [busy, setBusy] = useState(false);
   const [notice, setNotice] = useState<string | null>(null);
+  const [cat, setCat] = useState<Category | "전체">("전체");
 
   const refresh = useCallback(async () => {
     try {
@@ -101,9 +99,18 @@ export default function ReelsBenchmarkBoard() {
     }
   }
 
+  const cats = useMemo(() => {
+    const order: Category[] = ["레퍼런스", "요리", "AI"];
+    const present = new Set(cards.map((c) => c.category));
+    return order.filter((c) => present.has(c));
+  }, [cards]);
+
   const sorted = useMemo(
-    () => [...cards].sort((a, b) => (a.date < b.date ? 1 : -1)),
-    [cards],
+    () =>
+      cards
+        .filter((c) => cat === "전체" || c.category === cat)
+        .sort((a, b) => (a.date < b.date ? 1 : -1)),
+    [cards, cat],
   );
 
   return (
@@ -152,6 +159,26 @@ export default function ReelsBenchmarkBoard() {
           {notice && <p className="text-[12px] mt-2" style={{ color: "var(--accent-text)" }}>{notice}</p>}
         </div>
 
+        {cats.length > 0 && (
+          <div className="flex items-center gap-1.5 mb-4">
+            {(["전체", ...cats] as (Category | "전체")[]).map((c) => (
+              <button
+                key={c}
+                onClick={() => setCat(c)}
+                className="text-[12px] px-3 py-1 rounded-full font-medium transition"
+                style={{
+                  border: `1px solid ${cat === c ? "var(--accent)" : "var(--border)"}`,
+                  backgroundColor: cat === c ? "var(--accent)" : "transparent",
+                  color: cat === c ? "#fff" : "var(--text-secondary)",
+                }}
+              >
+                {c}
+                {c !== "전체" && ` ${cards.filter((x) => x.category === c).length}`}
+              </button>
+            ))}
+          </div>
+        )}
+
         {loading && <p className="text-[13px] text-muted text-center py-10">불러오는 중…</p>}
         {error && !loading && (
           <p className="text-[13px] text-center py-10" style={{ color: "var(--danger)" }}>{error}</p>
@@ -184,15 +211,25 @@ function clamp(lines: number): React.CSSProperties {
   return { display: "-webkit-box", WebkitLineClamp: lines, WebkitBoxOrient: "vertical", overflow: "hidden" };
 }
 
+const CAT_STYLE: Record<string, { bg: string; fg: string }> = {
+  "레퍼런스": { bg: "#E7EFE0", fg: "#2E5B2E" },
+  "요리": { bg: "#FBEFE0", fg: "#8A4B1E" },
+  "AI": { bg: "#E5EDFB", fg: "#25457F" },
+};
+
 function CardView({ card, expanded, onToggle }: { card: BenchmarkCard; expanded: boolean; onToggle: () => void }) {
   const cover = card.frames[0]?.img;
   const plat = platformOf(card.url);
+  const catS = CAT_STYLE[card.category] || CAT_STYLE["레퍼런스"];
   return (
     <div className="rounded-xl overflow-hidden flex flex-col" style={{ border: "1px solid var(--border)", backgroundColor: "var(--bg-card)" }}>
-      {/* 커버 (첫 훅 프레임) — 세로 릴스라 훅 텍스트·인물이 보이게 상단 30% 지점 크롭 */}
+      {/* 커버 (첫 프레임) — 세로 영상이라 상단 28% 지점 크롭해 핵심 화면이 보이게 */}
       <button onClick={onToggle} className="relative block w-full" style={{ height: 168, backgroundColor: "var(--bg-card-soft)" }}>
         {cover && <img src={cover} alt="" className="w-full h-full object-cover" style={{ objectPosition: "50% 28%" }} />}
-        <span className="absolute top-2 left-2 text-[9px] px-1.5 py-0.5 rounded font-bold" style={{ backgroundColor: plat.bg, color: plat.fg }}>{plat.label}</span>
+        <span className="absolute top-2 left-2 flex gap-1">
+          <span className="text-[9px] px-1.5 py-0.5 rounded font-bold" style={{ backgroundColor: catS.bg, color: catS.fg }}>{card.category}</span>
+          <span className="text-[9px] px-1.5 py-0.5 rounded font-bold" style={{ backgroundColor: plat.bg, color: plat.fg }}>{plat.label}</span>
+        </span>
         <span className="absolute bottom-2 right-2 text-[10px] px-1.5 py-0.5 rounded font-semibold tabular-nums" style={{ backgroundColor: "rgba(0,0,0,0.6)", color: "#fff" }}>조회 {fmtInt(card.views)}</span>
       </button>
 
@@ -205,26 +242,18 @@ function CardView({ card, expanded, onToggle }: { card: BenchmarkCard; expanded:
         <button onClick={onToggle} className="text-left">
           <p className="text-[13.5px] font-semibold leading-snug" style={clamp(2)}>{card.title}</p>
         </button>
-        <div className="flex items-center gap-1.5">
-          <span className="text-[9px] px-1.5 py-0.5 rounded font-semibold shrink-0" style={{ backgroundColor: "var(--secondary-soft)", color: "var(--secondary-text)" }}>{card.hook_pattern || "훅"}</span>
-          <p className="text-[11.5px] leading-snug text-muted" style={clamp(1)}>🎣 {card.hook}</p>
-        </div>
-        {card.steal_formula && (
-          <div className="rounded-lg px-2.5 py-1.5" style={{ backgroundColor: "var(--accent-soft)" }}>
-            <p className="text-[11px] leading-relaxed" style={{ color: "var(--accent-text)", ...clamp(expanded ? 10 : 2) }}>
-              <b style={{ fontWeight: 600 }}>🎯 </b>{card.steal_formula}
-            </p>
-          </div>
+        {card.summary && (
+          <p className="text-[11.5px] leading-snug text-muted" style={clamp(expanded ? 20 : 2)}>{card.summary}</p>
         )}
       </div>
 
       <button onClick={onToggle} className="text-[11.5px] px-3 py-2 text-left transition hover:opacity-70" style={{ color: "var(--accent)", borderTop: "1px solid var(--border)" }}>
-        {expanded ? "접기 ▲" : "화면 · 왜터졌나 · 대본 · 변주 훅 ▼"}
+        {expanded ? "접기 ▲" : "화면 · 분석 · 대본 ▼"}
       </button>
 
       {expanded && (
         <div className="px-3 pb-4 flex flex-col gap-3 text-[13px]">
-          {/* 🎬 화면 (훅 프레임 전체) — 가로 스크롤 */}
+          {/* 🎬 화면 (프레임 전체) — 가로 스크롤 */}
           {card.frames.length > 0 && (
             <div className="flex gap-1 overflow-x-auto -mx-1 px-1" style={{ scrollbarWidth: "thin" }}>
               {card.frames.map((f, i) => (
@@ -236,63 +265,28 @@ function CardView({ card, expanded, onToggle }: { card: BenchmarkCard; expanded:
             </div>
           )}
 
-          {card.why_viral.length > 0 && (
-            <Section title="🔥 왜 터졌나">
+          {/* 모드별 분석 blocks */}
+          {card.blocks?.map((b, i) => (
+            <div key={i}>
+              <p className="text-[11px] text-muted mb-1 font-semibold">{b.h}</p>
               <ul className="flex flex-col gap-1">
-                {card.why_viral.map((w, i) => <li key={i} className="leading-relaxed">· {w}</li>)}
+                {b.items.map((it, j) => <li key={j} className="leading-relaxed">· {it}</li>)}
               </ul>
-            </Section>
-          )}
-
-          {card.structure.length > 0 && (
-            <Section title="🏗 구조">
-              <div className="flex flex-col gap-1.5">
-                {card.structure.map((s, i) => (
-                  <div key={i} className="rounded-lg px-3 py-2" style={{ backgroundColor: "var(--bg-card-soft)" }}>
-                    <span className="text-[11px] text-muted">{i + 1}. {s.section} ({s.sec}초)</span>
-                    <p className="leading-relaxed mt-0.5">{s.content}</p>
-                  </div>
-                ))}
-              </div>
-            </Section>
-          )}
-
-          {card.next_hooks.length > 0 && (
-            <Section title="🔁 한나 채널 변주 훅">
-              <ul className="flex flex-col gap-1">
-                {card.next_hooks.map((h, i) => <li key={i} className="leading-relaxed">· {h}</li>)}
-              </ul>
-            </Section>
-          )}
-
-          {card.comment_insight && (
-            <Section title="💬 댓글 반응"><p className="leading-relaxed">{card.comment_insight}</p></Section>
-          )}
-
-          {card.warning && (
-            <p className="text-[12px] leading-relaxed" style={{ color: "var(--danger-text)" }}>⚠️ {card.warning}</p>
-          )}
+            </div>
+          ))}
 
           {card.transcript && (
-            <Section title="🎤 대본 (Whisper)">
+            <div>
+              <p className="text-[11px] text-muted mb-1 font-semibold">🎤 대본 (Whisper)</p>
               <pre className="text-[11px] leading-relaxed whitespace-pre-wrap rounded-lg px-3 py-2 max-h-64 overflow-y-auto" style={{ backgroundColor: "var(--bg-page)", border: "1px solid var(--border)", color: "var(--text-secondary)" }}>{card.transcript}</pre>
-            </Section>
+            </div>
           )}
 
           <a href={card.url} target="_blank" rel="noreferrer" className="text-[12px] underline w-fit" style={{ color: "var(--accent)" }}>
-            인스타에서 원본 보기 ↗
+            원본 보기 ↗
           </a>
         </div>
       )}
-    </div>
-  );
-}
-
-function Section({ title, children }: { title: string; children: React.ReactNode }) {
-  return (
-    <div>
-      <p className="text-[11px] text-muted mb-1 font-semibold">{title}</p>
-      {children}
     </div>
   );
 }
