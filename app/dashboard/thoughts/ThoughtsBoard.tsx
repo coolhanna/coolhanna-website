@@ -278,8 +278,8 @@ function ThoughtCard({
         {t.summary && (
           <p className="text-[12.5px] leading-relaxed" style={{ color: "var(--text-primary)" }}>{t.summary}</p>
         )}
-        {/* 녹음정황 — 그때 어디서/언제 */}
-        {t.context && (
+        {/* 녹음정황 — 그때 어디서/언제 (빈 값/"[]" 은 숨김) */}
+        {t.context && t.context.trim() !== "[]" && (
           <p className="text-[11px] italic" style={{ color: "var(--text-secondary)" }}>🎙 {t.context}</p>
         )}
       </button>
