@@ -261,14 +261,14 @@ function CardView({ card, expanded, onToggle }: { card: BenchmarkCard; expanded:
 
   return (
     <div className="rounded-xl overflow-hidden flex flex-col" style={{ border: "1px solid var(--border)", backgroundColor: "var(--bg-card)" }}>
-      {/* 커버 (첫 프레임) — 이미지 게시물은 전체 보이게(contain), 세로 영상은 상단 크롭 */}
-      <button onClick={onToggle} className="relative block w-full" style={{ height: 190, backgroundColor: "var(--bg-card-soft)" }}>
+      {/* 커버 (첫 프레임) — 세로 게시물처럼 4:5 세로 비율. 릴스는 채우고(cover), 카드뉴스는 전체(contain) */}
+      <button onClick={onToggle} className="relative block w-full" style={{ aspectRatio: "4 / 5", backgroundColor: "var(--bg-card-soft)" }}>
         {cover && (
           <img
             src={frameUrl(cover)}
             alt=""
             className="w-full h-full"
-            style={{ objectFit: isImagePost ? "contain" : "cover", objectPosition: "50% 22%" }}
+            style={{ objectFit: isImagePost ? "contain" : "cover", objectPosition: "center" }}
           />
         )}
         <span className="absolute top-2 left-2 flex gap-1">
