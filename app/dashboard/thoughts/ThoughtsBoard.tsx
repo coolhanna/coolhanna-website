@@ -45,6 +45,15 @@ interface ThoughtsResponse {
   emotion: EmotionMonth[];
 }
 
+interface ThoughtReport {
+  kind: string; // 주간 | 월간
+  label: string;
+  period: string;
+  count: string;
+  generated: string;
+  markdown: string;
+}
+
 // 감정 → 색 (무거움=진회청 / 중립=회색 / 밝음=따뜻)
 const EMO: Record<string, { bar: string; chip: string; fg: string; label: string }> = {
   무거움: { bar: "#3E4C63", chip: "#E4E8EF", fg: "#3E4C63", label: "무거움" },
@@ -64,11 +73,17 @@ export default function ThoughtsBoard() {
 
   const [kw, setKw] = useState<string | null>(null);
   const [emoFilter, setEmoFilter] = useState<string | null>(null);
+  const [reports, setReports] = useState<ThoughtReport[]>([]);
+  const [openReport, setOpenReport] = useState<string | null>(null);
 
   const refresh = useCallback(async () => {
     try {
-      const d = await callApi<ThoughtsResponse>("GET", "thoughts");
+      const [d, r] = await Promise.all([
+        callApi<ThoughtsResponse>("GET", "thoughts"),
+        callApi<{ items: ThoughtReport[] }>("GET", "thoughts/reports").catch(() => ({ items: [] })),
+      ]);
       setData(d);
+      setReports(r.items || []);
       setError(null);
     } catch (e) {
       setError(e instanceof Error ? e.message : "불러오기 실패");
@@ -124,6 +139,42 @@ export default function ThoughtsBoard() {
 
         {data && !loading && (
           <>
+            {/* 회고 리포트 (주간/월간 자동) */}
+            {reports.length > 0 && (
+              <div className="rounded-2xl p-4 mb-3" style={{ backgroundColor: "var(--bg-card)", border: "1px solid var(--border)" }}>
+                <p className="text-[12px] font-semibold mb-2">회고 리포트 <span className="text-muted font-normal">· 매주·매월 자동</span></p>
+                <div className="flex flex-wrap gap-1.5">
+                  {reports.map((r) => {
+                    const on = openReport === r.label;
+                    return (
+                      <button
+                        key={r.label}
+                        onClick={() => setOpenReport(on ? null : r.label)}
+                        className="text-[11.5px] px-2.5 py-1 rounded-lg transition"
+                        style={{
+                          border: `1px solid ${on ? "var(--accent)" : "var(--border)"}`,
+                          backgroundColor: on ? "var(--accent)" : "transparent",
+                          color: on ? "#fff" : "var(--text-secondary)",
+                        }}
+                      >
+                        {r.kind} · {r.label} <span style={{ opacity: 0.6 }}>{r.count}개</span>
+                      </button>
+                    );
+                  })}
+                </div>
+                {openReport && (() => {
+                  const r = reports.find((x) => x.label === openReport);
+                  if (!r) return null;
+                  return (
+                    <div className="mt-3 pt-3" style={{ borderTop: "1px solid var(--border)" }}>
+                      <p className="text-[13px] font-semibold mb-1">{r.kind} 리포트 · {r.period}</p>
+                      <MarkdownLite md={r.markdown} />
+                    </div>
+                  );
+                })()}
+              </div>
+            )}
+
             {/* 상단: 감정 지형 + 키워드 */}
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 mb-5">
               {/* 감정 지형 */}
@@ -211,6 +262,34 @@ export default function ThoughtsBoard() {
       </div>
     </main>
   );
+}
+
+// 리포트 마크다운 라이트 렌더 — ## 헤딩 / - 목록 / [[링크]]→텍스트만
+function MarkdownLite({ md }: { md: string }) {
+  const blocks = md.split("\n").map((line, i) => {
+    const clean = line.replace(/\[\[([^\]]+)\]\]/g, "$1");
+    if (/^##+\s/.test(clean)) {
+      return (
+        <p key={i} className="text-[12.5px] font-semibold mt-3 mb-1" style={{ color: "var(--accent-text)" }}>
+          {clean.replace(/^##+\s/, "")}
+        </p>
+      );
+    }
+    if (/^-\s/.test(clean)) {
+      return (
+        <p key={i} className="text-[12.5px] leading-relaxed pl-2" style={{ color: "var(--text-secondary)" }}>
+          · {clean.replace(/^-\s/, "")}
+        </p>
+      );
+    }
+    if (clean.trim() === "" || clean.trim() === "---") return <div key={i} style={{ height: 4 }} />;
+    return (
+      <p key={i} className="text-[12.5px] leading-relaxed" style={{ color: "var(--text-secondary)" }}>
+        {clean}
+      </p>
+    );
+  });
+  return <div className="max-h-[26rem] overflow-y-auto pr-1">{blocks}</div>;
 }
 
 function Chip({ label, onClear }: { label: string; onClear: () => void }) {
