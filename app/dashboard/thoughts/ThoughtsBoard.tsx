@@ -17,6 +17,8 @@ interface Thought {
   time: string;
   duration: string;
   title: string;
+  summary: string;
+  context: string;
   emotion: string;
   importance: number;
   topics: string[];
@@ -235,12 +237,35 @@ function ThoughtCard({
   onKeyword: (w: string) => void;
 }) {
   const e = emo(t.emotion);
+  const [raw, setRaw] = useState<string | null>(null);
+  const [rawOpen, setRawOpen] = useState(false);
+  const [rawLoading, setRawLoading] = useState(false);
+
+  async function toggleRaw() {
+    if (rawOpen) {
+      setRawOpen(false);
+      return;
+    }
+    setRawOpen(true);
+    if (raw === null && !rawLoading) {
+      setRawLoading(true);
+      try {
+        const r = await callApi<{ raw: string }>("GET", `thoughts/${encodeURIComponent(t.id)}/raw`);
+        setRaw(r.raw || "(원본 없음)");
+      } catch {
+        setRaw("원본을 불러오지 못했어.");
+      } finally {
+        setRawLoading(false);
+      }
+    }
+  }
+
   return (
     <div
       className="rounded-xl overflow-hidden flex flex-col"
       style={{ border: "1px solid var(--border)", backgroundColor: "var(--bg-card)", borderLeft: `3px solid ${e.bar}` }}
     >
-      <button onClick={onToggle} className="text-left px-3.5 pt-3 pb-2 flex flex-col gap-1.5">
+      <button onClick={onToggle} className="text-left px-3.5 pt-3 pb-2.5 flex flex-col gap-1.5">
         <div className="flex items-center justify-between gap-2">
           <span className="text-[11px] text-muted tabular-nums">{t.date}{t.time ? ` · ${t.time}` : ""}</span>
           <span className="flex items-center gap-1.5">
@@ -249,27 +274,29 @@ function ThoughtCard({
           </span>
         </div>
         <p className="text-[14px] font-semibold leading-snug">{t.title}</p>
-        {t.topics.length > 0 && (
-          <div className="flex flex-wrap gap-1 mt-0.5">
-            {t.topics.slice(0, 4).map((tp, i) => (
-              <span key={i} className="text-[10.5px] px-1.5 py-0.5 rounded" style={{ backgroundColor: "var(--bg-page)", color: "var(--text-secondary)", border: "1px solid var(--border)" }}>{tp}</span>
-            ))}
-          </div>
+        {/* 한 줄 요약 — 카드 맨 위 핵심 */}
+        {t.summary && (
+          <p className="text-[12.5px] leading-relaxed" style={{ color: "var(--text-primary)" }}>{t.summary}</p>
+        )}
+        {/* 녹음정황 — 그때 어디서/언제 */}
+        {t.context && (
+          <p className="text-[11px] italic" style={{ color: "var(--text-secondary)" }}>🎙 {t.context}</p>
         )}
       </button>
 
       <button onClick={onToggle} className="text-[11.5px] px-3.5 py-2 text-left transition hover:opacity-70" style={{ color: "var(--accent)", borderTop: "1px solid var(--border)" }}>
-        {open ? "접기 ▲" : "펼쳐보기 ▼"}
+        {open ? "접기 ▲" : "마음 · 내 말 · 원본 ▼"}
       </button>
 
       {open && (
         <div className="px-3.5 pb-4 flex flex-col gap-3 text-[13px]">
           {t.sections.map((s, i) => (
             <div key={i}>
-              <p className="text-[11px] text-muted mb-1 font-semibold">{s.h}</p>
+              <p className="text-[11px] mb-1 font-semibold" style={{ color: e.fg }}>{s.h}</p>
               <div className="text-[12.5px] leading-relaxed whitespace-pre-wrap" style={{ color: "var(--text-secondary)" }}>{s.body}</div>
             </div>
           ))}
+
           {t.keywords.length > 0 && (
             <div className="flex flex-wrap gap-1 pt-1">
               {t.keywords.map((k, i) => (
@@ -284,6 +311,18 @@ function ThoughtCard({
               ))}
             </div>
           )}
+
+          {/* 원본(날것) 전사 — 접었다 폈다 */}
+          <div className="pt-1">
+            <button onClick={toggleRaw} className="text-[11.5px] transition hover:opacity-70" style={{ color: "var(--text-secondary)" }}>
+              {rawOpen ? "원본(날것) 접기 ▲" : "원본(날것) 전사 보기 ▼"}
+            </button>
+            {rawOpen && (
+              <pre className="mt-2 text-[11px] leading-relaxed whitespace-pre-wrap rounded-lg px-3 py-2 max-h-72 overflow-y-auto" style={{ backgroundColor: "var(--bg-page)", border: "1px solid var(--border)", color: "var(--text-secondary)" }}>
+                {rawLoading ? "불러오는 중…" : raw}
+              </pre>
+            )}
+          </div>
         </div>
       )}
     </div>
