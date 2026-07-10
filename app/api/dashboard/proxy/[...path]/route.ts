@@ -24,11 +24,15 @@ async function forward(req: NextRequest, path: string[]) {
     body,
     cache: "no-store",
   });
-  const text = await r.text();
-  return new NextResponse(text, {
-    status: r.status,
-    headers: { "Content-Type": r.headers.get("content-type") || "application/json" },
-  });
+  // arrayBuffer로 읽어 바이너리(이미지 프레임 등)도 안 깨지게 그대로 통과
+  const contentType = r.headers.get("content-type") || "application/json";
+  const buf = await r.arrayBuffer();
+  const headers: Record<string, string> = { "Content-Type": contentType };
+  // 프레임 이미지는 브라우저 캐시 허용(같은 프레임 재요청 방지)
+  if (contentType.startsWith("image/")) {
+    headers["Cache-Control"] = "public, max-age=86400, immutable";
+  }
+  return new NextResponse(buf, { status: r.status, headers });
 }
 
 export async function POST(

@@ -1,14 +1,15 @@
 "use client";
 
-// 릴스 벤치마크 — 참고하려는 남의 릴스 URL을 붙여넣으면 대본+화면(훅 프레임)+분석을
-// 카드로 모아 한눈에 본다. 엔진: reels_analyzer/reel_benchmark.py (Apify+Whisper+claude -p).
+// 릴스 벤치마크 — 참고하려는 릴스/게시물 링크를 붙여넣으면 화면(고화질 프레임)+비주얼 분석+대본을
+// 카드로 모아 한눈에 본다. 저장한 이유는 메모로 적는다.
+// 엔진: reels_analyzer/reel_benchmark.py (Apify+Whisper+claude -p vision).
 
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { callApi } from "@/lib/dashboard-client";
 
 interface Frame {
   t: number;
-  img: string; // data:image/jpeg;base64,...
+  file: string; // shortcode_NN.jpg — /reels-benchmark/frame/{file} 로 로드
 }
 
 interface Block {
@@ -25,6 +26,8 @@ interface BenchmarkCard {
   date: string;
   category: Category;
   mode: string;
+  is_image_post?: boolean;
+  memo?: string;
   title: string;
   summary: string;
   blocks: Block[];
@@ -40,6 +43,10 @@ interface BenchmarkCard {
 interface BenchmarkResponse {
   items: BenchmarkCard[];
   total: number;
+}
+
+function frameUrl(file: string): string {
+  return `/api/dashboard/proxy/reels-benchmark/frame/${file}`;
 }
 
 function fmtInt(n: number): string {
@@ -83,7 +90,7 @@ export default function ReelsBenchmarkBoard() {
     const u = url.trim();
     if (!u || busy) return;
     if (!/instagram\.com|youtube\.com|youtu\.be/.test(u)) {
-      setNotice("인스타 릴스 또는 유튜브 링크를 붙여넣어줘.");
+      setNotice("인스타 릴스/게시물 또는 유튜브 링크를 붙여넣어줘.");
       return;
     }
     setBusy(true);
@@ -91,8 +98,8 @@ export default function ReelsBenchmarkBoard() {
     try {
       await callApi("POST", "reels-benchmark/analyze", { url: u, mode });
       setUrl("");
-      setNotice("분석 중 — 대본 뽑고 화면 캡처하는 중이야. 40초쯤 뒤 카드로 떠(자동 새로고침).");
-      [15000, 30000, 50000, 75000].forEach((ms) => setTimeout(refresh, ms));
+      setNotice("분석 중 — 화면 캡처하고 claude가 눈으로 뜯어보는 중이야. 1분쯤 뒤 카드로 떠(자동 새로고침).");
+      [20000, 40000, 65000, 95000].forEach((ms) => setTimeout(refresh, ms));
     } catch (e) {
       setNotice(e instanceof Error ? e.message : "분석 요청 실패");
     } finally {
@@ -121,7 +128,7 @@ export default function ReelsBenchmarkBoard() {
           <div>
             <h1 className="text-xl font-semibold tracking-tight">릴스 벤치마크</h1>
             <p className="text-[12px] text-muted mt-0.5">
-              참고할 릴스 링크를 넣으면 대본·화면·훔쳐올 공식까지 모아둬 · {cards.length}개
+              링크를 넣으면 화면·비주얼 분석·대본까지 모아둬 · 저장한 이유는 메모로 · {cards.length}개
             </p>
           </div>
           <button
@@ -141,7 +148,7 @@ export default function ReelsBenchmarkBoard() {
               value={url}
               onChange={(e) => setUrl(e.target.value)}
               onKeyDown={(e) => e.key === "Enter" && analyze()}
-              placeholder="릴스·유튜브(쇼츠) 링크 툭 붙여넣기"
+              placeholder="릴스·게시물·유튜브(쇼츠) 링크 툭 붙여넣기"
               className="flex-1 rounded-lg px-3 py-2 text-[13px]"
               style={{ border: "1px solid var(--border)", backgroundColor: "var(--bg-page)" }}
             />
@@ -153,7 +160,7 @@ export default function ReelsBenchmarkBoard() {
             >
               <option value="benchmark">레퍼런스</option>
               <option value="recipe">요리</option>
-              <option value="info">AI 정보</option>
+              <option value="info">AI 정보 (글 게시물)</option>
             </select>
             <button
               onClick={analyze}
@@ -165,7 +172,7 @@ export default function ReelsBenchmarkBoard() {
             </button>
           </div>
           <p className="text-[11px] text-muted mt-2">
-            대본(Whisper) · 훅 프레임 캡처 · 왜 터졌나 · <b style={{ fontWeight: 600 }}>한나 채널에 훔쳐올 공식</b>까지 자동
+            화면 캡처 · <b style={{ fontWeight: 600 }}>claude가 프레임을 직접 보고 비주얼 분석</b> · 대본(Whisper) · 훔쳐올 공식까지 자동
           </p>
           {notice && <p className="text-[12px] mt-2" style={{ color: "var(--accent-text)" }}>{notice}</p>}
         </div>
@@ -205,7 +212,7 @@ export default function ReelsBenchmarkBoard() {
 
         {!loading && !error && sorted.length === 0 && (
           <p className="text-[13px] text-muted text-center py-14">
-            아직 없어요. 위에 참고하고 싶은 릴스 링크를 붙여넣어보세요.
+            아직 없어요. 위에 참고하고 싶은 릴스/게시물 링크를 붙여넣어보세요.
           </p>
         )}
       </div>
@@ -229,19 +236,49 @@ const CAT_STYLE: Record<string, { bg: string; fg: string }> = {
 };
 
 function CardView({ card, expanded, onToggle }: { card: BenchmarkCard; expanded: boolean; onToggle: () => void }) {
-  const cover = card.frames[0]?.img;
+  const cover = card.frames[0]?.file;
   const plat = platformOf(card.url);
   const catS = CAT_STYLE[card.category] || CAT_STYLE["레퍼런스"];
+  const isImagePost = !!card.is_image_post;
+
+  // 저장한 이유 메모 — 로컬 편집 상태
+  const [memo, setMemo] = useState(card.memo || "");
+  const [savingMemo, setSavingMemo] = useState(false);
+  const [savedMemo, setSavedMemo] = useState(card.memo || "");
+
+  async function saveMemo() {
+    if (savingMemo) return;
+    setSavingMemo(true);
+    try {
+      await callApi("POST", `reels-benchmark/${card.shortcode}/memo`, { memo });
+      setSavedMemo(memo);
+    } catch {
+      // 실패 시 조용히 — 다시 저장 누르면 됨
+    } finally {
+      setSavingMemo(false);
+    }
+  }
+
   return (
     <div className="rounded-xl overflow-hidden flex flex-col" style={{ border: "1px solid var(--border)", backgroundColor: "var(--bg-card)" }}>
-      {/* 커버 (첫 프레임) — 세로 영상이라 상단 28% 지점 크롭해 핵심 화면이 보이게 */}
-      <button onClick={onToggle} className="relative block w-full" style={{ height: 168, backgroundColor: "var(--bg-card-soft)" }}>
-        {cover && <img src={cover} alt="" className="w-full h-full object-cover" style={{ objectPosition: "50% 28%" }} />}
+      {/* 커버 (첫 프레임) — 이미지 게시물은 전체 보이게(contain), 세로 영상은 상단 크롭 */}
+      <button onClick={onToggle} className="relative block w-full" style={{ height: 190, backgroundColor: "var(--bg-card-soft)" }}>
+        {cover && (
+          <img
+            src={frameUrl(cover)}
+            alt=""
+            loading="lazy"
+            className="w-full h-full"
+            style={{ objectFit: isImagePost ? "contain" : "cover", objectPosition: "50% 22%" }}
+          />
+        )}
         <span className="absolute top-2 left-2 flex gap-1">
           <span className="text-[9px] px-1.5 py-0.5 rounded font-bold" style={{ backgroundColor: catS.bg, color: catS.fg }}>{card.category}</span>
           <span className="text-[9px] px-1.5 py-0.5 rounded font-bold" style={{ backgroundColor: plat.bg, color: plat.fg }}>{plat.label}</span>
         </span>
-        <span className="absolute bottom-2 right-2 text-[10px] px-1.5 py-0.5 rounded font-semibold tabular-nums" style={{ backgroundColor: "rgba(0,0,0,0.6)", color: "#fff" }}>조회 {fmtInt(card.views)}</span>
+        {card.views > 0 && (
+          <span className="absolute bottom-2 right-2 text-[10px] px-1.5 py-0.5 rounded font-semibold tabular-nums" style={{ backgroundColor: "rgba(0,0,0,0.6)", color: "#fff" }}>조회 {fmtInt(card.views)}</span>
+        )}
       </button>
 
       {/* 본문 (컴팩트) */}
@@ -256,23 +293,58 @@ function CardView({ card, expanded, onToggle }: { card: BenchmarkCard; expanded:
         {card.summary && (
           <p className="text-[11.5px] leading-snug text-muted" style={clamp(expanded ? 20 : 2)}>{card.summary}</p>
         )}
+        {/* 저장한 이유 메모 — 접힌 상태에서도 한눈에 */}
+        {savedMemo && !expanded && (
+          <p className="text-[11.5px] leading-snug rounded-md px-2 py-1" style={{ backgroundColor: "var(--bg-page)", color: "var(--accent-text)", border: "1px solid var(--border)" }}>
+            📝 {savedMemo}
+          </p>
+        )}
       </div>
 
       <button onClick={onToggle} className="text-[11.5px] px-3 py-2 text-left transition hover:opacity-70" style={{ color: "var(--accent)", borderTop: "1px solid var(--border)" }}>
-        {expanded ? "접기 ▲" : "화면 · 분석 · 대본 ▼"}
+        {expanded ? "접기 ▲" : "화면 · 분석 · 메모 ▼"}
       </button>
 
       {expanded && (
         <div className="px-3 pb-4 flex flex-col gap-3 text-[13px]">
-          {/* 🎬 화면 (프레임 전체) — 가로 스크롤 */}
+          {/* 📝 저장한 이유 메모 (편집) */}
+          <div>
+            <p className="text-[11px] text-muted mb-1 font-semibold">📝 저장한 이유 (내 메모)</p>
+            <textarea
+              value={memo}
+              onChange={(e) => setMemo(e.target.value)}
+              placeholder="왜 저장했는지 — 이 화면/색감/편집이 좋아서 등"
+              rows={2}
+              className="w-full rounded-lg px-2.5 py-2 text-[12.5px] leading-relaxed"
+              style={{ border: "1px solid var(--border)", backgroundColor: "var(--bg-page)", resize: "vertical" }}
+            />
+            <div className="flex items-center gap-2 mt-1">
+              <button
+                onClick={saveMemo}
+                disabled={savingMemo || memo === savedMemo}
+                className="text-[11.5px] px-3 py-1 rounded-md font-medium transition"
+                style={{ backgroundColor: "var(--accent)", color: "#fff", opacity: savingMemo || memo === savedMemo ? 0.5 : 1 }}
+              >
+                {savingMemo ? "저장 중…" : memo === savedMemo ? "저장됨" : "메모 저장"}
+              </button>
+              {memo !== savedMemo && <span className="text-[11px] text-muted">저장 안 됨</span>}
+            </div>
+          </div>
+
+          {/* 🎬 화면 (프레임 전체) — 가로 스크롤, 고화질 */}
           {card.frames.length > 0 && (
-            <div className="flex gap-1 overflow-x-auto -mx-1 px-1" style={{ scrollbarWidth: "thin" }}>
-              {card.frames.map((f, i) => (
-                <div key={i} className="relative shrink-0">
-                  <img src={f.img} alt={`${f.t}s`} className="rounded-md" style={{ height: 150, width: "auto", border: "1px solid var(--border)" }} />
-                  <span className="absolute bottom-1 left-1 text-[9px] px-1 rounded" style={{ backgroundColor: "rgba(0,0,0,0.55)", color: "#fff" }}>{f.t}s</span>
-                </div>
-              ))}
+            <div>
+              <p className="text-[11px] text-muted mb-1 font-semibold">{isImagePost ? "🖼 카드 이미지" : "🎬 화면"}</p>
+              <div className="flex gap-1.5 overflow-x-auto -mx-1 px-1" style={{ scrollbarWidth: "thin" }}>
+                {card.frames.map((f, i) => (
+                  <div key={i} className="relative shrink-0">
+                    <img src={frameUrl(f.file)} alt={`${f.t}`} loading="lazy" className="rounded-md" style={{ height: 210, width: "auto", border: "1px solid var(--border)" }} />
+                    {!isImagePost && (
+                      <span className="absolute bottom-1 left-1 text-[9px] px-1 rounded" style={{ backgroundColor: "rgba(0,0,0,0.55)", color: "#fff" }}>{f.t}s</span>
+                    )}
+                  </div>
+                ))}
+              </div>
             </div>
           )}
 
