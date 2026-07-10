@@ -9,6 +9,7 @@ const TABS = [
   { label: "큐레이션", href: "/dashboard/curation" },
   { label: "릴스", href: "/dashboard/reels" },
   { label: "벤치마크", href: "/dashboard/reels-benchmark" },
+  { label: "생각", href: "/dashboard/thoughts" },
 ];
 
 const PIPELINE_URL = "https://coolhanna-pipeline.vercel.app";
