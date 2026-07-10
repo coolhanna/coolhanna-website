@@ -159,7 +159,7 @@ export default function ReelsBenchmarkBoard() {
               style={{ border: "1px solid var(--border)", backgroundColor: "var(--bg-page)" }}
             >
               <option value="benchmark">레퍼런스</option>
-              <option value="recipe">요리</option>
+              <option value="recipe">요리 레시피</option>
               <option value="info">AI 정보 (글 게시물)</option>
             </select>
             <button
