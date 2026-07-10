@@ -17,7 +17,7 @@ interface Block {
   items: string[];
 }
 
-type Category = "레퍼런스" | "요리" | "AI";
+type Category = "레퍼런스" | "요리" | "레시피" | "AI";
 
 interface BenchmarkCard {
   shortcode: string;
@@ -108,7 +108,7 @@ export default function ReelsBenchmarkBoard() {
   }
 
   const cats = useMemo(() => {
-    const order: Category[] = ["레퍼런스", "요리", "AI"];
+    const order: Category[] = ["레퍼런스", "요리", "레시피", "AI"];
     const present = new Set(cards.map((c) => c.category));
     return order.filter((c) => present.has(c));
   }, [cards]);
@@ -159,7 +159,8 @@ export default function ReelsBenchmarkBoard() {
               style={{ border: "1px solid var(--border)", backgroundColor: "var(--bg-page)" }}
             >
               <option value="benchmark">레퍼런스</option>
-              <option value="recipe">요리 레시피</option>
+              <option value="recipe">요리 (분석)</option>
+              <option value="recipe_only">레시피 (레시피만)</option>
               <option value="info">AI 정보 (글 게시물)</option>
             </select>
             <button
@@ -232,6 +233,7 @@ function clamp(lines: number): React.CSSProperties {
 const CAT_STYLE: Record<string, { bg: string; fg: string }> = {
   "레퍼런스": { bg: "#E7EFE0", fg: "#2E5B2E" },
   "요리": { bg: "#FBEFE0", fg: "#8A4B1E" },
+  "레시피": { bg: "#FCEBEB", fg: "#9B2C2C" },
   "AI": { bg: "#E5EDFB", fg: "#25457F" },
 };
 
