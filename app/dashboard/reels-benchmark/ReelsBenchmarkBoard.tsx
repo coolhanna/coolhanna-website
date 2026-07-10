@@ -267,7 +267,6 @@ function CardView({ card, expanded, onToggle }: { card: BenchmarkCard; expanded:
           <img
             src={frameUrl(cover)}
             alt=""
-            loading="lazy"
             className="w-full h-full"
             style={{ objectFit: isImagePost ? "contain" : "cover", objectPosition: "50% 22%" }}
           />
@@ -338,7 +337,7 @@ function CardView({ card, expanded, onToggle }: { card: BenchmarkCard; expanded:
               <div className="flex gap-1.5 overflow-x-auto -mx-1 px-1" style={{ scrollbarWidth: "thin" }}>
                 {card.frames.map((f, i) => (
                   <div key={i} className="relative shrink-0">
-                    <img src={frameUrl(f.file)} alt={`${f.t}`} loading="lazy" className="rounded-md" style={{ height: 210, width: "auto", border: "1px solid var(--border)" }} />
+                    <img src={frameUrl(f.file)} alt={`${f.t}`} className="rounded-md" style={{ height: 210, width: "auto", border: "1px solid var(--border)" }} />
                     {!isImagePost && (
                       <span className="absolute bottom-1 left-1 text-[9px] px-1 rounded" style={{ backgroundColor: "rgba(0,0,0,0.55)", color: "#fff" }}>{f.t}s</span>
                     )}
