@@ -127,17 +127,19 @@ export default function ThoughtsBoard() {
               {/* 감정 지형 */}
               <div className="rounded-2xl p-4" style={{ backgroundColor: "var(--bg-card)", border: "1px solid var(--border)" }}>
                 <p className="text-[12px] font-semibold mb-3">감정 지형 <span className="text-muted font-normal">· 월별</span></p>
-                <div className="flex items-end gap-3 h-24">
+                <div className="flex items-end gap-3" style={{ height: 96 }}>
                   {data.emotion.map((m) => {
                     const total = m.무거움 + m.중립 + m.밝음;
+                    const barPx = Math.max(4, (total / maxMonth) * 78);
                     return (
-                      <div key={m.month} className="flex-1 flex flex-col items-center gap-1">
-                        <div className="w-full flex flex-col-reverse rounded-md overflow-hidden" style={{ height: `${(total / maxMonth) * 100}%`, minHeight: 4 }}>
-                          <div style={{ height: `${(m.밝음 / total) * 100}%`, backgroundColor: EMO.밝음.bar }} />
-                          <div style={{ height: `${(m.중립 / total) * 100}%`, backgroundColor: EMO.중립.bar }} />
-                          <div style={{ height: `${(m.무거움 / total) * 100}%`, backgroundColor: EMO.무거움.bar }} />
+                      <div key={m.month} className="flex-1 flex flex-col items-center">
+                        <span className="text-[10px] text-muted tabular-nums mb-1">{total}</span>
+                        <div className="w-full flex flex-col-reverse rounded-md overflow-hidden" style={{ height: barPx }}>
+                          <div style={{ flexGrow: m.밝음, backgroundColor: EMO.밝음.bar }} />
+                          <div style={{ flexGrow: m.중립, backgroundColor: EMO.중립.bar }} />
+                          <div style={{ flexGrow: m.무거움, backgroundColor: EMO.무거움.bar }} />
                         </div>
-                        <span className="text-[10px] text-muted tabular-nums">{m.month.slice(3)}월</span>
+                        <span className="text-[10px] text-muted tabular-nums mt-1">{m.month.slice(3)}월</span>
                       </div>
                     );
                   })}
