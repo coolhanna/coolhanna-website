@@ -1,0 +1,670 @@
+/* 파이프라인 토큰 — 원래 별도 앱의 globals.css에 있던 값들.
+   메인 사이트(coolhanna.com)로 합치면서 전역 오염 없이 이 페이지에만 스코프.
+   ⚠️ 메인 globals는 --color-ink/paper/rule 체계라 이름이 안 겹침 → 여기서 직접 정의해야 함. */
+.page {
+  --color-bg: oklch(98.5% 0.004 95);
+  --color-surface: oklch(100% 0 0);
+  --color-text: oklch(24% 0.01 60);
+  --color-text-muted: oklch(55% 0.01 60);
+  --color-text-faint: oklch(70% 0.01 60);
+  --color-border: oklch(91% 0.005 70);
+  --color-border-strong: oklch(83% 0.008 70);
+  --color-accent: oklch(45% 0.08 150);
+
+  --status-done: oklch(64% 0.13 162);
+  --status-doing: oklch(74% 0.15 75);
+  --status-blocked: oklch(60% 0.21 25);
+  --status-todo: oklch(89% 0.004 70);
+
+  --reels: oklch(45% 0.15 300);
+  --reels-bg: oklch(95% 0.035 300);
+  --youtube: oklch(46% 0.18 25);
+  --youtube-bg: oklch(95% 0.04 25);
+  --shorts: oklch(46% 0.15 18);
+  --shorts-bg: oklch(95% 0.035 18);
+  --tiktok: oklch(38% 0.02 240);
+  --tiktok-bg: oklch(94% 0.01 240);
+
+  --text-hero: clamp(1.5rem, 1.1rem + 1.4vw, 2.1rem);
+  --space-page: clamp(1.25rem, 0.5rem + 2vw, 3rem);
+  --radius: 14px;
+  --radius-sm: 9px;
+  --duration: 160ms;
+  --ease: cubic-bezier(0.16, 1, 0.3, 1);
+
+  color: var(--color-text);
+  max-width: 1100px;
+  margin: 0 auto;
+  padding: var(--space-page);
+  display: flex;
+  flex-direction: column;
+  gap: 1.75rem;
+}
+
+/* ---------- 헤더 ---------- */
+.header {
+  display: flex;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: 1rem;
+  flex-wrap: wrap;
+}
+
+.nav {
+  display: flex;
+  align-items: center;
+  gap: 0.25rem;
+  margin-bottom: 1rem;
+  font-size: 0.82rem;
+}
+
+.navTab {
+  padding: 0.35rem 0.75rem;
+  border-radius: var(--radius);
+  color: var(--color-text-muted);
+  text-decoration: none;
+  transition: background 0.15s;
+}
+
+.navTab:hover {
+  background: var(--color-surface);
+}
+
+.navActive {
+  background: #7a8b6a;
+  color: #fff;
+  font-weight: 600;
+}
+
+.navActive:hover {
+  background: #7a8b6a;
+}
+
+.titleWrap {
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
+}
+
+.refreshBtn {
+  width: 32px;
+  height: 32px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius);
+  background: var(--color-surface);
+  color: var(--color-accent, #7a8b6a);
+  font-size: 18px;
+  line-height: 1;
+  cursor: pointer;
+  transition: opacity 0.15s;
+}
+
+.refreshBtn:hover {
+  opacity: 0.7;
+}
+
+.eyebrow {
+  font-size: 0.78rem;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--color-text-faint);
+  font-weight: 500;
+}
+
+.title {
+  font-size: 1.1rem;
+  font-weight: 600;
+  letter-spacing: -0.02em;
+  margin: 0;
+}
+
+.subtitle {
+  color: var(--color-text-muted);
+  font-size: 0.82rem;
+}
+
+.doneWrap {
+  margin-top: 0.75rem;
+}
+
+.doneToggle {
+  background: none;
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius);
+  color: var(--color-text-muted);
+  font-size: 0.78rem;
+  padding: 0.35rem 0.8rem;
+  cursor: pointer;
+  transition: background 0.15s;
+}
+
+.doneToggle:hover {
+  background: var(--color-surface);
+}
+
+/* ---------- 요약 카드 ---------- */
+.summary {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 0.75rem;
+}
+
+.card {
+  background: var(--color-surface);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius);
+  padding: 1rem 1.15rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.4rem;
+}
+
+.cardLabel {
+  font-size: 0.82rem;
+  color: var(--color-text-muted);
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+}
+
+.cardValue {
+  font-size: 1.35rem;
+  font-weight: 600;
+  letter-spacing: -0.02em;
+  line-height: 1;
+}
+
+.cardAccentBlocked .cardValue {
+  color: var(--status-blocked);
+}
+
+.cardDot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+}
+
+/* ---------- 표 ---------- */
+.tableWrap {
+  background: var(--color-surface);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius);
+  overflow: hidden;
+}
+
+.table {
+  width: 100%;
+  border-collapse: collapse;
+}
+
+.table thead th {
+  font-size: 0.72rem;
+  font-weight: 500;
+  color: var(--color-text-faint);
+  text-align: center;
+  padding: 0.85rem 0.4rem;
+  border-bottom: 1px solid var(--color-border);
+  white-space: nowrap;
+}
+
+.table thead th.titleCol {
+  text-align: left;
+  padding-left: 1.15rem;
+}
+
+.row td {
+  padding: 0.7rem 0.4rem;
+  border-bottom: 1px solid var(--color-border);
+  text-align: center;
+  vertical-align: middle;
+}
+
+.row:last-child td {
+  border-bottom: none;
+}
+
+.row:hover {
+  background: oklch(97% 0.004 95);
+}
+
+.titleCell {
+  text-align: left !important;
+  padding-left: 1.15rem !important;
+}
+
+.videoTitle {
+  display: flex;
+  flex-direction: column;
+  gap: 0.3rem;
+  align-items: flex-start;
+}
+
+.videoNameRow {
+  display: flex;
+  align-items: center;
+  gap: 0.45rem;
+}
+
+.videoName {
+  font-weight: 500;
+  font-size: 0.92rem;
+}
+
+.ideaPreview {
+  font-size: 0.78rem;
+  color: var(--color-text-muted);
+  line-height: 1.4;
+  max-width: 30ch;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.videoDate {
+  font-size: 0.72rem;
+  color: var(--color-text-faint);
+}
+
+/* ---------- 상태 점 ---------- */
+.dot {
+  width: 16px;
+  height: 16px;
+  border-radius: 50%;
+  display: inline-block;
+  border: 1.5px solid transparent;
+}
+
+.dotDone {
+  background: var(--status-done);
+}
+
+.dotDoing {
+  background: var(--status-doing);
+}
+
+.dotBlocked {
+  background: var(--status-blocked);
+}
+
+.dotTodo {
+  background: transparent;
+  border-color: var(--color-border-strong);
+}
+
+/* ---------- 플랫폼 알약 ---------- */
+.pill {
+  display: inline-block;
+  font-size: 0.7rem;
+  font-weight: 500;
+  padding: 0.12rem 0.5rem;
+  border-radius: 999px;
+}
+
+.pillReels {
+  background: var(--reels-bg);
+  color: var(--reels);
+}
+
+.pillYoutube {
+  background: var(--youtube-bg);
+  color: var(--youtube);
+}
+
+.pillShorts {
+  background: var(--shorts-bg);
+  color: var(--shorts);
+}
+
+.pillTiktok {
+  background: var(--tiktok-bg);
+  color: var(--tiktok);
+}
+
+/* ---------- 범례 ---------- */
+.legend {
+  display: flex;
+  gap: 1.1rem;
+  flex-wrap: wrap;
+  font-size: 0.8rem;
+  color: var(--color-text-muted);
+  padding: 0 0.2rem;
+}
+
+.legendItem {
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+}
+
+/* ---------- 상단 액션 바 ---------- */
+.toolbar {
+  display: flex;
+  gap: 0.5rem;
+  align-items: center;
+  flex-wrap: wrap;
+}
+
+.addForm {
+  display: flex;
+  gap: 0.5rem;
+  flex: 1;
+  min-width: 240px;
+}
+
+.input,
+.select,
+.textarea {
+  font-family: inherit;
+  font-size: 0.9rem;
+  color: var(--color-text);
+  background: var(--color-surface);
+  border: 1px solid var(--color-border-strong);
+  border-radius: var(--radius-sm);
+  padding: 0.5rem 0.7rem;
+  transition: border-color var(--duration) var(--ease);
+}
+
+.input {
+  flex: 1;
+  min-width: 0;
+}
+
+.input:focus,
+.select:focus,
+.textarea:focus {
+  outline: none;
+  border-color: var(--color-text);
+}
+
+.textarea {
+  width: 100%;
+  resize: vertical;
+  min-height: 58px;
+  line-height: 1.5;
+}
+
+.btn {
+  font-size: 0.88rem;
+  font-weight: 500;
+  border: 1px solid var(--color-border-strong);
+  background: var(--color-surface);
+  border-radius: var(--radius-sm);
+  padding: 0.5rem 0.9rem;
+  white-space: nowrap;
+  transition:
+    background var(--duration) var(--ease),
+    transform var(--duration) var(--ease);
+}
+
+.btn:hover {
+  background: oklch(96% 0.004 95);
+}
+
+.btn:active {
+  transform: scale(0.98);
+}
+
+.btnPrimary {
+  background: var(--color-text);
+  color: var(--color-surface);
+  border-color: var(--color-text);
+}
+
+.btnPrimary:hover {
+  background: oklch(34% 0.01 60);
+}
+
+.btnDanger {
+  color: var(--status-blocked);
+  border-color: oklch(82% 0.05 25);
+}
+
+.btnDanger:hover {
+  background: oklch(96% 0.02 25);
+}
+
+/* ---------- D-day 칸 ---------- */
+.dday {
+  font-size: 0.8rem;
+  font-weight: 500;
+  padding: 0.12rem 0.5rem;
+  border-radius: 999px;
+  white-space: nowrap;
+}
+
+.ddayOverdue {
+  background: oklch(94% 0.04 25);
+  color: var(--status-blocked);
+}
+
+.ddayUrgent {
+  background: oklch(95% 0.05 25);
+  color: oklch(52% 0.2 25);
+}
+
+.ddaySoon {
+  background: oklch(95% 0.05 75);
+  color: oklch(50% 0.12 70);
+}
+
+.ddayNormal {
+  background: oklch(95% 0.005 70);
+  color: var(--color-text-muted);
+}
+
+.ddayEmpty {
+  color: var(--color-text-faint);
+  font-size: 0.8rem;
+}
+
+/* 클릭 가능한 점 버튼 */
+.dotBtn {
+  border: none;
+  background: none;
+  padding: 5px;
+  line-height: 0;
+  border-radius: 50%;
+  transition: transform var(--duration) var(--ease);
+}
+
+.dotBtn:hover {
+  transform: scale(1.25);
+}
+
+.dotBtn:focus-visible {
+  outline: 2px solid var(--color-text);
+  outline-offset: 1px;
+}
+
+/* 클릭 가능한 영상 제목 */
+.titleBtn {
+  border: none;
+  background: none;
+  padding: 0;
+  text-align: left;
+  display: flex;
+  flex-direction: column;
+  gap: 0.3rem;
+  align-items: flex-start;
+}
+
+.titleBtn .videoName {
+  transition: color var(--duration) var(--ease);
+}
+
+.titleBtn:hover .videoName {
+  color: var(--reels);
+}
+
+.empty {
+  padding: 2.5rem 1rem;
+  text-align: center;
+  color: var(--color-text-faint);
+  font-size: 0.9rem;
+}
+
+/* ---------- 오른쪽 서랍 ---------- */
+.overlay {
+  position: fixed;
+  inset: 0;
+  background: oklch(20% 0.01 60 / 0.32);
+  z-index: 40;
+  animation: fade var(--duration) var(--ease);
+}
+
+.drawer {
+  position: fixed;
+  top: 0;
+  right: 0;
+  height: 100dvh;
+  width: min(460px, 92vw);
+  background: var(--color-bg);
+  border-left: 1px solid var(--color-border);
+  z-index: 50;
+  display: flex;
+  flex-direction: column;
+  animation: slideIn var(--duration) var(--ease);
+}
+
+@keyframes fade {
+  from {
+    opacity: 0;
+  }
+}
+
+@keyframes slideIn {
+  from {
+    transform: translateX(100%);
+  }
+}
+
+.drawerHead {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 0.75rem;
+  padding: 1.1rem 1.25rem;
+  border-bottom: 1px solid var(--color-border);
+}
+
+.drawerBody {
+  padding: 1.1rem 1.25rem 2rem;
+  overflow-x: hidden;
+  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+  gap: 1.25rem;
+}
+
+.closeBtn {
+  border: none;
+  background: none;
+  font-size: 1.3rem;
+  line-height: 1;
+  color: var(--color-text-muted);
+  padding: 0.2rem 0.4rem;
+  border-radius: var(--radius-sm);
+}
+
+.closeBtn:hover {
+  background: oklch(94% 0.004 95);
+}
+
+.field {
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
+}
+
+.fieldLabel {
+  font-size: 0.78rem;
+  color: var(--color-text-muted);
+  font-weight: 500;
+}
+
+.dateRow {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+  gap: 0.6rem;
+}
+
+.input[type="date"],
+.input[type="number"] {
+  width: 100%;
+}
+
+.sectionTitle {
+  font-size: 0.78rem;
+  color: var(--color-text-faint);
+  letter-spacing: 0.04em;
+  font-weight: 500;
+}
+
+/* 단계별 편집 줄 */
+.stageEdit {
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-sm);
+  padding: 0.6rem 0.7rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.stageEditHead {
+  display: flex;
+  align-items: center;
+  gap: 0.6rem 0.5rem;
+  flex-wrap: wrap;
+}
+
+.stageEditName {
+  font-size: 0.88rem;
+  font-weight: 500;
+  width: 56px;
+  flex: none;
+}
+
+.statusToggle {
+  display: flex;
+  gap: 0.25rem;
+  margin-left: auto;
+  flex-wrap: wrap;
+}
+
+.statusChip {
+  font-size: 0.72rem;
+  border: 1px solid var(--color-border-strong);
+  background: var(--color-surface);
+  border-radius: 999px;
+  padding: 0.15rem 0.55rem;
+  color: var(--color-text-muted);
+}
+
+.statusChipActive {
+  color: var(--color-surface);
+  border-color: transparent;
+}
+
+.stageInputs {
+  display: flex;
+  flex-direction: column;
+  gap: 0.4rem;
+}
+
+.metricGrid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 0.6rem;
+}
+
+@media (max-width: 720px) {
+  .summary {
+    grid-template-columns: repeat(2, 1fr);
+  }
+  .table {
+    font-size: 0.85rem;
+  }
+}

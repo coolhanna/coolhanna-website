@@ -1,6 +1,8 @@
 "use client";
 
-// 대시보드 상단 공유 탭 — 운영 / 큐레이션 / 파이프라인. 창 하나로 통일.
+// 대시보드 상단 공유 탭 — 여기가 유일한 탭 정의(단일 출처).
+// 진행(파이프라인)은 원래 별도 앱이라 탭이 따로 놀고 주소창까지 떴는데,
+// 2026-07-17에 /dashboard/pipeline 으로 합쳐서 여기 한 곳만 고치면 전부 반영된다.
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 
@@ -11,9 +13,8 @@ const TABS = [
   { label: "벤치마크", href: "/dashboard/reels-benchmark" },
   { label: "생각", href: "/dashboard/thoughts" },
   { label: "건강", href: "/dashboard/health" },
+  { label: "진행", href: "/dashboard/pipeline" },
 ];
-
-const PIPELINE_URL = "https://coolhanna-pipeline.vercel.app";
 
 export default function DashboardNav() {
   const path = usePathname() || "";
@@ -41,13 +42,6 @@ export default function DashboardNav() {
           </Link>
         );
       })}
-      <a
-        href={PIPELINE_URL}
-        className="px-3 py-1.5 rounded-lg transition hover:opacity-70"
-        style={{ color: "var(--text-secondary)" }}
-      >
-        진행 ↗
-      </a>
     </nav>
   );
 }
