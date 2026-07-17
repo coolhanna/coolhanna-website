@@ -10,6 +10,7 @@ const TABS = [
   { label: "릴스", href: "/dashboard/reels" },
   { label: "벤치마크", href: "/dashboard/reels-benchmark" },
   { label: "생각", href: "/dashboard/thoughts" },
+  { label: "건강", href: "/dashboard/health" },
 ];
 
 const PIPELINE_URL = "https://coolhanna-pipeline.vercel.app";

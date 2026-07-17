@@ -47,6 +47,8 @@ export const dash = {
     api<any>(`/api/dashboard/weekly-todos?week_offset=${offset}`),
   // v6.2.2 — 오늘의 나 통합 (수면/컨디션/활동/식단 3끼니)
   todayMe: () => api<any>("/api/dashboard/today-me"),
+  // v7 — 애플워치 건강 (coolhanna-health 프록시: 어제/이번주/이번달 병합)
+  watchHealth: () => api<any>("/api/dashboard/watch-health"),
   // v6.4 — 최근 메모 (오늘 + 어제, 미완료만)
   memosRecent: () => api<any>("/api/dashboard/memos-recent"),
   // v6.5.1 — 진행중 할 일 (광고/공구와 분리)
