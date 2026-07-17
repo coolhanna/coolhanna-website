@@ -330,8 +330,12 @@ export default function HealthClient({ data }: { data: Dict }) {
         <Stat label="기상시각 흔들림 (14일)" value={fmt(ins.variability?.wake_sd_min, "분")}
           goal={`취침 ${ins.variability?.bed_sd_min ?? "—"}분 · 장기 평균 236분`}
           tone={ins.variability?.wake_sd_min > 120 ? "warn" : ins.variability?.wake_sd_min <= 75 ? "good" : undefined} />
-        <Stat label="생리 주기" value={ins.cycle?.dday ? `D+${ins.cycle.dday}` : "—"}
-          goal={`중앙값 ${ins.cycle?.median ?? "—"}일 · 최근 ${(ins.cycle?.recent ?? []).join("·") || "—"}`} />
+        <Stat label="생리 예정"
+          value={ins.cycle?.dday && ins.cycle?.median
+            ? (ins.cycle.median - ins.cycle.dday >= 0 ? `${ins.cycle.median - ins.cycle.dday}일 뒤` : "예정일 지남")
+            : "—"}
+          goal={`주기 ${ins.cycle?.dday ?? "—"}일째 · 중앙값 ${ins.cycle?.median ?? "—"}일`}
+          tone={ins.cycle?.dday && ins.cycle?.median && ins.cycle.median - ins.cycle.dday <= 3 ? "warn" : undefined} />
         <Stat label="VO2max" value={fmt(ins.aux?.vo2max?.value)}
           goal={ins.aux?.vo2max?.date ?? "—"} />
         <Stat label="심박 회복(1분)" value={fmt(ins.aux?.hr_recovery?.value)}
