@@ -87,6 +87,7 @@ export default function HealthClient({ data }: { data: Dict }) {
   const m = data?.month ?? {};
   const c = m.cards ?? {};
   const s = t.sleep ?? {};
+  const ins = data?.insights ?? {};
 
   return (
     <main className="max-w-page mx-auto px-5 sm:px-8 pb-16">
@@ -230,6 +231,99 @@ export default function HealthClient({ data }: { data: Dict }) {
         <Card title="90일 추세 · 선=심박 7일 평균 · 막대=달리기">
           <TrendChart trend={m.trend ?? []} />
         </Card>
+      </div>
+
+      <div className="h-3" />
+
+      {/* 오늘 활동 + 식단 (실시간, 매시간 갱신) */}
+      <div className="grid sm:grid-cols-2 gap-3 mb-3">
+        <Card title="오늘 활동 (매시간 갱신 — 진행 중)">
+          <div className="grid grid-cols-4 gap-2 text-center">
+            {[
+              { k: "걸음", v: ins.activity?.steps?.toLocaleString?.("ko-KR") },
+              { k: "운동(분)", v: ins.activity?.exercise_min },
+              { k: "햇빛(분)", v: ins.activity?.daylight_min },
+              { k: "활동 kcal", v: ins.activity?.active_kcal },
+            ].map(({ k, v }) => (
+              <div key={k}>
+                <div className="text-xl font-bold tabular-nums">{v ?? <Dash />}</div>
+                <div className="text-[11px]" style={{ color: "var(--color-muted)" }}>{k}</div>
+              </div>
+            ))}
+          </div>
+        </Card>
+        <Card title="오늘 식단 (봇에 사진 보내면 기록됨)">
+          {ins.meals?.length ? (
+            <ul className="text-[13px] space-y-1">
+              {ins.meals.map((meal: Dict) => (
+                <li key={meal.ts}>
+                  <b>{meal.meal_type}</b>{" "}
+                  <span style={{ color: "var(--color-muted)" }}>{meal.summary || "기록됨"}</span>
+                </li>
+              ))}
+            </ul>
+          ) : (
+            <p className="text-[13px]" style={{ color: "var(--color-muted)" }}>
+              아직 기록 없음 — 텔레그램 봇에 음식 사진 + "아침/점심/저녁" 캡션
+            </p>
+          )}
+        </Card>
+      </div>
+
+      {/* 한나 실측 인사이트 — 원지표 관계 (합성점수 아님) */}
+      <div className="grid sm:grid-cols-2 gap-3 mb-3">
+        <Card title="수면 길이 → 다음날 심박 (최근 60일 실측)">
+          {(ins.sleep_to_rhr ?? []).map((b: Dict) => {
+            const best = b.rhr !== null && b.rhr === Math.min(...(ins.sleep_to_rhr ?? []).filter((x: Dict) => x.rhr !== null).map((x: Dict) => x.rhr));
+            return (
+              <div key={b.bucket} className="flex items-center gap-2 py-1 text-[13px] tabular-nums">
+                <span className="w-12" style={{ color: "var(--color-muted)" }}>{b.bucket}</span>
+                <div className="flex-1 h-4 rounded"
+                  style={{ background: best ? "#3a7d3a" : "#8fb4e8", opacity: b.n ? 1 : 0.2,
+                    width: b.rhr ? `${((b.rhr - 50) / 20) * 100}%` : "2%", maxWidth: "70%" }} />
+                <b>{b.rhr ?? "—"}</b>
+                <span className="text-[11px]" style={{ color: "var(--color-muted)" }}>n={b.n}</span>
+              </div>
+            );
+          })}
+          <p className="text-[11px] mt-1" style={{ color: "var(--color-muted)" }}>
+            한나 몸은 6~7시간에서 심박이 가장 낮다. 더 잔다고 더 내려가지 않음.
+          </p>
+        </Card>
+        <Card title={`월 달리기 일수 → 그달 심박 (15개월 실측) · 지금 롤링 30일 = ${ins.run30 ?? "—"}일`}>
+          {(ins.run_to_rhr ?? []).map((b: Dict) => {
+            const cur = ins.run30 >= 10 ? "10일+" : ins.run30 >= 6 ? "6-9일" : ins.run30 >= 1 ? "1-5일" : "0일";
+            const isCur = b.bucket === cur;
+            return (
+              <div key={b.bucket} className="flex items-center gap-2 py-1 text-[13px] tabular-nums"
+                style={{ fontWeight: isCur ? 700 : 400 }}>
+                <span className="w-12" style={{ color: isCur ? "var(--color-ink)" : "var(--color-muted)" }}>
+                  {b.bucket}{isCur ? " ←" : ""}</span>
+                <div className="flex-1 h-4 rounded"
+                  style={{ background: b.bucket === "0일" ? "#b3261e" : "#5588d4", opacity: b.n ? 1 : 0.15,
+                    width: b.rhr ? `${((b.rhr - 55) / 15) * 100}%` : "2%", maxWidth: "70%" }} />
+                <b>{b.rhr ?? "—"}</b>
+                <span className="text-[11px]" style={{ color: "var(--color-muted)" }}>n={b.n}</span>
+              </div>
+            );
+          })}
+          <p className="text-[11px] mt-1" style={{ color: "var(--color-muted)" }}>
+            0일이 되면 두 달 만에 72까지 간 적 있음(2025-12). 하한은 월 4일.
+          </p>
+        </Card>
+      </div>
+
+      {/* 리듬·주기·보조지표 */}
+      <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+        <Stat label="기상시각 흔들림 (14일)" value={fmt(ins.variability?.wake_sd_min, "분")}
+          goal={`취침 ${ins.variability?.bed_sd_min ?? "—"}분 · 장기 평균 236분`}
+          tone={ins.variability?.wake_sd_min > 120 ? "warn" : ins.variability?.wake_sd_min <= 75 ? "good" : undefined} />
+        <Stat label="생리 주기" value={ins.cycle?.dday ? `D+${ins.cycle.dday}` : "—"}
+          goal={`중앙값 ${ins.cycle?.median ?? "—"}일 · 최근 ${(ins.cycle?.recent ?? []).join("·") || "—"}`} />
+        <Stat label="VO2max" value={fmt(ins.aux?.vo2max?.value)}
+          goal={ins.aux?.vo2max?.date ?? "—"} />
+        <Stat label="심박 회복(1분)" value={fmt(ins.aux?.hr_recovery?.value)}
+          goal={ins.aux?.hr_recovery?.date ?? "—"} />
       </div>
     </main>
   );
