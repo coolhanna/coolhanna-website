@@ -6,7 +6,7 @@ import { useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 import type { AccountSummary, ReelItem, ReelsResponse } from "@/lib/dashboard-api";
 
-type AccountFilter = "전체" | "한나" | "혜린";
+type AccountFilter = "전체" | "한나" | "혜린" | "신신나";
 type SortKey = "latest" | "views" | "engagement";
 
 const SORT_LABEL: Record<SortKey, string> = {
@@ -128,7 +128,7 @@ export default function ReelsClient({ data }: ReelsClientProps) {
     );
   }
 
-  const accounts: AccountFilter[] = ["전체", "한나", "혜린"];
+  const accounts: AccountFilter[] = ["전체", "한나", "혜린", "신신나"];
 
   return (
     <main className="max-w-page mx-auto px-5 sm:px-8 py-8 sm:py-12">
