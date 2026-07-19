@@ -725,6 +725,22 @@ function ReelDetail({ reel }: { reel: ReelItem }) {
       )}
 
       {/* 한나 적용 포인트 */}
+      {/* 캡션 */}
+      {(reel.caption_analysis || reel.caption) && (
+        <div className="mb-3">
+          <h4 className="font-semibold mb-1">✍️ 캡션 분석</h4>
+          {reel.caption_analysis && (
+            <p style={{ whiteSpace: "pre-wrap" }}>{reel.caption_analysis.replace(/\*\*/g, "")}</p>
+          )}
+          {reel.caption && (
+            <details className="mt-1">
+              <summary style={{ cursor: "pointer", color: "var(--color-muted)", fontSize: "0.85em" }}>원본 캡션 보기</summary>
+              <p style={{ whiteSpace: "pre-wrap", color: "var(--color-muted)", fontSize: "0.9em", marginTop: 4 }}>{reel.caption}</p>
+            </details>
+          )}
+        </div>
+      )}
+
       {reel.applicable && (
         <div>
           <h4 className="font-semibold mb-1">💡 내 채널 적용 포인트</h4>
