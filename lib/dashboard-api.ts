@@ -111,6 +111,8 @@ export interface ReelItem {
   applicable: string;
   warning: string;
   transcript: string;
+  caption: string;
+  caption_analysis: string;
   has_transcript: boolean;
   transcription_status: TranscriptionStatus;
   visual: ReelVisual | null;
