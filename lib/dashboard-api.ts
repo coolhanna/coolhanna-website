@@ -152,7 +152,7 @@ export interface ReelItem {
 }
 
 export interface AccountSummary {
-  display_name: "한나" | "혜린";
+  display_name: "한나" | "혜린" | "가족먹거리";
   username: string;
   date: string;
   followers: number;

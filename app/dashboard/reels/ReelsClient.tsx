@@ -296,8 +296,58 @@ function AccountCards({ accounts }: { accounts: AccountSummary[] }) {
             <AcctStat label="참여 계정" value={fmtInt(a.accounts_engaged)} />
             <AcctStat label="링크 클릭" value={fmtInt(a.website_clicks + a.profile_links_taps)} highlight />
           </div>
+          <FollowerTrend history={a.history} />
         </div>
       ))}
+    </div>
+  );
+}
+
+function FollowerTrend({ history }: { history: AccountSummary["history"] }) {
+  const pts = history.filter((p) => typeof p.followers === "number" && p.followers > 0);
+  if (pts.length < 2) return null;
+  const W = 260;
+  const H = 54;
+  const PAD = 3;
+  const vals = pts.map((p) => p.followers);
+  const min = Math.min(...vals);
+  const max = Math.max(...vals);
+  const span = Math.max(max - min, 1);
+  const x = (i: number) => PAD + (i * (W - PAD * 2)) / (pts.length - 1);
+  const y = (v: number) => H - PAD - ((v - min) * (H - PAD * 2)) / span;
+  const line = vals
+    .map((v, i) => `${i === 0 ? "M" : "L"}${x(i).toFixed(1)},${y(v).toFixed(1)}`)
+    .join(" ");
+  const area = `${line} L${x(vals.length - 1).toFixed(1)},${H - PAD} L${x(0).toFixed(1)},${H - PAD} Z`;
+  const total = vals[vals.length - 1] - vals[0];
+  const days = pts.length - 1;
+  return (
+    <div className="mt-3 pt-2" style={{ borderTop: "1px solid var(--color-rule)" }}>
+      <div className="flex items-baseline justify-between text-[11px]">
+        <span style={{ color: "var(--color-muted)" }}>팔로워 추이 · {days}일</span>
+        <span
+          className="tabular-nums font-medium"
+          style={{ color: total >= 0 ? "#3a7d3a" : "#b3261e" }}
+        >
+          {total >= 0 ? "+" : ""}
+          {fmtInt(total)}
+        </span>
+      </div>
+      <svg
+        viewBox={`0 0 ${W} ${H}`}
+        className="mt-1 w-full"
+        style={{ height: 54 }}
+        role="img"
+        aria-label={`최근 ${days}일 팔로워 추이, ${total >= 0 ? "+" : ""}${total}명`}
+      >
+        <path d={area} fill="var(--color-ink)" opacity="0.07" />
+        <path d={line} fill="none" stroke="var(--color-ink)" strokeWidth="1.5" />
+        <circle cx={x(vals.length - 1)} cy={y(vals[vals.length - 1])} r="2.5" fill="var(--color-ink)" />
+      </svg>
+      <div className="flex justify-between text-[10px] tabular-nums" style={{ color: "var(--color-muted)" }}>
+        <span>{pts[0].date?.slice(5)}</span>
+        <span>{pts[pts.length - 1].date?.slice(5)}</span>
+      </div>
     </div>
   );
 }
