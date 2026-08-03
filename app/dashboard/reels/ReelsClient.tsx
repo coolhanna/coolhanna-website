@@ -306,47 +306,74 @@ function AccountCards({ accounts }: { accounts: AccountSummary[] }) {
 function FollowerTrend({ history }: { history: AccountSummary["history"] }) {
   const pts = history.filter((p) => typeof p.followers === "number" && p.followers > 0);
   if (pts.length < 2) return null;
+  // 일별 증감 (한나 2026-08-02: "매일 얼마나 늘었는지"가 보여야 함 — 누적 곡선은 확인 불가)
+  const deltas = pts.slice(1).map((p, i) => ({
+    date: p.date,
+    delta: p.followers - pts[i].followers,
+  }));
+  const recent = deltas.slice(-14);
   const W = 260;
-  const H = 54;
-  const PAD = 3;
-  const vals = pts.map((p) => p.followers);
-  const min = Math.min(...vals);
-  const max = Math.max(...vals);
-  const span = Math.max(max - min, 1);
-  const x = (i: number) => PAD + (i * (W - PAD * 2)) / (pts.length - 1);
-  const y = (v: number) => H - PAD - ((v - min) * (H - PAD * 2)) / span;
-  const line = vals
-    .map((v, i) => `${i === 0 ? "M" : "L"}${x(i).toFixed(1)},${y(v).toFixed(1)}`)
-    .join(" ");
-  const area = `${line} L${x(vals.length - 1).toFixed(1)},${H - PAD} L${x(0).toFixed(1)},${H - PAD} Z`;
-  const total = vals[vals.length - 1] - vals[0];
-  const days = pts.length - 1;
+  const H = 64;
+  const PAD = 2;
+  const maxAbs = Math.max(...recent.map((d) => Math.abs(d.delta)), 1);
+  const zeroY = H - 12;
+  const barW = (W - PAD * 2) / recent.length;
+  const last = recent[recent.length - 1];
+  const week = deltas.slice(-7).reduce((s, d) => s + d.delta, 0);
   return (
     <div className="mt-3 pt-2" style={{ borderTop: "1px solid var(--color-rule)" }}>
       <div className="flex items-baseline justify-between text-[11px]">
-        <span style={{ color: "var(--color-muted)" }}>팔로워 추이 · {days}일</span>
-        <span
-          className="tabular-nums font-medium"
-          style={{ color: total >= 0 ? "#3a7d3a" : "#b3261e" }}
-        >
-          {total >= 0 ? "+" : ""}
-          {fmtInt(total)}
+        <span style={{ color: "var(--color-muted)" }}>일별 팔로워 증감 · 최근 {recent.length}일</span>
+        <span className="tabular-nums" style={{ color: "var(--color-muted)" }}>
+          7일 합계{" "}
+          <span className="font-medium" style={{ color: week >= 0 ? "#3a7d3a" : "#b3261e" }}>
+            {week >= 0 ? "+" : ""}
+            {fmtInt(week)}
+          </span>
         </span>
       </div>
       <svg
         viewBox={`0 0 ${W} ${H}`}
         className="mt-1 w-full"
-        style={{ height: 54 }}
+        style={{ height: 64 }}
         role="img"
-        aria-label={`최근 ${days}일 팔로워 추이, ${total >= 0 ? "+" : ""}${total}명`}
+        aria-label={`최근 ${recent.length}일 일별 팔로워 증감, 마지막 날 ${last.delta >= 0 ? "+" : ""}${last.delta}명`}
       >
-        <path d={area} fill="var(--color-ink)" opacity="0.07" />
-        <path d={line} fill="none" stroke="var(--color-ink)" strokeWidth="1.5" />
-        <circle cx={x(vals.length - 1)} cy={y(vals[vals.length - 1])} r="2.5" fill="var(--color-ink)" />
+        {recent.map((d, i) => {
+          const h = Math.max((Math.abs(d.delta) / maxAbs) * (zeroY - 14), d.delta === 0 ? 1 : 2);
+          const up = d.delta >= 0;
+          return (
+            <g key={d.date}>
+              <rect
+                x={PAD + i * barW + barW * 0.15}
+                y={up ? zeroY - h : zeroY}
+                width={barW * 0.7}
+                height={h}
+                rx={1.5}
+                fill={up ? "#3a7d3a" : "#b3261e"}
+                opacity={i === recent.length - 1 ? 1 : 0.55}
+              >
+                <title>{`${d.date?.slice(5)} · ${up ? "+" : ""}${d.delta}`}</title>
+              </rect>
+            </g>
+          );
+        })}
+        <line x1={PAD} y1={zeroY} x2={W - PAD} y2={zeroY} stroke="var(--color-rule)" strokeWidth="1" />
+        <text
+          x={PAD + (recent.length - 1) * barW + barW * 0.5}
+          y={zeroY - Math.max((Math.abs(last.delta) / maxAbs) * (zeroY - 14), 2) - 4}
+          textAnchor="end"
+          fontSize="10"
+          className="tabular-nums"
+          fill={last.delta >= 0 ? "#3a7d3a" : "#b3261e"}
+        >
+          {last.delta >= 0 ? "+" : ""}
+          {fmtInt(last.delta)}
+        </text>
       </svg>
       <div className="flex justify-between text-[10px] tabular-nums" style={{ color: "var(--color-muted)" }}>
-        <span>{pts[0].date?.slice(5)}</span>
-        <span>{pts[pts.length - 1].date?.slice(5)}</span>
+        <span>{recent[0].date?.slice(5)}</span>
+        <span>{last.date?.slice(5)}</span>
       </div>
     </div>
   );
