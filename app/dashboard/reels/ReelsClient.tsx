@@ -4,7 +4,7 @@
 // 개별 심층(구조·바이럴요인·대본·적용포인트). 계정 필터는 모든 집계에 반영됨.
 import { useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
-import type { AccountSummary, ReelItem, ReelsResponse } from "@/lib/dashboard-api";
+import type { AccountSummary, ReelItem, ReelsResponse, YouTubeSummary } from "@/lib/dashboard-api";
 
 type AccountFilter = "전체" | "한나" | "혜린" | "가족먹거리";
 type SortKey = "latest" | "views" | "engagement";
@@ -183,6 +183,10 @@ export default function ReelsClient({ data }: ReelsClientProps) {
         />
       )}
 
+      {!isError && data.youtube && (account === "전체" || account === "한나") && (
+        <YouTubeCard yt={data.youtube} />
+      )}
+
       {agg && (
         <>
           <KpiRow agg={agg} />
@@ -303,7 +307,57 @@ function AccountCards({ accounts }: { accounts: AccountSummary[] }) {
   );
 }
 
-function FollowerTrend({ history }: { history: AccountSummary["history"] }) {
+function YouTubeCard({ yt }: { yt: YouTubeSummary }) {
+  const change = yt.subscribers_change_1d;
+  return (
+    <div
+      className="rounded-xl overflow-hidden mb-4 p-4"
+      style={{ backgroundColor: "var(--color-paper)", border: "1px solid var(--color-rule)" }}
+    >
+      <div className="flex items-baseline justify-between">
+        <span className="text-[13px] font-semibold">▶ {yt.display_name}</span>
+        <span className="text-[11px]" style={{ color: "var(--color-muted)" }}>
+          채널 지표 · {yt.date}
+        </span>
+      </div>
+      <div className="mt-2 flex items-end gap-2">
+        <span className="text-2xl font-semibold tabular-nums leading-none">{fmtInt(yt.subscribers)}</span>
+        <span className="text-[12px]" style={{ color: "var(--color-muted)" }}>구독자</span>
+        {change !== 0 && (
+          <span className="text-[12px]" style={{ color: change > 0 ? "#3a7d3a" : "#b3261e" }}>
+            {change > 0 ? "▲" : "▼"}
+            {fmtInt(Math.abs(change))}
+          </span>
+        )}
+      </div>
+      <div className="mt-2 grid gap-x-6 md:grid-cols-2">
+        <div>
+          <FollowerTrend history={yt.history.filter((h) => typeof h.followers === "number")} />
+          {yt.history.length < 3 && (
+            <p className="mt-1 text-[10px]" style={{ color: "var(--color-muted)" }}>
+              구독자 증감 그래프는 데이터가 2일 이상 쌓이면 표시돼요 (매일 밤 자동 수집 중)
+            </p>
+          )}
+        </div>
+        <ol className="mt-3 space-y-1.5">
+          {yt.videos.slice(0, 5).map((v) => (
+            <li key={v.id} className="flex items-baseline justify-between gap-3 text-[12px]">
+              <span className="truncate">{v.title}</span>
+              <span className="tabular-nums shrink-0" style={{ color: "var(--color-muted)" }}>
+                {fmtInt(v.views)}
+                {typeof v.views_change_1d === "number" && v.views_change_1d > 0 && (
+                  <span style={{ color: "#3a7d3a" }}> +{fmtInt(v.views_change_1d)}</span>
+                )}
+              </span>
+            </li>
+          ))}
+        </ol>
+      </div>
+    </div>
+  );
+}
+
+function FollowerTrend({ history }: { history: Array<{ date: string; followers: number }> }) {
   const pts = history.filter((p) => typeof p.followers === "number" && p.followers > 0);
   if (pts.length < 2) return null;
   // 일별 증감 (한나 2026-08-02: "매일 얼마나 늘었는지"가 보여야 함 — 누적 곡선은 확인 불가)

@@ -171,10 +171,29 @@ export interface AccountSummary {
   }>;
 }
 
+export interface YouTubeVideo {
+  id: string;
+  title: string;
+  views: number;
+  views_change_1d: number | null;
+  duration_sec: number | null;
+}
+
+export interface YouTubeSummary {
+  display_name: string;
+  channel_id: string;
+  date: string;
+  subscribers: number;
+  subscribers_change_1d: number;
+  history: Array<{ date: string; followers: number }>;
+  videos: YouTubeVideo[];
+}
+
 export interface ReelsResponse {
   items: ReelItem[];
   overview: unknown; // 서버 집계(전체 기준). UI는 계정필터 반영 위해 items에서 재집계.
   accounts?: AccountSummary[];
+  youtube?: YouTubeSummary | null;
 }
 
 export interface HyerinDiaryTodo {
