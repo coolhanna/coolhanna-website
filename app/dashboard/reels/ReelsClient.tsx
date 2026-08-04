@@ -6,7 +6,7 @@ import { useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 import type { AccountSummary, ReelItem, ReelsResponse, YouTubeSummary } from "@/lib/dashboard-api";
 
-type AccountFilter = "전체" | "한나" | "혜린" | "가족먹거리";
+type AccountFilter = "전체" | "한나" | "혜린" | "가족먹거리" | "유튜브";
 type SortKey = "latest" | "views" | "engagement";
 
 const SORT_LABEL: Record<SortKey, string> = {
@@ -128,7 +128,7 @@ export default function ReelsClient({ data }: ReelsClientProps) {
     );
   }
 
-  const accounts: AccountFilter[] = ["전체", "한나", "혜린", "가족먹거리"];
+  const accounts: AccountFilter[] = ["전체", "한나", "혜린", "가족먹거리", "유튜브"];
 
   return (
     <main className="max-w-page mx-auto px-5 sm:px-8 py-8 sm:py-12">
@@ -173,7 +173,7 @@ export default function ReelsClient({ data }: ReelsClientProps) {
         </div>
       </header>
 
-      {!isError && data.accounts && data.accounts.length > 0 && (
+      {!isError && account !== "유튜브" && data.accounts && data.accounts.length > 0 && (
         <AccountCards
           accounts={
             account === "전체"
@@ -183,11 +183,11 @@ export default function ReelsClient({ data }: ReelsClientProps) {
         />
       )}
 
-      {!isError && data.youtube && (account === "전체" || account === "한나") && (
-        <YouTubeCard yt={data.youtube} />
+      {!isError && data.youtube && (account === "전체" || account === "유튜브") && (
+        <YouTubeCard yt={data.youtube} expanded={account === "유튜브"} />
       )}
 
-      {agg && (
+      {account !== "유튜브" && agg && (
         <>
           <KpiRow agg={agg} />
           <HookPerformance
@@ -199,7 +199,9 @@ export default function ReelsClient({ data }: ReelsClientProps) {
         </>
       )}
 
-      {/* 정렬 컨트롤 */}
+      {/* 정렬 컨트롤 (유튜브 뷰에선 릴스 목록 숨김) */}
+      {account !== "유튜브" && (
+      <>
       <div className="flex items-center gap-2 pt-8 pb-1">
         <span className="text-[12px]" style={{ color: "var(--color-muted)" }}>
           정렬
@@ -245,6 +247,8 @@ export default function ReelsClient({ data }: ReelsClientProps) {
         <p className="py-16 text-center text-[13px]" style={{ color: "var(--color-muted)" }}>
           표시할 릴스가 없어요.
         </p>
+      )}
+      </>
       )}
     </main>
   );
@@ -307,8 +311,9 @@ function AccountCards({ accounts }: { accounts: AccountSummary[] }) {
   );
 }
 
-function YouTubeCard({ yt }: { yt: YouTubeSummary }) {
+function YouTubeCard({ yt, expanded = false }: { yt: YouTubeSummary; expanded?: boolean }) {
   const change = yt.subscribers_change_1d;
+  const shown = expanded ? yt.videos : yt.videos.slice(0, 5);
   return (
     <div
       className="rounded-xl overflow-hidden mb-4 p-4"
@@ -340,9 +345,21 @@ function YouTubeCard({ yt }: { yt: YouTubeSummary }) {
           )}
         </div>
         <ol className="mt-3 space-y-1.5">
-          {yt.videos.slice(0, 5).map((v) => (
+          {shown.map((v) => (
             <li key={v.id} className="flex items-baseline justify-between gap-3 text-[12px]">
-              <span className="truncate">{v.title}</span>
+              <span className="flex items-baseline gap-1.5 min-w-0">
+                <span
+                  className="shrink-0 text-[10px] px-1 rounded"
+                  style={{
+                    backgroundColor: v.format === "숏폼" ? "var(--color-ink)" : "transparent",
+                    color: v.format === "숏폼" ? "var(--color-paper)" : "var(--color-muted)",
+                    border: v.format === "숏폼" ? "none" : "1px solid var(--color-rule)",
+                  }}
+                >
+                  {v.format === "숏폼" ? "숏" : "롱"}
+                </span>
+                <span className="truncate">{v.title}</span>
+              </span>
               <span className="tabular-nums shrink-0" style={{ color: "var(--color-muted)" }}>
                 {fmtInt(v.views)}
                 {typeof v.views_change_1d === "number" && v.views_change_1d > 0 && (

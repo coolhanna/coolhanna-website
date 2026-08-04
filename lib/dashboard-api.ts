@@ -177,6 +177,7 @@ export interface YouTubeVideo {
   views: number;
   views_change_1d: number | null;
   duration_sec: number | null;
+  format: "숏폼" | "롱폼";
 }
 
 export interface YouTubeSummary {
