@@ -1,7 +1,7 @@
 "use client";
 
-// 유튜브 탭 v2 (2026-08-07 한나: "업로드 기록만 나열하면 유튜브에 대해 뭐 알겠어") —
-// 나열이 아니라 판단: 채널 진단 → 포맷×주제 성적표 → 구독자 → 영상별 판정·배운 것·다음 수.
+// 유튜브 탭 v3 (2026-08-07 한나: "숏폼만, 릴스 포맷으로 제대로") —
+// 숏폼(7월 요리 전환 이후)만 다룬다. 영상마다 심층 분석(판정·인스타 대비·제목·변주 훅)을 펼쳐 본다.
 import { useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 import type { YouTubeTabResponse, YouTubeUpload } from "@/lib/dashboard-api";
@@ -22,8 +22,6 @@ const VERDICT_STYLE: Record<string, { bg: string; fg: string; border?: string }>
   성장중: { bg: "transparent", fg: "var(--color-muted)", border: "1px dashed var(--color-rule)" },
 };
 
-type ListFilter = "전체" | "배운 것만" | "요리" | "교육";
-
 export default function YouTubeClient({
   data,
 }: {
@@ -31,7 +29,6 @@ export default function YouTubeClient({
 }) {
   const router = useRouter();
   const isError = "error" in data;
-  const [filter, setFilter] = useState<ListFilter>("배운 것만");
 
   const derived = useMemo(() => {
     if (isError) return null;
@@ -41,7 +38,8 @@ export default function YouTubeClient({
       date: h.date,
       delta: h.followers - hist[i].followers,
     }));
-    return { subDeltas };
+    const cohort = d.matrix?.find((m) => m.format === "숏폼" && m.topic === "요리") ?? null;
+    return { subDeltas, cohort };
   }, [data, isError]);
 
   if (isError || !derived) {
@@ -56,20 +54,14 @@ export default function YouTubeClient({
 
   const d = data as YouTubeTabResponse;
   const uploads = d.uploads ?? [];
-  const shown = uploads.filter((u) => {
-    if (filter === "배운 것만") return !!u.learning;
-    if (filter === "요리" || filter === "교육") return u.topic === filter;
-    return true;
-  });
-  const bestCell = d.matrix?.reduce((m, c) => (c.median > (m?.median ?? 0) ? c : m), d.matrix[0]);
 
   return (
     <main className="mx-auto max-w-3xl px-4 pb-20">
       <header className="flex items-end justify-between pt-6 pb-4">
         <div>
-          <h1 className="text-xl font-semibold">유튜브</h1>
+          <h1 className="text-xl font-semibold">유튜브 숏폼</h1>
           <p className="text-[12px] mt-0.5" style={{ color: "var(--color-muted)" }}>
-            {d.display_name} · 지표 {d.date} · 매일 밤 자동 수집 · 달력은{" "}
+            {d.display_name} · 지표 {d.date} · 달력은{" "}
             <a href="/dashboard/uploads" className="underline">업로드 탭</a>
           </p>
         </div>
@@ -83,7 +75,7 @@ export default function YouTubeClient({
         </button>
       </header>
 
-      {/* 🧭 채널 진단 — 이 채널을 한 문단으로 이해 */}
+      {/* 🧭 채널 진단 */}
       {d.diagnosis && (
         <section
           className="rounded-xl p-4 mb-4"
@@ -99,7 +91,10 @@ export default function YouTubeClient({
               </li>
             ))}
           </ul>
-          <div className="mt-3 pt-2 space-y-1 text-[12px]" style={{ borderTop: "1px solid rgba(255,255,255,0.2)" }}>
+          <div
+            className="mt-3 pt-2 space-y-1 text-[12px]"
+            style={{ borderTop: "1px solid rgba(255,255,255,0.2)" }}
+          >
             {d.diagnosis.next_moves.map((m) => (
               <p key={m} className="flex gap-1.5">
                 <span className="shrink-0">→</span>
@@ -110,167 +105,158 @@ export default function YouTubeClient({
         </section>
       )}
 
-      {/* 포맷×주제 성적표 */}
-      {d.matrix && d.matrix.length > 0 && (
-        <section className="mb-4">
-          <h2 className="text-[13px] font-semibold mb-2">
-            포맷 × 주제 성적표{" "}
-            <span className="font-normal text-[11px]" style={{ color: "var(--color-muted)" }}>
-              — 어디에 힘을 실을지 한 눈에 (중앙값 기준)
-            </span>
-          </h2>
-          <div className="grid grid-cols-2 gap-px rounded-xl overflow-hidden" style={{ backgroundColor: "var(--color-rule)" }}>
-            {(["숏폼", "롱폼"] as const).flatMap((fmt) =>
-              (["요리", "교육"] as const).map((tp) => {
-                const c = d.matrix.find((m) => m.format === fmt && m.topic === tp);
-                const isBest = c && bestCell && c.format === bestCell.format && c.topic === bestCell.topic;
-                return (
-                  <div
-                    key={`${fmt}-${tp}`}
-                    className="p-3"
-                    style={{
-                      backgroundColor: isBest
-                        ? "color-mix(in srgb, #3a7d3a 12%, var(--color-paper))"
-                        : "var(--color-paper)",
-                    }}
-                  >
-                    <div className="flex items-baseline justify-between">
-                      <span className="text-[12px] font-medium">
-                        {fmt} · {tp} {isBest && "👑"}
-                      </span>
-                      <span className="text-[10px]" style={{ color: "var(--color-muted)" }}>
-                        {c ? `${c.n}개` : "없음"}
-                      </span>
-                    </div>
-                    {c ? (
-                      <div className="mt-1 flex items-baseline gap-2">
-                        <span className="text-lg font-semibold tabular-nums">{fmtShort(c.median)}</span>
-                        <span className="text-[10px]" style={{ color: "var(--color-muted)" }}>
-                          최고 {fmtShort(c.max)}
-                        </span>
-                      </div>
-                    ) : (
-                      <p className="mt-1 text-[11px]" style={{ color: "var(--color-muted)" }}>—</p>
-                    )}
-                  </div>
-                );
-              }),
-            )}
-          </div>
-        </section>
-      )}
-
-      {/* 구독자 + 일별 증감 */}
+      {/* 구독자 + 코호트 기준 */}
       <section
         className="rounded-xl p-4 mb-4"
         style={{ backgroundColor: "var(--color-paper)", border: "1px solid var(--color-rule)" }}
       >
-        <div className="flex items-end gap-2">
-          <span className="text-3xl font-semibold tabular-nums leading-none">{fmtInt(d.subscribers)}</span>
-          <span className="text-[12px]" style={{ color: "var(--color-muted)" }}>구독자</span>
-          {d.subscribers_change_1d !== 0 && (
-            <span
-              className="text-[13px] font-medium"
-              style={{ color: d.subscribers_change_1d > 0 ? "#3a7d3a" : "#b3261e" }}
-            >
-              {d.subscribers_change_1d > 0 ? "▲" : "▼"}
-              {fmtInt(Math.abs(d.subscribers_change_1d))}
-            </span>
+        <div className="flex flex-wrap items-end justify-between gap-3">
+          <div className="flex items-end gap-2">
+            <span className="text-3xl font-semibold tabular-nums leading-none">{fmtInt(d.subscribers)}</span>
+            <span className="text-[12px]" style={{ color: "var(--color-muted)" }}>구독자</span>
+            {d.subscribers_change_1d !== 0 && (
+              <span
+                className="text-[13px] font-medium"
+                style={{ color: d.subscribers_change_1d > 0 ? "#3a7d3a" : "#b3261e" }}
+              >
+                {d.subscribers_change_1d > 0 ? "▲" : "▼"}
+                {fmtInt(Math.abs(d.subscribers_change_1d))}
+              </span>
+            )}
+          </div>
+          {derived.cohort && (
+            <p className="text-[11px] tabular-nums" style={{ color: "var(--color-muted)" }}>
+              판정 기준: 요리 숏폼 {derived.cohort.n}개 · 중앙값 {fmtShort(derived.cohort.median)} · 최고{" "}
+              {fmtShort(derived.cohort.max)}
+            </p>
           )}
         </div>
         <SubDeltaBars deltas={derived.subDeltas} />
         {derived.subDeltas.length < 7 && (
           <p className="mt-1 text-[10px]" style={{ color: "var(--color-muted)" }}>
-            구독자 일별 데이터는 8/3부터 축적 중 — 쌓일수록 "어떤 영상이 구독을 만들었나"가 보여요
+            구독자 일별 데이터는 8/3부터 축적 중
           </p>
         )}
       </section>
 
-      {/* 영상별 판정·배운 것 */}
-      <section
-        className="rounded-xl p-4"
-        style={{ backgroundColor: "var(--color-paper)", border: "1px solid var(--color-rule)" }}
-      >
-        <div className="flex flex-wrap items-center justify-between gap-2 mb-2">
-          <h2 className="text-[13px] font-semibold">영상별 판정 · 배운 것</h2>
-          <div className="flex gap-1">
-            {(["배운 것만", "전체", "요리", "교육"] as ListFilter[]).map((f) => (
-              <button
-                key={f}
-                type="button"
-                onClick={() => setFilter(f)}
-                className="text-[11px] px-2 py-0.5 rounded-md"
-                style={{
-                  backgroundColor: f === filter ? "var(--color-ink)" : "transparent",
-                  color: f === filter ? "var(--color-paper)" : "var(--color-muted)",
-                  border: f === filter ? "1px solid var(--color-ink)" : "1px solid var(--color-rule)",
-                }}
-              >
-                {f}
-              </button>
-            ))}
-          </div>
-        </div>
-        <ol className="space-y-3">
-          {shown.map((v) => (
-            <VideoAnalysisRow key={v.id} v={v} />
+      {/* 영상별 심층 분석 */}
+      <section>
+        <h2 className="text-[13px] font-semibold mb-2">
+          영상별 분석{" "}
+          <span className="font-normal text-[11px]" style={{ color: "var(--color-muted)" }}>
+            ({uploads.length}개 · 최신순 · 눌러서 펼치기)
+          </span>
+        </h2>
+        <ol className="space-y-2">
+          {uploads.map((v) => (
+            <VideoCard key={v.id} v={v} />
           ))}
         </ol>
-        {shown.length === 0 && (
-          <p className="py-8 text-center text-[12px]" style={{ color: "var(--color-muted)" }}>
-            해당하는 영상이 없어요.
-          </p>
-        )}
       </section>
     </main>
   );
 }
 
-function VideoAnalysisRow({ v }: { v: YouTubeUpload }) {
+function VideoCard({ v }: { v: YouTubeUpload }) {
+  const [open, setOpen] = useState(false);
   const vs = v.verdict ? VERDICT_STYLE[v.verdict] : null;
+  const a = v.analysis;
   return (
-    <li className="text-[12px]">
-      <div className="flex items-baseline justify-between gap-3">
-        <span className="flex items-baseline gap-1.5 min-w-0">
-          <span className="tabular-nums shrink-0 text-[11px]" style={{ color: "var(--color-muted)" }}>
-            {v.upload_date.slice(5)}
-          </span>
-          {vs && v.verdict && (
-            <span
-              className="shrink-0 text-[10px] px-1 rounded font-medium"
-              style={{ backgroundColor: vs.bg, color: vs.fg, border: vs.border ?? "none" }}
-            >
-              {v.verdict}
+    <li
+      className="rounded-xl overflow-hidden"
+      style={{ backgroundColor: "var(--color-paper)", border: "1px solid var(--color-rule)" }}
+    >
+      <button
+        type="button"
+        onClick={() => setOpen((o) => !o)}
+        className="w-full text-left p-3"
+        aria-expanded={open}
+      >
+        <div className="flex items-baseline justify-between gap-3 text-[12px]">
+          <span className="flex items-baseline gap-1.5 min-w-0">
+            <span className="tabular-nums shrink-0 text-[11px]" style={{ color: "var(--color-muted)" }}>
+              {v.upload_date.slice(5)}
             </span>
-          )}
-          <span
-            className="shrink-0 text-[10px] px-1 rounded"
-            style={{
-              backgroundColor: v.format === "숏폼" ? "var(--color-ink)" : "transparent",
-              color: v.format === "숏폼" ? "var(--color-paper)" : "var(--color-muted)",
-              border: v.format === "숏폼" ? "none" : "1px solid var(--color-rule)",
-            }}
-          >
-            {v.format === "숏폼" ? "숏" : "롱"}
+            {vs && v.verdict && (
+              <span
+                className="shrink-0 text-[10px] px-1 rounded font-medium"
+                style={{ backgroundColor: vs.bg, color: vs.fg, border: vs.border ?? "none" }}
+              >
+                {v.verdict}
+              </span>
+            )}
+            <span className="truncate font-medium">{v.title}</span>
           </span>
-          <span className="truncate font-medium">{v.title}</span>
-        </span>
-        <span className="tabular-nums shrink-0" style={{ color: "var(--color-muted)" }}>
-          {fmtInt(v.views)}
-          {typeof v.views_change_1d === "number" && v.views_change_1d > 0 && (
-            <span style={{ color: "#3a7d3a" }}> +{fmtInt(v.views_change_1d)}</span>
+          <span className="tabular-nums shrink-0" style={{ color: "var(--color-muted)" }}>
+            {fmtInt(v.views)}
+            {typeof v.views_change_1d === "number" && v.views_change_1d > 0 && (
+              <span style={{ color: "#3a7d3a" }}> +{fmtInt(v.views_change_1d)}</span>
+            )}
+            <span className="ml-1.5">{open ? "▾" : "▸"}</span>
+          </span>
+        </div>
+        {!open && v.learning && (
+          <p className="mt-1 text-[11px] leading-snug truncate" style={{ color: "var(--color-muted)" }}>
+            {v.learning}
+          </p>
+        )}
+      </button>
+
+      {open && (
+        <div className="px-3 pb-3 space-y-2.5 text-[12px]" style={{ borderTop: "1px solid var(--color-rule)" }}>
+          {a?.verdict_line && (
+            <Block h="🧭 판정">{a.verdict_line}</Block>
           )}
-        </span>
-      </div>
-      {v.learning && (
-        <p className="mt-0.5 pl-9 text-[11px] leading-snug" style={{ color: "var(--color-muted)" }}>
-          {v.learning}
-          {v.next && (
-            <span style={{ color: "var(--color-ink)" }}> → {v.next}</span>
+          {a?.ig_compare && (
+            <Block h="🆚 인스타 대비 (같은 영상, 다른 플랫폼)">{a.ig_compare}</Block>
           )}
-        </p>
+          {a?.title_review && <Block h="✍️ 제목 (유튜브의 훅)">{a.title_review}</Block>}
+          {a && a.good.length > 0 && (
+            <Block h="✅ 좋았던 것">
+              {a.good.map((g) => (
+                <p key={g}>• {g}</p>
+              ))}
+            </Block>
+          )}
+          {a && a.bad.length > 0 && (
+            <Block h="❌ 아쉬운 것">
+              {a.bad.map((b) => (
+                <p key={b}>• {b}</p>
+              ))}
+            </Block>
+          )}
+          {a && a.next_hooks.length > 0 && (
+            <Block h="🔁 다음 변주 훅">
+              {a.next_hooks.map((hk) => (
+                <p key={hk}>• {hk}</p>
+              ))}
+            </Block>
+          )}
+          {(v.learning || v.next) && (
+            <Block h="💡 배운 것 → 다음 수">
+              {v.learning}
+              {v.next && <span style={{ color: "var(--color-ink)", fontWeight: 500 }}> → {v.next}</span>}
+            </Block>
+          )}
+          {!a && (
+            <p className="pt-2 text-[11px]" style={{ color: "var(--color-muted)" }}>
+              심층 분석 생성 중 — 분석이 끝나면 여기 채워져요.
+            </p>
+          )}
+        </div>
       )}
     </li>
+  );
+}
+
+function Block({ h, children }: { h: string; children: React.ReactNode }) {
+  return (
+    <div className="pt-2">
+      <p className="text-[11px] font-semibold mb-0.5">{h}</p>
+      <div className="leading-relaxed" style={{ color: "var(--color-muted)" }}>
+        {children}
+      </div>
+    </div>
   );
 }
 
@@ -295,8 +281,13 @@ function SubDeltaBars({ deltas }: { deltas: Array<{ date: string; delta: number 
           {last.date.slice(5)} · {last.delta >= 0 ? "+" : ""}{fmtInt(last.delta)}
         </span>
       </div>
-      <svg viewBox={`0 0 ${W} ${H}`} className="mt-1 w-full" style={{ height: 64 }} role="img"
-        aria-label={`일별 구독자 증감, 마지막 ${last.delta >= 0 ? "+" : ""}${last.delta}명`}>
+      <svg
+        viewBox={`0 0 ${W} ${H}`}
+        className="mt-1 w-full"
+        style={{ height: 64 }}
+        role="img"
+        aria-label={`일별 구독자 증감, 마지막 ${last.delta >= 0 ? "+" : ""}${last.delta}명`}
+      >
         {recent.map((r, i) => {
           const h = Math.max((Math.abs(r.delta) / maxAbs) * (zeroY - 14), r.delta === 0 ? 1 : 2);
           const up = r.delta >= 0;

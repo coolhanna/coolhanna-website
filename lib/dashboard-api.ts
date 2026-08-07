@@ -209,6 +209,16 @@ export interface YouTubeSummary {
   videos: YouTubeVideo[];
 }
 
+export interface YouTubeDeepAnalysis {
+  verdict_line: string | null;
+  ig_compare: string | null;
+  title_review: string | null;
+  good: string[];
+  bad: string[];
+  next_hooks: string[];
+  ig_note: string | null;
+}
+
 export interface YouTubeUpload {
   id: string;
   title: string | null;
@@ -221,6 +231,7 @@ export interface YouTubeUpload {
   learning: string | null;
   next: string | null;
   verdict: "대박" | "성공" | "평타" | "부진" | "성장중" | null;
+  analysis: YouTubeDeepAnalysis | null;
 }
 
 export interface YouTubeMatrixCell {
