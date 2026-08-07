@@ -152,15 +152,9 @@ export default function YouTubeClient({
         ))}
       </section>
 
-      {/* 업로드 달력 */}
-      <section className="mb-4">
-        <h2 className="text-[13px] font-semibold mb-2">업로드 달력 <span className="font-normal text-[11px]" style={{ color: "var(--color-muted)" }}>— ● 숏폼 · ○ 롱폼</span></h2>
-        <div className="grid gap-3 sm:grid-cols-2">
-          {derived.months.map((m) => (
-            <MonthCalendar key={m} month={m} byDate={derived.byDate} counts={derived.byMonth.get(m)!} />
-          ))}
-        </div>
-      </section>
+      <p className="text-[11px] mb-4" style={{ color: "var(--color-muted)" }}>
+        업로드 달력은 <a href="/dashboard/uploads" className="underline">업로드 탭</a>에서 — 릴스와 통합해서 한 판으로 보여요
+      </p>
 
       {/* 조회수 TOP 5 */}
       <section
@@ -226,78 +220,6 @@ function VideoRow({ v, rank, withDate }: { v: YouTubeUpload; rank?: number; with
         )}
       </span>
     </li>
-  );
-}
-
-function MonthCalendar({
-  month,
-  byDate,
-  counts,
-}: {
-  month: string; // YYYY-MM
-  byDate: Map<string, YouTubeUpload[]>;
-  counts: { 숏폼: number; 롱폼: number };
-}) {
-  const [y, m] = month.split("-").map(Number);
-  const first = new Date(y, m - 1, 1);
-  const daysInMonth = new Date(y, m, 0).getDate();
-  const leadBlank = (first.getDay() + 6) % 7; // 월요일 시작
-  const cells: Array<{ day: number; uploads: YouTubeUpload[] } | null> = [
-    ...Array.from({ length: leadBlank }, () => null),
-    ...Array.from({ length: daysInMonth }, (_, i) => {
-      const ds = `${month}-${String(i + 1).padStart(2, "0")}`;
-      return { day: i + 1, uploads: byDate.get(ds) ?? [] };
-    }),
-  ];
-  return (
-    <div
-      className="rounded-xl p-3"
-      style={{ backgroundColor: "var(--color-paper)", border: "1px solid var(--color-rule)" }}
-    >
-      <div className="flex items-baseline justify-between mb-1.5">
-        <span className="text-[12px] font-semibold">{y}년 {m}월</span>
-        <span className="text-[11px] tabular-nums" style={{ color: "var(--color-muted)" }}>
-          숏 {counts.숏폼} · 롱 {counts.롱폼}
-        </span>
-      </div>
-      <div className="grid grid-cols-7 gap-0.5 text-center">
-        {["월", "화", "수", "목", "금", "토", "일"].map((w) => (
-          <span key={w} className="text-[9px]" style={{ color: "var(--color-muted)" }}>{w}</span>
-        ))}
-        {cells.map((c, i) =>
-          c === null ? (
-            <span key={`b${i}`} />
-          ) : (
-            <span
-              key={c.day}
-              className="relative flex flex-col items-center justify-start h-8 rounded text-[10px] tabular-nums pt-0.5"
-              style={{
-                backgroundColor: c.uploads.length ? "color-mix(in srgb, var(--color-ink) 6%, transparent)" : "transparent",
-                color: "var(--color-muted)",
-              }}
-              title={c.uploads.map((u) => `${u.format} ${u.title ?? ""}`).join("\n") || undefined}
-            >
-              {c.day}
-              {c.uploads.length > 0 && (
-                <span className="flex gap-0.5 mt-0.5">
-                  {c.uploads.slice(0, 3).map((u) => (
-                    <span
-                      key={u.id}
-                      className="w-1.5 h-1.5 rounded-full"
-                      style={{
-                        backgroundColor: u.format === "숏폼" ? "var(--color-ink)" : "transparent",
-                        border: u.format === "롱폼" ? "1.5px solid var(--color-ink)" : "none",
-                      }}
-                    />
-                  ))}
-                  {c.uploads.length > 3 && <span className="text-[8px]">+{c.uploads.length - 3}</span>}
-                </span>
-              )}
-            </span>
-          ),
-        )}
-      </div>
-    </div>
   );
 }
 

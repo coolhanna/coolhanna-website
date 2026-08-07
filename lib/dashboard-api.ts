@@ -72,7 +72,24 @@ export const dash = {
   reels: () => api<ReelsResponse>("/api/dashboard/reels"),
   // 유튜브 전용 탭 — 채널 지표 + 업로드 달력
   youtube: () => api<YouTubeTabResponse>("/api/dashboard/youtube"),
+  // 통합 업로드 캘린더 — 릴스 3계정 + 유튜브 숏/롱
+  uploads: () => api<UploadsResponse>("/api/dashboard/uploads"),
 };
+
+export type UploadSource = "한나" | "가족먹거리" | "혜린" | "YT숏" | "YT롱";
+
+export interface UploadEntry {
+  date: string; // KST YYYY-MM-DD
+  platform: "릴스" | "유튜브";
+  source: UploadSource;
+  title: string | null;
+  views: number | null;
+  key: string;
+}
+
+export interface UploadsResponse {
+  uploads: UploadEntry[];
+}
 
 export type TranscriptionStatus = "ok" | "no_speech" | "no_audio" | "failed" | "unknown";
 
