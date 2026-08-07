@@ -70,6 +70,8 @@ export const dash = {
   hyerinDiaryState: () => api<HyerinDiaryStateResponse>("/api/dashboard/hyerin/diary/state"),
   // Phase 4 — 릴스 분석 노트 (조회수순 + 전사상태)
   reels: () => api<ReelsResponse>("/api/dashboard/reels"),
+  // 유튜브 전용 탭 — 채널 지표 + 업로드 달력
+  youtube: () => api<YouTubeTabResponse>("/api/dashboard/youtube"),
 };
 
 export type TranscriptionStatus = "ok" | "no_speech" | "no_audio" | "failed" | "unknown";
@@ -188,6 +190,20 @@ export interface YouTubeSummary {
   subscribers_change_1d: number;
   history: Array<{ date: string; followers: number }>;
   videos: YouTubeVideo[];
+}
+
+export interface YouTubeUpload {
+  id: string;
+  title: string | null;
+  upload_date: string;
+  format: "숏폼" | "롱폼";
+  duration_sec: number | null;
+  views: number | null;
+  views_change_1d: number | null;
+}
+
+export interface YouTubeTabResponse extends YouTubeSummary {
+  uploads: YouTubeUpload[];
 }
 
 export interface ReelsResponse {

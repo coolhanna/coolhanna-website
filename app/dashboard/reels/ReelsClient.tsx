@@ -4,9 +4,9 @@
 // 개별 심층(구조·바이럴요인·대본·적용포인트). 계정 필터는 모든 집계에 반영됨.
 import { useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
-import type { AccountSummary, ReelItem, ReelsResponse, YouTubeSummary } from "@/lib/dashboard-api";
+import type { AccountSummary, ReelItem, ReelsResponse } from "@/lib/dashboard-api";
 
-type AccountFilter = "전체" | "한나" | "혜린" | "가족먹거리" | "유튜브";
+type AccountFilter = "전체" | "한나" | "혜린" | "가족먹거리";
 type SortKey = "latest" | "views" | "engagement";
 
 const SORT_LABEL: Record<SortKey, string> = {
@@ -128,7 +128,7 @@ export default function ReelsClient({ data }: ReelsClientProps) {
     );
   }
 
-  const accounts: AccountFilter[] = ["전체", "한나", "혜린", "가족먹거리", "유튜브"];
+  const accounts: AccountFilter[] = ["전체", "한나", "혜린", "가족먹거리"];
 
   return (
     <main className="max-w-page mx-auto px-5 sm:px-8 py-8 sm:py-12">
@@ -173,7 +173,7 @@ export default function ReelsClient({ data }: ReelsClientProps) {
         </div>
       </header>
 
-      {!isError && account !== "유튜브" && data.accounts && data.accounts.length > 0 && (
+      {!isError && data.accounts && data.accounts.length > 0 && (
         <AccountCards
           accounts={
             account === "전체"
@@ -183,11 +183,7 @@ export default function ReelsClient({ data }: ReelsClientProps) {
         />
       )}
 
-      {!isError && data.youtube && (account === "전체" || account === "유튜브") && (
-        <YouTubeCard yt={data.youtube} expanded={account === "유튜브"} />
-      )}
-
-      {account !== "유튜브" && agg && (
+      {agg && (
         <>
           <KpiRow agg={agg} />
           <HookPerformance
@@ -199,9 +195,7 @@ export default function ReelsClient({ data }: ReelsClientProps) {
         </>
       )}
 
-      {/* 정렬 컨트롤 (유튜브 뷰에선 릴스 목록 숨김) */}
-      {account !== "유튜브" && (
-      <>
+      {/* 정렬 컨트롤 */}
       <div className="flex items-center gap-2 pt-8 pb-1">
         <span className="text-[12px]" style={{ color: "var(--color-muted)" }}>
           정렬
@@ -247,8 +241,6 @@ export default function ReelsClient({ data }: ReelsClientProps) {
         <p className="py-16 text-center text-[13px]" style={{ color: "var(--color-muted)" }}>
           표시할 릴스가 없어요.
         </p>
-      )}
-      </>
       )}
     </main>
   );
@@ -307,69 +299,6 @@ function AccountCards({ accounts }: { accounts: AccountSummary[] }) {
           <FollowerTrend history={a.history} />
         </div>
       ))}
-    </div>
-  );
-}
-
-function YouTubeCard({ yt, expanded = false }: { yt: YouTubeSummary; expanded?: boolean }) {
-  const change = yt.subscribers_change_1d;
-  const shown = expanded ? yt.videos : yt.videos.slice(0, 5);
-  return (
-    <div
-      className="rounded-xl overflow-hidden mb-4 p-4"
-      style={{ backgroundColor: "var(--color-paper)", border: "1px solid var(--color-rule)" }}
-    >
-      <div className="flex items-baseline justify-between">
-        <span className="text-[13px] font-semibold">▶ {yt.display_name}</span>
-        <span className="text-[11px]" style={{ color: "var(--color-muted)" }}>
-          채널 지표 · {yt.date}
-        </span>
-      </div>
-      <div className="mt-2 flex items-end gap-2">
-        <span className="text-2xl font-semibold tabular-nums leading-none">{fmtInt(yt.subscribers)}</span>
-        <span className="text-[12px]" style={{ color: "var(--color-muted)" }}>구독자</span>
-        {change !== 0 && (
-          <span className="text-[12px]" style={{ color: change > 0 ? "#3a7d3a" : "#b3261e" }}>
-            {change > 0 ? "▲" : "▼"}
-            {fmtInt(Math.abs(change))}
-          </span>
-        )}
-      </div>
-      <div className="mt-2 grid gap-x-6 md:grid-cols-2">
-        <div>
-          <FollowerTrend history={yt.history.filter((h) => typeof h.followers === "number")} />
-          {yt.history.length < 3 && (
-            <p className="mt-1 text-[10px]" style={{ color: "var(--color-muted)" }}>
-              구독자 증감 그래프는 데이터가 2일 이상 쌓이면 표시돼요 (매일 밤 자동 수집 중)
-            </p>
-          )}
-        </div>
-        <ol className="mt-3 space-y-1.5">
-          {shown.map((v) => (
-            <li key={v.id} className="flex items-baseline justify-between gap-3 text-[12px]">
-              <span className="flex items-baseline gap-1.5 min-w-0">
-                <span
-                  className="shrink-0 text-[10px] px-1 rounded"
-                  style={{
-                    backgroundColor: v.format === "숏폼" ? "var(--color-ink)" : "transparent",
-                    color: v.format === "숏폼" ? "var(--color-paper)" : "var(--color-muted)",
-                    border: v.format === "숏폼" ? "none" : "1px solid var(--color-rule)",
-                  }}
-                >
-                  {v.format === "숏폼" ? "숏" : "롱"}
-                </span>
-                <span className="truncate">{v.title}</span>
-              </span>
-              <span className="tabular-nums shrink-0" style={{ color: "var(--color-muted)" }}>
-                {fmtInt(v.views)}
-                {typeof v.views_change_1d === "number" && v.views_change_1d > 0 && (
-                  <span style={{ color: "#3a7d3a" }}> +{fmtInt(v.views_change_1d)}</span>
-                )}
-              </span>
-            </li>
-          ))}
-        </ol>
-      </div>
     </div>
   );
 }
