@@ -214,13 +214,35 @@ export interface YouTubeUpload {
   title: string | null;
   upload_date: string;
   format: "숏폼" | "롱폼";
+  topic: "요리" | "교육";
   duration_sec: number | null;
   views: number | null;
   views_change_1d: number | null;
+  learning: string | null;
+  next: string | null;
+  verdict: "대박" | "성공" | "평타" | "부진" | "성장중" | null;
+}
+
+export interface YouTubeMatrixCell {
+  format: "숏폼" | "롱폼";
+  topic: "요리" | "교육";
+  n: number;
+  median: number;
+  max: number;
+}
+
+export interface YouTubeDiagnosis {
+  headline: string;
+  points: string[];
+  next_moves: string[];
+  source: string;
+  updated: string;
 }
 
 export interface YouTubeTabResponse extends YouTubeSummary {
   uploads: YouTubeUpload[];
+  matrix: YouTubeMatrixCell[];
+  diagnosis: YouTubeDiagnosis | null;
 }
 
 export interface ReelsResponse {

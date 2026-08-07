@@ -1,26 +1,28 @@
 "use client";
 
-// 유튜브 전용 탭 (2026-08-07 한나: "완전히 분리") — 스튜디오 안 들어가고 여기서 다 본다.
-// 구성: 구독자+일별 증감 → 업로드 리듬(주/월) → 업로드 달력 → 성장 연결 → 영상 목록.
-import { useMemo } from "react";
+// 유튜브 탭 v2 (2026-08-07 한나: "업로드 기록만 나열하면 유튜브에 대해 뭐 알겠어") —
+// 나열이 아니라 판단: 채널 진단 → 포맷×주제 성적표 → 구독자 → 영상별 판정·배운 것·다음 수.
+import { useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 import type { YouTubeTabResponse, YouTubeUpload } from "@/lib/dashboard-api";
 
 const fmtInt = (n: number | null | undefined) =>
   typeof n === "number" ? n.toLocaleString("ko-KR") : "-";
+const fmtShort = (n: number | null | undefined) => {
+  if (typeof n !== "number") return "-";
+  if (n >= 10000) return `${(n / 10000).toFixed(n >= 100000 ? 0 : 1)}만`;
+  return n.toLocaleString("ko-KR");
+};
 
-const DAY_MS = 24 * 60 * 60 * 1000;
+const VERDICT_STYLE: Record<string, { bg: string; fg: string; border?: string }> = {
+  대박: { bg: "var(--color-ink)", fg: "var(--color-paper)" },
+  성공: { bg: "#3a7d3a", fg: "#fff" },
+  평타: { bg: "var(--color-rule)", fg: "var(--color-muted)" },
+  부진: { bg: "#f3ddda", fg: "#b3261e" },
+  성장중: { bg: "transparent", fg: "var(--color-muted)", border: "1px dashed var(--color-rule)" },
+};
 
-function toDate(s: string): Date {
-  return new Date(`${s}T00:00:00+09:00`);
-}
-
-/** 월요일 시작 주의 첫날 (YYYY-MM-DD) */
-function weekStart(d: Date): string {
-  const day = (d.getDay() + 6) % 7;
-  const monday = new Date(d.getTime() - day * DAY_MS);
-  return monday.toISOString().slice(0, 10);
-}
+type ListFilter = "전체" | "배운 것만" | "요리" | "교육";
 
 export default function YouTubeClient({
   data,
@@ -29,45 +31,17 @@ export default function YouTubeClient({
 }) {
   const router = useRouter();
   const isError = "error" in data;
+  const [filter, setFilter] = useState<ListFilter>("배운 것만");
 
   const derived = useMemo(() => {
     if (isError) return null;
     const d = data as YouTubeTabResponse;
-    const uploads = d.uploads ?? [];
-
-    // 날짜별 업로드 (달력용)
-    const byDate = new Map<string, YouTubeUpload[]>();
-    for (const u of uploads) {
-      const arr = byDate.get(u.upload_date) ?? [];
-      arr.push(u);
-      byDate.set(u.upload_date, arr);
-    }
-
-    // 월별 집계 (최신 월 먼저)
-    const byMonth = new Map<string, { 숏폼: number; 롱폼: number }>();
-    for (const u of uploads) {
-      const m = u.upload_date.slice(0, 7);
-      const cnt = byMonth.get(m) ?? { 숏폼: 0, 롱폼: 0 };
-      cnt[u.format] += 1;
-      byMonth.set(m, cnt);
-    }
-    const months = [...byMonth.keys()].sort().reverse();
-
-    // 주간 리듬 — 이번 주 / 지난주
-    const now = new Date();
-    const thisWeek = weekStart(now);
-    const lastWeek = weekStart(new Date(now.getTime() - 7 * DAY_MS));
-    const countWeek = (ws: string) =>
-      uploads.filter((u) => weekStart(toDate(u.upload_date)) === ws).length;
-
-    // 구독자 일별 증감
     const hist = (d.history ?? []).filter((h) => typeof h.followers === "number");
     const subDeltas = hist.slice(1).map((h, i) => ({
       date: h.date,
       delta: h.followers - hist[i].followers,
     }));
-
-    return { uploads, byDate, byMonth, months, thisWeekN: countWeek(thisWeek), lastWeekN: countWeek(lastWeek), subDeltas };
+    return { subDeltas };
   }, [data, isError]);
 
   if (isError || !derived) {
@@ -81,10 +55,13 @@ export default function YouTubeClient({
   }
 
   const d = data as YouTubeTabResponse;
-  const top5 = [...derived.uploads]
-    .filter((u) => typeof u.views === "number")
-    .sort((a, b) => (b.views ?? 0) - (a.views ?? 0))
-    .slice(0, 5);
+  const uploads = d.uploads ?? [];
+  const shown = uploads.filter((u) => {
+    if (filter === "배운 것만") return !!u.learning;
+    if (filter === "요리" || filter === "교육") return u.topic === filter;
+    return true;
+  });
+  const bestCell = d.matrix?.reduce((m, c) => (c.median > (m?.median ?? 0) ? c : m), d.matrix[0]);
 
   return (
     <main className="mx-auto max-w-3xl px-4 pb-20">
@@ -92,7 +69,8 @@ export default function YouTubeClient({
         <div>
           <h1 className="text-xl font-semibold">유튜브</h1>
           <p className="text-[12px] mt-0.5" style={{ color: "var(--color-muted)" }}>
-            {d.display_name} · 지표 {d.date} · 매일 밤 자동 수집
+            {d.display_name} · 지표 {d.date} · 매일 밤 자동 수집 · 달력은{" "}
+            <a href="/dashboard/uploads" className="underline">업로드 탭</a>
           </p>
         </div>
         <button
@@ -105,15 +83,90 @@ export default function YouTubeClient({
         </button>
       </header>
 
+      {/* 🧭 채널 진단 — 이 채널을 한 문단으로 이해 */}
+      {d.diagnosis && (
+        <section
+          className="rounded-xl p-4 mb-4"
+          style={{ backgroundColor: "var(--color-ink)", color: "var(--color-paper)" }}
+        >
+          <p className="text-[11px] opacity-70 mb-1">🧭 채널 진단 · {d.diagnosis.updated}</p>
+          <p className="text-[14px] font-semibold leading-snug">{d.diagnosis.headline}</p>
+          <ul className="mt-2.5 space-y-1 text-[12px] opacity-90">
+            {d.diagnosis.points.map((p) => (
+              <li key={p} className="flex gap-1.5">
+                <span className="shrink-0">•</span>
+                <span>{p}</span>
+              </li>
+            ))}
+          </ul>
+          <div className="mt-3 pt-2 space-y-1 text-[12px]" style={{ borderTop: "1px solid rgba(255,255,255,0.2)" }}>
+            {d.diagnosis.next_moves.map((m) => (
+              <p key={m} className="flex gap-1.5">
+                <span className="shrink-0">→</span>
+                <span>{m}</span>
+              </p>
+            ))}
+          </div>
+        </section>
+      )}
+
+      {/* 포맷×주제 성적표 */}
+      {d.matrix && d.matrix.length > 0 && (
+        <section className="mb-4">
+          <h2 className="text-[13px] font-semibold mb-2">
+            포맷 × 주제 성적표{" "}
+            <span className="font-normal text-[11px]" style={{ color: "var(--color-muted)" }}>
+              — 어디에 힘을 실을지 한 눈에 (중앙값 기준)
+            </span>
+          </h2>
+          <div className="grid grid-cols-2 gap-px rounded-xl overflow-hidden" style={{ backgroundColor: "var(--color-rule)" }}>
+            {(["숏폼", "롱폼"] as const).flatMap((fmt) =>
+              (["요리", "교육"] as const).map((tp) => {
+                const c = d.matrix.find((m) => m.format === fmt && m.topic === tp);
+                const isBest = c && bestCell && c.format === bestCell.format && c.topic === bestCell.topic;
+                return (
+                  <div
+                    key={`${fmt}-${tp}`}
+                    className="p-3"
+                    style={{
+                      backgroundColor: isBest
+                        ? "color-mix(in srgb, #3a7d3a 12%, var(--color-paper))"
+                        : "var(--color-paper)",
+                    }}
+                  >
+                    <div className="flex items-baseline justify-between">
+                      <span className="text-[12px] font-medium">
+                        {fmt} · {tp} {isBest && "👑"}
+                      </span>
+                      <span className="text-[10px]" style={{ color: "var(--color-muted)" }}>
+                        {c ? `${c.n}개` : "없음"}
+                      </span>
+                    </div>
+                    {c ? (
+                      <div className="mt-1 flex items-baseline gap-2">
+                        <span className="text-lg font-semibold tabular-nums">{fmtShort(c.median)}</span>
+                        <span className="text-[10px]" style={{ color: "var(--color-muted)" }}>
+                          최고 {fmtShort(c.max)}
+                        </span>
+                      </div>
+                    ) : (
+                      <p className="mt-1 text-[11px]" style={{ color: "var(--color-muted)" }}>—</p>
+                    )}
+                  </div>
+                );
+              }),
+            )}
+          </div>
+        </section>
+      )}
+
       {/* 구독자 + 일별 증감 */}
       <section
         className="rounded-xl p-4 mb-4"
         style={{ backgroundColor: "var(--color-paper)", border: "1px solid var(--color-rule)" }}
       >
         <div className="flex items-end gap-2">
-          <span className="text-3xl font-semibold tabular-nums leading-none">
-            {fmtInt(d.subscribers)}
-          </span>
+          <span className="text-3xl font-semibold tabular-nums leading-none">{fmtInt(d.subscribers)}</span>
           <span className="text-[12px]" style={{ color: "var(--color-muted)" }}>구독자</span>
           {d.subscribers_change_1d !== 0 && (
             <span
@@ -128,97 +181,95 @@ export default function YouTubeClient({
         <SubDeltaBars deltas={derived.subDeltas} />
         {derived.subDeltas.length < 7 && (
           <p className="mt-1 text-[10px]" style={{ color: "var(--color-muted)" }}>
-            구독자 일별 데이터는 8/3부터 축적 중 — 쌓일수록 "어떤 영상이 구독을 만들었나"가 여기서 보여요
+            구독자 일별 데이터는 8/3부터 축적 중 — 쌓일수록 "어떤 영상이 구독을 만들었나"가 보여요
           </p>
         )}
       </section>
 
-      {/* 업로드 리듬 */}
-      <section className="grid grid-cols-3 gap-px rounded-xl overflow-hidden mb-4" style={{ backgroundColor: "var(--color-rule)" }}>
-        {[
-          { label: "이번 주", value: derived.thisWeekN },
-          { label: "지난주", value: derived.lastWeekN },
-          {
-            label: "이번 달",
-            value:
-              (derived.byMonth.get(new Date().toISOString().slice(0, 7))?.숏폼 ?? 0) +
-              (derived.byMonth.get(new Date().toISOString().slice(0, 7))?.롱폼 ?? 0),
-          },
-        ].map((s) => (
-          <div key={s.label} className="p-3 text-center" style={{ backgroundColor: "var(--color-paper)" }}>
-            <div className="text-xl font-semibold tabular-nums">{s.value}</div>
-            <div className="text-[11px]" style={{ color: "var(--color-muted)" }}>{s.label} 업로드</div>
-          </div>
-        ))}
-      </section>
-
-      <p className="text-[11px] mb-4" style={{ color: "var(--color-muted)" }}>
-        업로드 달력은 <a href="/dashboard/uploads" className="underline">업로드 탭</a>에서 — 릴스와 통합해서 한 판으로 보여요
-      </p>
-
-      {/* 조회수 TOP 5 */}
-      <section
-        className="rounded-xl p-4 mb-4"
-        style={{ backgroundColor: "var(--color-paper)", border: "1px solid var(--color-rule)" }}
-      >
-        <h2 className="text-[13px] font-semibold mb-2">조회수 TOP 5</h2>
-        <ol className="space-y-1.5">
-          {top5.map((v, i) => (
-            <VideoRow key={v.id} v={v} rank={i + 1} />
-          ))}
-        </ol>
-      </section>
-
-      {/* 전체 업로드 목록 (최신순) */}
+      {/* 영상별 판정·배운 것 */}
       <section
         className="rounded-xl p-4"
         style={{ backgroundColor: "var(--color-paper)", border: "1px solid var(--color-rule)" }}
       >
-        <h2 className="text-[13px] font-semibold mb-2">업로드 기록 <span className="font-normal text-[11px]" style={{ color: "var(--color-muted)" }}>({derived.uploads.length}개, 최신순)</span></h2>
-        <ol className="space-y-1.5">
-          {derived.uploads.map((v) => (
-            <VideoRow key={v.id} v={v} withDate />
+        <div className="flex flex-wrap items-center justify-between gap-2 mb-2">
+          <h2 className="text-[13px] font-semibold">영상별 판정 · 배운 것</h2>
+          <div className="flex gap-1">
+            {(["배운 것만", "전체", "요리", "교육"] as ListFilter[]).map((f) => (
+              <button
+                key={f}
+                type="button"
+                onClick={() => setFilter(f)}
+                className="text-[11px] px-2 py-0.5 rounded-md"
+                style={{
+                  backgroundColor: f === filter ? "var(--color-ink)" : "transparent",
+                  color: f === filter ? "var(--color-paper)" : "var(--color-muted)",
+                  border: f === filter ? "1px solid var(--color-ink)" : "1px solid var(--color-rule)",
+                }}
+              >
+                {f}
+              </button>
+            ))}
+          </div>
+        </div>
+        <ol className="space-y-3">
+          {shown.map((v) => (
+            <VideoAnalysisRow key={v.id} v={v} />
           ))}
         </ol>
+        {shown.length === 0 && (
+          <p className="py-8 text-center text-[12px]" style={{ color: "var(--color-muted)" }}>
+            해당하는 영상이 없어요.
+          </p>
+        )}
       </section>
     </main>
   );
 }
 
-function FormatDot({ format }: { format: "숏폼" | "롱폼" }) {
+function VideoAnalysisRow({ v }: { v: YouTubeUpload }) {
+  const vs = v.verdict ? VERDICT_STYLE[v.verdict] : null;
   return (
-    <span
-      className="shrink-0 text-[10px] px-1 rounded"
-      style={{
-        backgroundColor: format === "숏폼" ? "var(--color-ink)" : "transparent",
-        color: format === "숏폼" ? "var(--color-paper)" : "var(--color-muted)",
-        border: format === "숏폼" ? "none" : "1px solid var(--color-rule)",
-      }}
-    >
-      {format === "숏폼" ? "숏" : "롱"}
-    </span>
-  );
-}
-
-function VideoRow({ v, rank, withDate }: { v: YouTubeUpload; rank?: number; withDate?: boolean }) {
-  return (
-    <li className="flex items-baseline justify-between gap-3 text-[12px]">
-      <span className="flex items-baseline gap-1.5 min-w-0">
-        {rank && <span className="tabular-nums shrink-0" style={{ color: "var(--color-muted)" }}>{rank}.</span>}
-        {withDate && (
+    <li className="text-[12px]">
+      <div className="flex items-baseline justify-between gap-3">
+        <span className="flex items-baseline gap-1.5 min-w-0">
           <span className="tabular-nums shrink-0 text-[11px]" style={{ color: "var(--color-muted)" }}>
             {v.upload_date.slice(5)}
           </span>
-        )}
-        <FormatDot format={v.format} />
-        <span className="truncate">{v.title}</span>
-      </span>
-      <span className="tabular-nums shrink-0" style={{ color: "var(--color-muted)" }}>
-        {fmtInt(v.views)}
-        {typeof v.views_change_1d === "number" && v.views_change_1d > 0 && (
-          <span style={{ color: "#3a7d3a" }}> +{fmtInt(v.views_change_1d)}</span>
-        )}
-      </span>
+          {vs && v.verdict && (
+            <span
+              className="shrink-0 text-[10px] px-1 rounded font-medium"
+              style={{ backgroundColor: vs.bg, color: vs.fg, border: vs.border ?? "none" }}
+            >
+              {v.verdict}
+            </span>
+          )}
+          <span
+            className="shrink-0 text-[10px] px-1 rounded"
+            style={{
+              backgroundColor: v.format === "숏폼" ? "var(--color-ink)" : "transparent",
+              color: v.format === "숏폼" ? "var(--color-paper)" : "var(--color-muted)",
+              border: v.format === "숏폼" ? "none" : "1px solid var(--color-rule)",
+            }}
+          >
+            {v.format === "숏폼" ? "숏" : "롱"}
+          </span>
+          <span className="truncate font-medium">{v.title}</span>
+        </span>
+        <span className="tabular-nums shrink-0" style={{ color: "var(--color-muted)" }}>
+          {fmtInt(v.views)}
+          {typeof v.views_change_1d === "number" && v.views_change_1d > 0 && (
+            <span style={{ color: "#3a7d3a" }}> +{fmtInt(v.views_change_1d)}</span>
+          )}
+        </span>
+      </div>
+      {v.learning && (
+        <p className="mt-0.5 pl-9 text-[11px] leading-snug" style={{ color: "var(--color-muted)" }}>
+          {v.learning}
+          {v.next && (
+            <span style={{ color: "var(--color-ink)" }}> → {v.next}</span>
+          )}
+        </p>
+      )}
     </li>
   );
 }
