@@ -15,12 +15,14 @@ test("dashboard navigation exposes the short-form operations room as a top-level
   assert.ok(!nav.includes('{ label: "편집", href: "/dashboard/editing" }'));
 });
 
-test("short-form operations room includes editing training as one section", () => {
+test("short-form operations category embeds the original room unchanged", () => {
   const page = read("app/dashboard/shorts-ops/page.tsx");
-  const board = read("app/dashboard/shorts-ops/ShortsOpsBoard.tsx");
+  const room = read("public/shorts-ops/shorts.html");
+  const app = read("public/shorts-ops/shorts-app.js");
+  const styles = read("public/shorts-ops/shorts-styles.css");
+  const data = JSON.parse(read("public/shorts-ops/data/shorts-ops.json"));
 
-  assert.ok(page.includes("ShortsOpsBoard"));
-  assert.ok(board.includes("숏폼 운영실"));
+  assert.ok(page.includes('src="/shorts-ops/shorts.html"'));
   for (const section of [
     "오늘 할 일",
     "판정 대기",
@@ -29,10 +31,13 @@ test("short-form operations room includes editing training as one section", () =
     "내 영상에서 배운 것",
     "오늘 볼 영상",
     "다음 실험",
-    "편집 자동화 학습",
   ]) {
-    assert.ok(board.includes(section), `missing section: ${section}`);
+    assert.ok(room.includes(section), `missing section: ${section}`);
   }
+  assert.ok(app.includes("renderDashboard"));
+  assert.ok(styles.includes(".weekly-brief"));
+  assert.equal(data.todayActions.length, 3);
+  assert.equal(data.channels.length, 2);
 });
 
 test("the old editing URL redirects to the short-form operations room", () => {

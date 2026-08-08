@@ -1,5 +1,4 @@
 import type { Metadata } from "next";
-import ShortsOpsBoard from "./ShortsOpsBoard";
 
 export const metadata: Metadata = {
   title: "숏폼 운영실",
@@ -7,5 +6,13 @@ export const metadata: Metadata = {
 };
 
 export default function ShortsOpsPage() {
-  return <ShortsOpsBoard />;
+  return (
+    <main style={{ height: "calc(100vh - 52px)", background: "#f5f1e8" }}>
+      <iframe
+        src="/shorts-ops/shorts.html"
+        title="숏폼 운영실"
+        style={{ width: "100%", height: "100%", border: 0, display: "block" }}
+      />
+    </main>
+  );
 }
