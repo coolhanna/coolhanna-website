@@ -48,6 +48,7 @@ export const dash = {
   // v6.2.2 — 오늘의 나 통합 (수면/컨디션/활동/식단 3끼니)
   todayMe: () => api<any>("/api/dashboard/today-me"),
   lifeToday: () => api<LifeDayResponse>("/api/dashboard/life-today"),
+  lifeLatest: () => api<LifeDayResponse>("/api/dashboard/life-latest"),
   // v7 — 애플워치 건강 (coolhanna-health 프록시: 어제/이번주/이번달 병합)
   watchHealth: () => api<any>("/api/dashboard/watch-health"),
   // v6.4 — 최근 메모 (오늘 + 어제, 미완료만)
