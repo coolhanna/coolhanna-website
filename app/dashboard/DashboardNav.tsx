@@ -8,6 +8,7 @@ import { usePathname } from "next/navigation";
 
 const TABS = [
   { label: "운영", href: "/dashboard" },
+  { label: "하루", href: "/dashboard/day" },
   { label: "큐레이션", href: "/dashboard/curation" },
   { label: "릴스", href: "/dashboard/reels" },
   { label: "벤치마크", href: "/dashboard/reels-benchmark" },
@@ -24,7 +25,7 @@ export default function DashboardNav() {
   if (path.startsWith("/dashboard/login")) return null;
 
   return (
-    <nav className="max-w-page mx-auto px-5 sm:px-8 pt-3 pb-1 flex items-center gap-1 text-[13px]">
+    <nav className="max-w-page mx-auto px-5 sm:px-8 pt-3 pb-1 flex items-center gap-1 text-[13px] overflow-x-auto whitespace-nowrap">
       {TABS.map((t) => {
         const active =
           t.href === "/dashboard"
@@ -34,7 +35,8 @@ export default function DashboardNav() {
           <Link
             key={t.href}
             href={t.href}
-            className="px-3 py-1.5 rounded-lg transition"
+            aria-current={active ? "page" : undefined}
+            className="px-3 py-1.5 rounded-lg transition shrink-0"
             style={{
               backgroundColor: active ? "var(--accent)" : "transparent",
               color: active ? "#fff" : "var(--text-secondary)",

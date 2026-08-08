@@ -26,7 +26,6 @@ export default async function DashboardPage() {
     memosRecent,
     activeTodos,
     thinkingTracks,
-    lifeToday,
   ] = await Promise.all([
     dash.today(),
     dash.recommendation(),
@@ -49,7 +48,6 @@ export default async function DashboardPage() {
     dash.memosRecent(),
     dash.activeTodos(),
     dash.thinkingTracks(),
-    dash.lifeToday(),
   ]);
 
   return (
@@ -76,7 +74,6 @@ export default async function DashboardPage() {
         memosRecent,
         activeTodos,
         thinkingTracks,
-        lifeToday,
       }}
     />
   );
