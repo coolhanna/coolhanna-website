@@ -86,6 +86,8 @@ function DayArchive({ days, activeDate }: { days: Array<{ date: string; headline
 
 export default function LifeDayClient({ data, days }: { data: LifeDayResponse | { error: string }; days: Array<{ date: string; headline: string; duration: string }> }) {
   const [expanded, setExpanded] = useState<string | null>(null);
+  const [answers, setAnswers] = useState<Record<string, string>>({});
+  const [feedbackState, setFeedbackState] = useState<"idle" | "saving" | "saved" | "error">("idle");
 
   if ("error" in data) {
     return (
@@ -122,6 +124,29 @@ export default function LifeDayClient({ data, days }: { data: LifeDayResponse | 
   const pending = data.pending || [];
   const ideas = data.ideas || [];
   const shopping = data.shopping || [];
+  const questions = data.questions || [];
+  const weather = data.weather;
+  const activeDate = data.date;
+
+  async function saveFeedback() {
+    const submitted = Object.fromEntries(Object.entries(answers).filter(([, value]) => value.trim()));
+    if (Object.keys(submitted).length === 0) return;
+    setFeedbackState("saving");
+    try {
+      const response = await fetch(`/api/dashboard/proxy/life-day/${encodeURIComponent(activeDate)}/feedback`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ answers: submitted }),
+      });
+      if (!response.ok) throw new Error(`feedback ${response.status}`);
+      const result = (await response.json()) as { note_synced?: boolean };
+      if (result.note_synced === false) throw new Error("feedback note sync failed");
+      setFeedbackState("saved");
+      window.location.reload();
+    } catch {
+      setFeedbackState("error");
+    }
+  }
 
   return (
     <main className="dashboard-root min-h-screen bg-paper text-ink">
@@ -149,8 +174,39 @@ export default function LifeDayClient({ data, days }: { data: LifeDayResponse | 
               </div>
             ))}
           </div>
+          {weather?.summary && (
+            <div className="mt-2.5 rounded-xl px-3 py-2.5 flex flex-wrap items-center gap-x-3 gap-y-1" style={{ background: "var(--accent-soft)", border: "1px solid var(--border)" }}>
+              <span className="text-[10px] font-semibold" style={{ color: "var(--accent-text)" }}>오늘의 환경</span>
+              <span className="text-[11px] font-medium">{weather.summary}</span>
+              {weather.location && <span className="text-[10px] text-muted">{weather.location}</span>}
+            </div>
+          )}
           <p className="text-[10px] text-muted mt-3">시간은 녹음기 파일의 시작 시각과 녹음 내 위치를 기준으로 계산</p>
         </section>
+
+        {questions.length > 0 && (
+          <Section title="한나 확인">
+            <div className="space-y-3">
+              {questions.map((question, index) => (
+                <div key={question.id} className="rounded-xl p-3" style={{ background: "var(--bg-card-soft)", border: "1px solid var(--border)" }}>
+                  <p className="text-[10px] text-muted">{index + 1} · {question.category}</p>
+                  <p className="text-xs font-medium mt-1">{question.question}</p>
+                  {question.status === "answered" ? (
+                    <p className="text-[11px] leading-relaxed mt-2" style={{ color: "var(--accent-text)" }}>한나 답변 · {question.answer}</p>
+                  ) : (
+                    <textarea value={answers[question.id] || ""} onChange={(event) => setAnswers((current) => ({ ...current, [question.id]: event.target.value }))} rows={2} placeholder="편하게 답해주세요" className="mt-2 w-full resize-y rounded-lg px-3 py-2 text-[11px] outline-none" style={{ background: "var(--bg-card)", border: "1px solid var(--border)" }} />
+                  )}
+                </div>
+              ))}
+            </div>
+            {questions.some((question) => question.status !== "answered") && (
+              <div className="mt-3 flex items-center gap-3">
+                <button type="button" onClick={saveFeedback} disabled={feedbackState === "saving" || !Object.values(answers).some((value) => value.trim())} className="rounded-lg px-3 py-2 text-[11px] font-medium disabled:opacity-40" style={{ background: "var(--accent)", color: "white" }}>{feedbackState === "saving" ? "저장 중" : "답변 반영"}</button>
+                {feedbackState === "error" && <span className="text-[10px]" style={{ color: "var(--danger-text)" }}>저장하지 못했어요. 다시 시도해 주세요.</span>}
+              </div>
+            )}
+          </Section>
+        )}
 
         <Section title="시간대별 하루">
           <div className="grid grid-cols-1 md:grid-cols-2 gap-3">

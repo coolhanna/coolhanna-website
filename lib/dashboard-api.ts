@@ -115,6 +115,24 @@ export interface LifeDayResponse {
   pending?: string[];
   ideas?: string[];
   shopping?: Array<{ item: string; state: string }>;
+  weather?: {
+    summary: string;
+    location: string;
+    high_c: number | null;
+    low_c: number | null;
+    precipitation: string;
+    humidity: string;
+    air_quality: string;
+    source: string;
+  };
+  questions?: Array<{
+    id: string;
+    question: string;
+    category: string;
+    answer: string;
+    status: string;
+    answered_at: string;
+  }>;
   source_note?: string;
 }
 
