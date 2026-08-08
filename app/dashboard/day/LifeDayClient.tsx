@@ -6,32 +6,58 @@ import type { LifeDayResponse } from "@/lib/dashboard-api";
 
 function Section({ title, children }: { title: string; children: React.ReactNode }) {
   return (
-    <section className="rounded-2xl p-4 sm:p-5" style={{ background: "var(--bg-card)", border: "1px solid var(--border)" }}>
-      <h2 className="text-sm sm:text-base font-semibold tracking-tight mb-4">{title}</h2>
+    <section className="rounded-2xl p-4" style={{ background: "var(--bg-card)", border: "1px solid var(--border)" }}>
+      <h2 className="text-sm font-semibold tracking-tight mb-3">{title}</h2>
       {children}
     </section>
   );
 }
 
-function koreanTime(time: string) {
+function parseTime(time: string) {
   const match = /^(\d{2}):(\d{2})$/.exec(time);
-  if (!match) return time;
+  if (!match) return null;
   const [, hourText, minute] = match;
   const hour = Number(hourText);
   const minuteNumber = Number(minute);
-  if (hour < 0 || hour > 23 || minuteNumber < 0 || minuteNumber > 59) return time;
+  if (hour < 0 || hour > 23 || minuteNumber < 0 || minuteNumber > 59) return null;
+  return { hour, minute, minuteNumber };
+}
+
+function koreanTime(time: string) {
+  const parsed = parseTime(time);
+  if (!parsed) return "시간 미상";
+  const { hour, minute } = parsed;
   const period = hour < 12 ? "오전" : "오후";
   const displayHour = hour % 12 || 12;
   return `${period} ${displayHour}:${minute}`;
 }
 
 function timeValue(time: string) {
-  const match = /^(\d{2}):(\d{2})$/.exec(time);
-  if (!match) return Number.MAX_SAFE_INTEGER;
-  const hour = Number(match[1]);
-  const minute = Number(match[2]);
-  if (hour > 23 || minute > 59) return Number.MAX_SAFE_INTEGER;
-  return hour * 60 + minute;
+  const parsed = parseTime(time);
+  return parsed ? parsed.hour * 60 + parsed.minuteNumber : Number.MAX_SAFE_INTEGER;
+}
+
+function hourValue(time: string) {
+  return parseTime(time)?.hour ?? 24;
+}
+
+function TimelineColumn({ label, items }: { label: string; items: LifeDayResponse["timeline"] }) {
+  const safeItems = items || [];
+  return (
+    <div className="rounded-xl p-3 sm:p-4" style={{ background: "var(--bg-card-soft)", border: "1px solid var(--border)" }}>
+      <h3 className="text-[10px] font-semibold mb-3" style={{ color: "var(--accent-text)" }}>{label}</h3>
+      {safeItems.map((item, index) => (
+        <div key={`${item.time}-${item.title}`} className="grid grid-cols-[66px_12px_1fr] gap-2 min-h-[62px]">
+          <span className="text-[10px] text-muted pt-px whitespace-nowrap">{koreanTime(item.time)}</span>
+          <span className="relative flex justify-center">
+            <span className="z-10 w-2 h-2 rounded-full mt-0.5" style={{ background: "var(--accent)" }} />
+            {index < safeItems.length - 1 && <span className="absolute top-2.5 -bottom-0.5 w-px" style={{ background: "var(--border)" }} />}
+          </span>
+          <div className="pb-3.5"><p className="text-xs font-medium leading-snug">{item.title}</p><p className="text-[11px] text-muted leading-relaxed mt-1">{item.detail}</p></div>
+        </div>
+      ))}
+    </div>
+  );
 }
 
 function shortDate(date: string) {
@@ -87,6 +113,8 @@ export default function LifeDayClient({ data, days }: { data: LifeDayResponse | 
 
   const statusLabel = data.status === "feedback_applied" ? "피드백 반영" : data.status === "feedback_needed" ? "확인 필요" : "분석 기록";
   const timeline = [...(data.timeline || [])].sort((a, b) => timeValue(a.time) - timeValue(b.time));
+  const morningTimeline = timeline.filter((item) => hourValue(item.time) < 12);
+  const afternoonTimeline = timeline.filter((item) => hourValue(item.time) >= 12);
   const conversations = data.conversations || [];
   const intake = data.intake || [];
   const signals = data.health_signals || [];
@@ -100,42 +128,34 @@ export default function LifeDayClient({ data, days }: { data: LifeDayResponse | 
       <div className="max-w-page mx-auto px-5 sm:px-8 py-6 space-y-4">
         <DayArchive days={days} activeDate={data.date} />
 
-        <section className="rounded-2xl p-5 sm:p-6" style={{ background: "var(--bg-card)", border: "2px solid var(--accent)", boxShadow: "0 2px 10px rgba(70,80,60,.04)" }}>
+        <section className="rounded-2xl p-4 sm:p-5" style={{ background: "var(--bg-card)", border: "1.5px solid var(--accent)", boxShadow: "0 2px 10px rgba(70,80,60,.04)" }}>
           <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-3">
             <div>
-              <p className="text-[11px] text-muted mb-2">{data.date} · 생활녹음 {data.recording?.duration}</p>
-              <h1 className="text-xl sm:text-2xl font-semibold tracking-tight leading-relaxed max-w-4xl">{data.headline}</h1>
-              <p className="text-xs sm:text-sm text-muted leading-relaxed mt-3 max-w-4xl">{data.summary}</p>
+              <p className="text-[10px] text-muted mb-1.5">{data.date} · 생활녹음 {data.recording?.duration}</p>
+              <h1 className="text-base sm:text-lg font-semibold tracking-tight leading-relaxed max-w-4xl">{data.headline}</h1>
+              <p className="text-[11px] sm:text-xs text-muted leading-relaxed mt-2.5 max-w-4xl">{data.summary}</p>
             </div>
             <span className="text-[11px] px-2.5 py-1.5 rounded-full whitespace-nowrap self-start" style={{ background: "var(--accent-soft)", color: "var(--accent-text)" }}>{statusLabel}</span>
           </div>
-          <div className="grid grid-cols-2 lg:grid-cols-4 gap-2 mt-5">
+          <div className="grid grid-cols-2 lg:grid-cols-4 gap-2 mt-4">
             {[
               ["녹음 구간", data.recording?.ranges?.join(" · ") || "─"],
               ["녹음 공백", data.recording?.gap || "없음"],
               ["함께한 사람", (data.people || []).join(" · ") || "─"],
               ["주요 장소", (data.places || []).join(" · ") || "─"],
             ].map(([label, value]) => (
-              <div key={label} className="rounded-xl p-3" style={{ background: "var(--bg-card-soft)", border: "1px solid var(--border)" }}>
-                <p className="text-[10px] text-muted mb-1">{label}</p><p className="text-xs sm:text-sm font-medium leading-relaxed">{value}</p>
+              <div key={label} className="rounded-xl p-2.5" style={{ background: "var(--bg-card-soft)", border: "1px solid var(--border)" }}>
+                <p className="text-[10px] text-muted mb-1">{label}</p><p className="text-[11px] sm:text-xs font-medium leading-relaxed">{value}</p>
               </div>
             ))}
           </div>
           <p className="text-[10px] text-muted mt-3">시간은 녹음기 파일의 시작 시각과 녹음 내 위치를 기준으로 계산</p>
         </section>
 
-        <Section title="시간대별 하루 원장">
-          <div className="max-w-4xl">
-            {timeline.map((item, index) => (
-              <div key={`${item.time}-${item.title}`} className="grid grid-cols-[78px_14px_1fr] sm:grid-cols-[92px_16px_1fr] gap-2 sm:gap-3 min-h-[76px]">
-                <span className="text-[11px] sm:text-xs text-muted pt-0.5 whitespace-nowrap">{koreanTime(item.time)}</span>
-                <span className="relative flex justify-center">
-                  <span className="z-10 w-2.5 h-2.5 rounded-full mt-1" style={{ background: "var(--accent)" }} />
-                  {index < timeline.length - 1 && <span className="absolute top-3 -bottom-1 w-px" style={{ background: "var(--border)" }} />}
-                </span>
-                <div className="pb-5"><p className="text-sm font-medium">{item.title}</p><p className="text-xs text-muted leading-relaxed mt-1.5">{item.detail}</p></div>
-              </div>
-            ))}
+        <Section title="시간대별 하루">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+            <TimelineColumn label="오전" items={morningTimeline} />
+            <TimelineColumn label="오후" items={afternoonTimeline} />
           </div>
         </Section>
 
@@ -164,7 +184,7 @@ export default function LifeDayClient({ data, days }: { data: LifeDayResponse | 
               return (
                 <button key={key} type="button" aria-expanded={isOpen} onClick={() => setExpanded(isOpen ? null : key)} className="w-full rounded-xl p-4 text-left transition" style={{ border: `1px solid ${isOpen ? "var(--accent)" : "var(--border)"}`, background: isOpen ? "var(--accent-soft)" : "var(--bg-card)" }}>
                   <div className="flex flex-wrap items-baseline gap-2"><span className="text-[11px] px-2 py-0.5 rounded-full" style={{ background: "var(--bg-card-soft)", color: "var(--text-secondary)" }}>{conversation.person}</span><strong className="text-sm">{conversation.topic}</strong></div>
-                  <p className="text-sm leading-relaxed mt-3">{conversation.viewpoint}</p>
+                  <p className="text-xs leading-relaxed mt-2.5">{conversation.viewpoint}</p>
                   <p className="text-xs leading-relaxed mt-2" style={{ color: "var(--accent-text)" }}>“{conversation.quote}”</p>
                   <p className="text-[10px] text-muted mt-3">{isOpen ? "접기" : "상황과 관계 맥락 펼치기"}</p>
                   {isOpen && <p className="text-xs leading-relaxed mt-3 pt-3" style={{ borderTop: "1px solid var(--border)" }}>{conversation.detail}</p>}
@@ -175,13 +195,13 @@ export default function LifeDayClient({ data, days }: { data: LifeDayResponse | 
         </Section>
 
         <Section title="일·사업·콘텐츠에서 나온 생각">
-          <div className="space-y-2">{ideas.map((idea, index) => <div key={idea} className="flex gap-3 rounded-xl p-3" style={{ background: "var(--bg-card-soft)" }}><span className="text-xs font-semibold" style={{ color: "var(--accent)" }}>{String(index + 1).padStart(2, "0")}</span><p className="text-sm leading-relaxed">{idea}</p></div>)}</div>
+          <div className="space-y-2">{ideas.map((idea, index) => <div key={idea} className="flex gap-3 rounded-xl p-3" style={{ background: "var(--bg-card-soft)" }}><span className="text-[11px] font-semibold" style={{ color: "var(--accent)" }}>{String(index + 1).padStart(2, "0")}</span><p className="text-xs leading-relaxed">{idea}</p></div>)}</div>
           <p className="text-[10px] text-muted mt-3">아이디어는 운영 일정으로 자동 승격하지 않으며, 한나가 확정한 뒤에만 할 일·캘린더로 이동</p>
         </Section>
 
         <Section title="마트 장보기 · 품목별 기록">
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
-            {shopping.map((item) => <div key={item.item} className="flex items-start justify-between gap-3 rounded-xl p-3" style={{ background: "var(--bg-card-soft)" }}><span className="text-sm">{item.item}</span><span className="text-[10px] text-muted whitespace-nowrap">{item.state}</span></div>)}
+            {shopping.map((item) => <div key={item.item} className="flex items-start justify-between gap-3 rounded-xl p-3" style={{ background: "var(--bg-card-soft)" }}><span className="text-xs">{item.item}</span><span className="text-[10px] text-muted whitespace-nowrap">{item.state}</span></div>)}
           </div>
           <p className="text-[10px] text-muted mt-3">영수증이 없는 날은 녹음에서 들리는 품목을 기록하고, 최종 구매·구매 가능성·검토만 한 상품을 구분</p>
         </Section>
