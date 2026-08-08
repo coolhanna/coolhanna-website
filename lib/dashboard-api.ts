@@ -49,6 +49,8 @@ export const dash = {
   todayMe: () => api<any>("/api/dashboard/today-me"),
   lifeToday: () => api<LifeDayResponse>("/api/dashboard/life-today"),
   lifeLatest: () => api<LifeDayResponse>("/api/dashboard/life-latest"),
+  lifeDay: (date: string) => api<LifeDayResponse>(`/api/dashboard/life-day/${encodeURIComponent(date)}`),
+  lifeDays: (limit = 30) => api<LifeDaysResponse>(`/api/dashboard/life-days?limit=${limit}`),
   // v7 — 애플워치 건강 (coolhanna-health 프록시: 어제/이번주/이번달 병합)
   watchHealth: () => api<any>("/api/dashboard/watch-health"),
   // v6.4 — 최근 메모 (오늘 + 어제, 미완료만)
@@ -114,6 +116,10 @@ export interface LifeDayResponse {
   ideas?: string[];
   shopping?: Array<{ item: string; state: string }>;
   source_note?: string;
+}
+
+export interface LifeDaysResponse {
+  days: Array<{ date: string; headline: string; duration: string }>;
 }
 
 export type UploadSource = "한나" | "가족먹거리" | "혜린" | "YT숏" | "YT롱";
