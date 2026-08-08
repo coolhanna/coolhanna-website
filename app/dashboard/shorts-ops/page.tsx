@@ -1,5 +1,5 @@
 import type { Metadata } from "next";
-import EditingTrainingBoard from "../editing/EditingTrainingBoard";
+import ShortsOpsBoard from "./ShortsOpsBoard";
 
 export const metadata: Metadata = {
   title: "숏폼 운영실",
@@ -7,5 +7,5 @@ export const metadata: Metadata = {
 };
 
 export default function ShortsOpsPage() {
-  return <EditingTrainingBoard />;
+  return <ShortsOpsBoard />;
 }

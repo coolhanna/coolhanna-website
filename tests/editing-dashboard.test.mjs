@@ -17,15 +17,22 @@ test("dashboard navigation exposes the short-form operations room as a top-level
 
 test("short-form operations room includes editing training as one section", () => {
   const page = read("app/dashboard/shorts-ops/page.tsx");
-  const board = read("app/dashboard/editing/EditingTrainingBoard.tsx");
+  const board = read("app/dashboard/shorts-ops/ShortsOpsBoard.tsx");
 
-  assert.ok(page.includes("EditingTrainingBoard"));
+  assert.ok(page.includes("ShortsOpsBoard"));
   assert.ok(board.includes("숏폼 운영실"));
-  assert.ok(board.includes("편집 자동화 학습"));
-  assert.ok(board.includes("1/8"));
-  assert.ok(board.includes("대본이 있는 영상"));
-  assert.ok(board.includes("대본 없는 먹거리·모녀 대화"));
-  assert.ok(board.includes("다음 녹화"));
+  for (const section of [
+    "오늘 할 일",
+    "판정 대기",
+    "두 채널 주간판",
+    "제작 중",
+    "내 영상에서 배운 것",
+    "오늘 볼 영상",
+    "다음 실험",
+    "편집 자동화 학습",
+  ]) {
+    assert.ok(board.includes(section), `missing section: ${section}`);
+  }
 });
 
 test("the old editing URL redirects to the short-form operations room", () => {
