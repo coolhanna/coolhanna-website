@@ -17,7 +17,7 @@ interface Block {
   items: string[];
 }
 
-type Category = "레퍼런스" | "요리" | "레시피" | "AI" | "기록";
+type Category = "레퍼런스" | "스카우트" | "요리" | "레시피" | "AI" | "기록";
 
 interface BenchmarkCard {
   shortcode: string;
@@ -130,7 +130,7 @@ export default function ReelsBenchmarkBoard() {
   }
 
   const cats = useMemo(() => {
-    const order: Category[] = ["레퍼런스", "요리", "레시피", "AI", "기록"];
+    const order: Category[] = ["레퍼런스", "스카우트", "요리", "레시피", "AI", "기록"];
     const present = new Set(cards.map((c) => c.category));
     return order.filter((c) => present.has(c));
   }, [cards]);
@@ -201,7 +201,7 @@ export default function ReelsBenchmarkBoard() {
           {notice && <p className="text-[12px] mt-2" style={{ color: "var(--accent-text)" }}>{notice}</p>}
         </div>
 
-        {scout && scout.picks.length > 0 && (
+        {scout && (scout.picks.length > 0 || scout.rejected.length > 0) && (
           <ScoutSection
             scout={scout}
             hasCard={(id) => cards.some((c) => c.shortcode === id)}
@@ -285,11 +285,16 @@ function ScoutSection({
   return (
     <section className="mb-6">
       <div className="flex items-baseline justify-between gap-2 mb-2">
-        <h2 className="text-[14px] font-bold">🔭 유튜브 시드 스캔 — 이번 주 수확 {scout.picks.length}개</h2>
+        <h2 className="text-[14px] font-bold">🔭 유튜브 요리 스카우트 — 새 픽 {scout.picks.length}개</h2>
         <span className="text-[11px]" style={{ color: "var(--text-secondary)" }}>
-          시드 = 네가 저장한 유튜브 채널 · {scout.updated}
+          요리만 · 분석 끝난 픽은 아래 <b>스카우트</b> 카드로 · {scout.updated}
         </span>
       </div>
+      {scout.picks.length === 0 && (
+        <p className="text-[12px] mb-1" style={{ color: "var(--text-secondary)" }}>
+          이번 주 새 픽 없음 — 다음 스캔은 일요일 새벽. 지난 수확은 아래 카드에서 <b>스카우트</b> 라벨.
+        </p>
+      )}
       <div className="flex flex-col gap-3">
         {scout.picks.map((p) => (
           <article
@@ -363,6 +368,8 @@ function ScoutSection({
 
 const CAT_STYLE: Record<string, { bg: string; fg: string }> = {
   "레퍼런스": { bg: "#E7EFE0", fg: "#2E5B2E" },
+  // 스카우트 = 내(시스템)가 발굴해온 것 — 한나가 직접 저장한 레퍼런스와 확실히 구분
+  "스카우트": { bg: "#FFF3D6", fg: "#8A6410" },
   "요리": { bg: "#FBEFE0", fg: "#8A4B1E" },
   "레시피": { bg: "#FCEBEB", fg: "#9B2C2C" },
   "기록": { bg: "#EDEAF7", fg: "#4A3B7A" },
