@@ -35,13 +35,13 @@ export default function EditingTrainingBoard() {
     <main className="mx-auto max-w-5xl px-5 sm:px-8 pb-20">
       <header className="pt-8 pb-5">
         <p className="text-[11px] font-semibold tracking-[0.12em] mb-1" style={{ color: "var(--accent-dark)" }}>
-          한나의 편집 판단을 작업 데이터로 만드는 곳
+          분석에서 다음 제작까지 연결하는 곳
         </p>
         <div className="flex flex-wrap items-end justify-between gap-3">
           <div>
-            <h1 className="text-3xl sm:text-4xl font-semibold tracking-tight">편집 자동화 학습</h1>
+            <h1 className="text-3xl sm:text-4xl font-semibold tracking-tight">숏폼 운영실</h1>
             <p className="text-[13px] mt-2" style={{ color: "var(--text-secondary)" }}>
-              녹화 개수보다 대본형과 판단형의 편집 기준을 고르게 모읍니다.
+              오늘 만들 영상, 제작 진행, 성과 학습과 편집 자동화를 한곳에서 관리합니다.
             </p>
           </div>
           <div className="text-right">
@@ -50,6 +50,14 @@ export default function EditingTrainingBoard() {
           </div>
         </div>
       </header>
+
+      <div className="flex items-end justify-between gap-3 mt-4 mb-3">
+        <div>
+          <p className="text-[11px] font-semibold" style={{ color: "var(--accent-dark)" }}>제작 시스템</p>
+          <h2 className="text-xl font-semibold mt-1">편집 자동화 학습</h2>
+        </div>
+        <span className="text-[11px]" style={{ color: "var(--text-secondary)" }}>현재 1차 데이터 수집 중</span>
+      </div>
 
       <section className="rounded-2xl p-5 sm:p-6 mb-4" style={{ background: "var(--text-main)", color: "#fff" }}>
         <p className="text-[11px] font-semibold mb-2" style={{ color: "#E8D67C" }}>다음 녹화</p>
