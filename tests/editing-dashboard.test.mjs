@@ -27,3 +27,8 @@ test("short-form operations room includes editing training as one section", () =
   assert.ok(board.includes("대본 없는 먹거리·모녀 대화"));
   assert.ok(board.includes("다음 녹화"));
 });
+
+test("the old editing URL redirects to the short-form operations room", () => {
+  const redirectPage = read("app/dashboard/editing/page.tsx");
+  assert.ok(redirectPage.includes('redirect("/dashboard/shorts-ops")'));
+});
