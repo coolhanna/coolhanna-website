@@ -40,9 +40,29 @@ interface BenchmarkCard {
   frames: Frame[];
 }
 
+interface ScoutPick {
+  id: string;
+  title: string;
+  channel: string;
+  subs: number;
+  views: number;
+  mult: number;
+  lane: string;
+  url: string;
+  why: string;
+  steal: string;
+}
+
+interface ScoutData {
+  updated: string;
+  picks: ScoutPick[];
+  rejected: Array<{ title: string; reason: string }>;
+}
+
 interface BenchmarkResponse {
   items: BenchmarkCard[];
   total: number;
+  scout?: ScoutData | null;
 }
 
 function frameUrl(file: string): string {
@@ -60,6 +80,7 @@ function engRate(c: BenchmarkCard): string {
 
 export default function ReelsBenchmarkBoard() {
   const [cards, setCards] = useState<BenchmarkCard[]>([]);
+  const [scout, setScout] = useState<ScoutData | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [expanded, setExpanded] = useState<string | null>(null);
@@ -74,6 +95,7 @@ export default function ReelsBenchmarkBoard() {
     try {
       const data = await callApi<BenchmarkResponse>("GET", "reels-benchmark");
       setCards(data.items || []);
+      setScout(data.scout || null);
       setError(null);
     } catch (e) {
       setError(e instanceof Error ? e.message : "불러오기 실패");
@@ -179,6 +201,19 @@ export default function ReelsBenchmarkBoard() {
           {notice && <p className="text-[12px] mt-2" style={{ color: "var(--accent-text)" }}>{notice}</p>}
         </div>
 
+        {scout && scout.picks.length > 0 && (
+          <ScoutSection
+            scout={scout}
+            hasCard={(id) => cards.some((c) => c.shortcode === id)}
+            onOpenCard={(id) => {
+              setExpanded(id);
+              setTimeout(() => {
+                document.getElementById(`bench-card-${id}`)?.scrollIntoView({ behavior: "smooth", block: "start" });
+              }, 60);
+            }}
+          />
+        )}
+
         {cats.length > 0 && (
           <div className="flex items-center gap-1.5 mb-4">
             {(["전체", ...cats] as (Category | "전체")[]).map((c) => (
@@ -207,7 +242,9 @@ export default function ReelsBenchmarkBoard() {
         {!loading && !error && (
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 items-start">
             {sorted.map((c) => (
-              <CardView key={c.shortcode} card={c} expanded={expanded === c.shortcode} onToggle={() => setExpanded(expanded === c.shortcode ? null : c.shortcode)} />
+              <div key={c.shortcode} id={`bench-card-${c.shortcode}`}>
+                <CardView card={c} expanded={expanded === c.shortcode} onToggle={() => setExpanded(expanded === c.shortcode ? null : c.shortcode)} />
+              </div>
             ))}
           </div>
         )}
@@ -229,6 +266,99 @@ function platformOf(url: string): { label: string; bg: string; fg: string } {
 
 function clamp(lines: number): React.CSSProperties {
   return { display: "-webkit-box", WebkitLineClamp: lines, WebkitBoxOrient: "vertical", overflow: "hidden" };
+}
+
+function fmtShortNum(n: number): string {
+  if (n >= 10000) return `${(n / 10000).toFixed(n >= 100000 ? 0 : 1)}만`;
+  return n.toLocaleString("ko-KR");
+}
+
+function ScoutSection({
+  scout,
+  hasCard,
+  onOpenCard,
+}: {
+  scout: ScoutData;
+  hasCard: (id: string) => boolean;
+  onOpenCard: (id: string) => void;
+}) {
+  return (
+    <section className="mb-6">
+      <div className="flex items-baseline justify-between gap-2 mb-2">
+        <h2 className="text-[14px] font-bold">🔭 유튜브 시드 스캔 — 이번 주 수확 {scout.picks.length}개</h2>
+        <span className="text-[11px]" style={{ color: "var(--text-secondary)" }}>
+          시드 = 네가 저장한 유튜브 채널 · {scout.updated}
+        </span>
+      </div>
+      <div className="flex flex-col gap-3">
+        {scout.picks.map((p) => (
+          <article
+            key={p.id}
+            className="rounded-xl p-4"
+            style={{ backgroundColor: "var(--card, var(--color-paper))", border: "1px solid var(--border)" }}
+          >
+            <div className="flex items-baseline gap-2 flex-wrap">
+              <span className="text-[17px] font-extrabold tabular-nums tracking-tight">
+                ×{p.mult.toLocaleString("ko-KR")}
+                <span className="text-[11px] font-semibold ml-0.5" style={{ color: "var(--text-secondary)" }}>배</span>
+              </span>
+              <span className="text-[10px] px-1.5 py-0.5 rounded-full font-semibold text-white" style={{ backgroundColor: "#cc0000" }}>
+                YT숏
+              </span>
+              <span
+                className="text-[10px] px-1.5 py-0.5 rounded-full font-semibold"
+                style={{ backgroundColor: "var(--accent)", color: "#fff" }}
+              >
+                {p.lane}
+              </span>
+              <span className="ml-auto text-[11px] tabular-nums" style={{ color: "var(--text-secondary)" }}>
+                {fmtShortNum(p.views)} 조회 / 구독 {fmtShortNum(p.subs)}
+              </span>
+            </div>
+            <h3 className="text-[14px] font-bold mt-1.5">{p.title}</h3>
+            <p className="text-[11px]" style={{ color: "var(--text-secondary)" }}>{p.channel}</p>
+            <div className="mt-2.5 flex flex-col gap-1.5 text-[12.5px]">
+              <div className="grid gap-2" style={{ gridTemplateColumns: "56px 1fr" }}>
+                <b className="text-[10.5px] pt-0.5" style={{ color: "var(--text-secondary)" }}>왜 보나</b>
+                <span>{p.why}</span>
+              </div>
+              <div className="grid gap-2" style={{ gridTemplateColumns: "56px 1fr" }}>
+                <b className="text-[10.5px] pt-0.5" style={{ color: "var(--text-secondary)" }}>훔칠 것</b>
+                <span className="font-semibold">{p.steal}</span>
+              </div>
+            </div>
+            <div className="flex gap-2 mt-3">
+              <a
+                href={p.url}
+                target="_blank"
+                rel="noreferrer"
+                className="text-[11.5px] px-3 py-1.5 rounded-lg font-medium text-white"
+                style={{ backgroundColor: "var(--accent)" }}
+              >
+                ▶ 영상 보기
+              </a>
+              {hasCard(p.id) && (
+                <button
+                  type="button"
+                  onClick={() => onOpenCard(p.id)}
+                  className="text-[11.5px] px-3 py-1.5 rounded-lg"
+                  style={{ border: "1px solid var(--border)", color: "var(--text-secondary)" }}
+                >
+                  분석 카드 ↓
+                </button>
+              )}
+            </div>
+          </article>
+        ))}
+      </div>
+      {scout.rejected.length > 0 && (
+        <p className="text-[11px] mt-2 leading-relaxed" style={{ color: "var(--text-secondary)" }}>
+          탈락 {scout.rejected.length}개:{" "}
+          {scout.rejected.map((r) => `${r.title} — ${r.reason}`).join(" · ")}
+        </p>
+      )}
+    </section>
+  );
 }
 
 const CAT_STYLE: Record<string, { bg: string; fg: string }> = {
