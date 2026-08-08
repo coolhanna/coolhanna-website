@@ -23,6 +23,7 @@ import {
 } from "@dnd-kit/sortable";
 import { CSS } from "@dnd-kit/utilities";
 import { CONTACT_CHANNELS } from "@/lib/dashboard-client";
+import type { LifeDayResponse } from "@/lib/dashboard-api";
 import {
   cleanFields,
   Field as EditField,
@@ -437,6 +438,7 @@ type Initial = {
   memosRecent: any;
   activeTodos: any;
   thinkingTracks: any;
+  lifeToday: LifeDayResponse | { error: string };
 };
 
 export default function DashboardClient({ initial }: { initial: Initial }) {
@@ -484,6 +486,8 @@ export default function DashboardClient({ initial }: { initial: Initial }) {
       </header>
 
       <div className="max-w-page mx-auto px-5 sm:px-8 py-6 space-y-3">
+        <LifeDayBriefing data={initial.lifeToday} />
+
         {/* 1. 이번 주 — 일정+할일 통합 주간뷰 (데스크탑) / 컴팩트(모바일) */}
         <div className="hidden md:block">
           <WeeklyTodos
@@ -547,6 +551,188 @@ export default function DashboardClient({ initial }: { initial: Initial }) {
         </p>
       </div>
     </main>
+  );
+}
+
+function LifeDayBriefing({
+  data,
+}: {
+  data: LifeDayResponse | { error: string };
+}) {
+  const [expanded, setExpanded] = useState<string | null>(null);
+  if ("error" in data || !data.available) return null;
+
+  const conversations = data.conversations || [];
+  const timeline = data.timeline || [];
+  const intake = data.intake || [];
+  const healthSignals = data.health_signals || [];
+  const completed = data.completed || [];
+  const pending = data.pending || [];
+  const shopping = data.shopping || [];
+  const statusLabel =
+    data.status === "feedback_applied"
+      ? "피드백 반영"
+      : data.status === "draft"
+        ? "분석 초안"
+        : data.status === "feedback_needed"
+          ? "확인 필요"
+          : "생활기록";
+
+  return (
+    <section
+      className="rounded-2xl overflow-hidden mb-4"
+      style={{ border: "1px solid var(--border)", background: "var(--bg-card)" }}
+    >
+      <div
+        className="p-5 sm:p-6"
+        style={{ background: "#252A22", color: "#F7F8F2" }}
+      >
+        <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-3">
+          <div>
+            <p className="text-[11px] mb-2" style={{ color: "#BFC9B3" }}>
+              오늘의 생활 브리핑 · {data.recording?.duration || "생활녹음"}
+            </p>
+            <h2 className="text-lg sm:text-xl font-semibold tracking-tight leading-relaxed max-w-3xl">
+              {data.headline}
+            </h2>
+            {data.summary && (
+              <p className="text-xs sm:text-sm mt-3 leading-relaxed max-w-4xl" style={{ color: "#D8DDD2" }}>
+                {data.summary}
+              </p>
+            )}
+          </div>
+          <span
+            className="text-[11px] px-2.5 py-1.5 rounded-full whitespace-nowrap self-start"
+            style={{ background: "#394035", color: "#D7E0CF" }}
+          >
+            {statusLabel}
+          </span>
+        </div>
+        <div className="grid grid-cols-2 lg:grid-cols-4 mt-5 rounded-xl overflow-hidden" style={{ border: "1px solid #454B41" }}>
+          {[
+            ["기록 구간", data.recording?.ranges?.join(" · ") || "─"],
+            ["주요 장소", (data.places || []).slice(0, 3).join(" · ") || "─"],
+            ["함께한 사람", (data.people || []).join(" · ") || "─"],
+            ["몸의 신호", healthSignals[0]?.title || "─"],
+          ].map(([label, value]) => (
+            <div key={label} className="p-3 sm:p-4" style={{ background: "#30352D", border: "1px solid #454B41" }}>
+              <p className="text-[10px] mb-1" style={{ color: "#ADB6A5" }}>{label}</p>
+              <p className="text-xs sm:text-sm font-medium leading-relaxed">{value}</p>
+            </div>
+          ))}
+        </div>
+      </div>
+
+      <div className="p-4 sm:p-5 space-y-4">
+        <div className="grid grid-cols-1 lg:grid-cols-[1.35fr_.9fr] gap-4">
+          <div className="rounded-xl p-4" style={{ border: "1px solid var(--border)" }}>
+            <h3 className="text-sm font-semibold mb-4">오늘의 흐름</h3>
+            <div className="space-y-0">
+              {timeline.map((item, index) => (
+                <div key={`${item.time}-${item.title}`} className="grid grid-cols-[48px_12px_1fr] gap-2">
+                  <span className="text-[11px] pt-0.5 text-muted">{item.time}</span>
+                  <span className="relative flex justify-center">
+                    <span className="w-2 h-2 rounded-full mt-1" style={{ background: "var(--accent)" }} />
+                    {index < timeline.length - 1 && (
+                      <span className="absolute top-3 bottom-0 w-px" style={{ background: "var(--border)" }} />
+                    )}
+                  </span>
+                  <div className="pb-4">
+                    <p className="text-xs sm:text-sm font-medium">{item.title}</p>
+                    <p className="text-[11px] sm:text-xs text-muted mt-1">{item.detail}</p>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+
+          <div className="space-y-4">
+            <div className="rounded-xl p-4" style={{ border: "1px solid var(--border)" }}>
+              <h3 className="text-sm font-semibold mb-3">몸과 섭취</h3>
+              <div className="grid grid-cols-2 gap-2">
+                {intake.map((item) => (
+                  <div key={`${item.label}-${item.value}`} className="rounded-lg p-3" style={{ background: "var(--bg-card-soft)" }}>
+                    <p className="text-[10px] text-muted mb-1">{item.label}</p>
+                    <p className="text-xs font-medium leading-relaxed">{item.value}</p>
+                  </div>
+                ))}
+              </div>
+              {healthSignals.map((signal) => (
+                <div
+                  key={signal.title}
+                  className="mt-2 rounded-lg p-3 text-xs leading-relaxed"
+                  style={{
+                    background: signal.level === "warning" ? "var(--danger-soft)" : "var(--accent-soft)",
+                    color: signal.level === "warning" ? "var(--danger-text)" : "var(--accent-text)",
+                  }}
+                >
+                  <strong>{signal.title}</strong> · {signal.detail}
+                </div>
+              ))}
+            </div>
+
+            <div className="rounded-xl p-4" style={{ border: "1px solid var(--border)" }}>
+              <h3 className="text-sm font-semibold mb-3">마트 장보기</h3>
+              <div className="space-y-2">
+                {shopping.map((item) => (
+                  <div key={item.item} className="flex items-start justify-between gap-3 text-xs">
+                    <span>{item.item}</span>
+                    <span className="text-[10px] text-muted whitespace-nowrap">{item.state}</span>
+                  </div>
+                ))}
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div className="rounded-xl p-4" style={{ border: "1px solid var(--border)" }}>
+          <div className="flex items-baseline justify-between gap-3 mb-3">
+            <h3 className="text-sm font-semibold">중요한 대화와 관점</h3>
+            <span className="text-[10px] text-muted">눌러서 자세히 보기</span>
+          </div>
+          <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-2">
+            {conversations.map((conversation, index) => {
+              const key = `${conversation.person}-${conversation.topic}-${index}`;
+              const isOpen = expanded === key;
+              return (
+                <button
+                  key={key}
+                  type="button"
+                  aria-expanded={isOpen}
+                  onClick={() => setExpanded(isOpen ? null : key)}
+                  className="rounded-xl p-3 text-left transition hover:opacity-80"
+                  style={{
+                    border: `1px solid ${isOpen ? "var(--accent)" : "var(--border)"}`,
+                    background: isOpen ? "var(--accent-soft)" : "var(--bg-card-soft)",
+                  }}
+                >
+                  <p className="text-[10px] text-muted">{conversation.person}</p>
+                  <p className="text-sm font-semibold mt-1">{conversation.topic}</p>
+                  <p className="text-xs text-muted leading-relaxed mt-2">{conversation.viewpoint}</p>
+                  <p className="text-xs mt-3" style={{ color: "var(--accent-text)" }}>“{conversation.quote}”</p>
+                  {isOpen && (
+                    <p className="text-xs leading-relaxed mt-3 pt-3" style={{ borderTop: "1px solid var(--border)" }}>
+                      {conversation.detail}
+                    </p>
+                  )}
+                </button>
+              );
+            })}
+          </div>
+        </div>
+
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <div className="rounded-xl p-4" style={{ border: "1px solid var(--border)" }}>
+            <h3 className="text-sm font-semibold mb-2">오늘 한 일</h3>
+            {completed.map((item) => <p key={item} className="text-xs py-1.5" style={{ color: "var(--success)" }}>✓ {item}</p>)}
+          </div>
+          <div className="rounded-xl p-4" style={{ border: "1px solid var(--border)" }}>
+            <h3 className="text-sm font-semibold mb-2">남은 일</h3>
+            {pending.map((item) => <p key={item} className="text-xs py-1.5">□ {item}</p>)}
+          </div>
+        </div>
+      </div>
+    </section>
   );
 }
 
