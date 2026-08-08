@@ -28,8 +28,14 @@ function setProgress(id, done) {
 
 function channelLabel(id) {
   if (id === "food") return "먹거리";
-  if (id === "parenting") return "육아실험실";
-  return "두 채널";
+  return "가족먹거리";
+}
+
+function renderOwnership(data) {
+  document.getElementById("ownershipStrip").innerHTML = `
+    <div><span>YouTube 분석</span><b>${escapeHtml(data.analyst.youtube)}</b></div>
+    <div><span>숏폼 운영실</span><b>${escapeHtml(data.analyst.shortsOps)}</b></div>
+    <p>${escapeHtml(data.analyst.rule)}</p>`;
 }
 
 function renderBrief(data) {
@@ -96,6 +102,16 @@ function renderPipeline(data) {
     .join("");
 }
 
+function renderEditing(data) {
+  const item = data.editingTraining;
+  const ratio = Math.round((item.reviewed / item.target) * 100);
+  document.getElementById("editingBoard").innerHTML = `
+    <div class="editing-score"><span>학습 완료</span><strong>${item.reviewed}/${item.target}</strong><div><i style="width:${ratio}%"></i></div></div>
+    <div><span>대본형</span><strong>${escapeHtml(item.scripted)}</strong></div>
+    <div><span>대본 없는 먹거리형</span><strong>${escapeHtml(item.unscripted)}</strong></div>
+    <p><span>다음 녹화</span><b>${escapeHtml(item.next)}</b></p>`;
+}
+
 function renderLearning(data) {
   const videos = activeChannel === "all" ? data.ownVideos : data.ownVideos.filter((video) => video.channelId === activeChannel);
   document.getElementById("learningBoard").innerHTML = videos
@@ -135,11 +151,13 @@ function renderExperiments(data) {
 function renderDashboard(data) {
   dashboardData = data;
   document.getElementById("generatedAt").textContent = `${new Date(data.generatedAt).toLocaleString("ko-KR")} 갱신`;
+  renderOwnership(data);
   renderBrief(data);
   renderActions(data);
   renderJudgementQueue(data);
   renderChannels(data);
   renderPipeline(data);
+  renderEditing(data);
   renderLearning(data);
   renderWatch(data);
   renderExperiments(data);

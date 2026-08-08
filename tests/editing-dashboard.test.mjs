@@ -26,18 +26,23 @@ test("short-form operations category embeds the original room unchanged", () => 
   for (const section of [
     "오늘 할 일",
     "판정 대기",
-    "두 채널 주간판",
+    "먹거리 주간판",
     "제작 중",
     "내 영상에서 배운 것",
     "오늘 볼 영상",
     "다음 실험",
+    "편집 자동화 학습",
   ]) {
     assert.ok(room.includes(section), `missing section: ${section}`);
   }
   assert.ok(app.includes("renderDashboard"));
   assert.ok(styles.includes(".weekly-brief"));
+  assert.ok(styles.includes(".compact-ops"));
+  assert.ok(app.includes("YouTube 분석"));
+  assert.ok(app.includes("숏폼 운영실"));
   assert.equal(data.todayActions.length, 3);
-  assert.equal(data.channels.length, 2);
+  assert.deepEqual(data.channels.map((channel) => channel.id), ["food"]);
+  assert.ok(data.todayActions.every((action) => action.channelId === "food"));
 });
 
 test("the old editing URL redirects to the short-form operations room", () => {

@@ -6,11 +6,11 @@
     <title>한나 숏폼 운영실</title>
     <link rel="stylesheet" href="./shorts-styles.css?v=20260807" />
   </head>
-  <body>
+  <body class="compact-ops">
     <header class="ops-header">
       <div>
         <a class="back-link" href="/dashboard">← 한나 운영 대시보드</a>
-        <p class="eyebrow">매일 다음 행동이 나오는 곳</p>
+        <p class="eyebrow">가족먹거리 성장 운영판</p>
         <h1>숏폼 운영실</h1>
       </div>
       <div class="header-meta">
@@ -20,6 +20,7 @@
     </header>
 
     <main>
+      <section id="ownershipStrip" class="ownership-strip" aria-label="분석 담당"></section>
       <section id="weeklyBrief" class="weekly-brief" aria-labelledby="briefTitle"></section>
 
       <section class="section-block" aria-labelledby="actionsTitle">
@@ -41,8 +42,8 @@
 
       <section class="section-block" aria-labelledby="channelsTitle">
         <div class="section-heading">
-          <div><p class="section-number">03</p><h2 id="channelsTitle">두 채널 주간판</h2></div>
-          <p>육아와 먹거리는 같은 모녀가 나오지만 성공 기준은 다릅니다.</p>
+          <div><p class="section-number">03</p><h2 id="channelsTitle">먹거리 주간판</h2></div>
+          <p>가족먹거리 한 채널의 업로드와 다음 움직임만 봅니다.</p>
         </div>
         <div id="channelBoard" class="channel-grid"></div>
       </section>
@@ -55,22 +56,25 @@
         <div id="pipelineBoard" class="pipeline-board"></div>
       </section>
 
+      <section class="section-block" aria-labelledby="editingTitle">
+        <div class="section-heading">
+          <div><p class="section-number">05</p><h2 id="editingTitle">편집 자동화 학습</h2></div>
+          <p>먹거리 제작 시간을 줄이기 위한 별도 학습 트랙입니다.</p>
+        </div>
+        <div id="editingBoard" class="editing-mini"></div>
+      </section>
+
       <section class="section-block" aria-labelledby="learningTitle">
         <div class="section-heading">
-          <div><p class="section-number">05</p><h2 id="learningTitle">내 영상에서 배운 것</h2></div>
+          <div><p class="section-number">06</p><h2 id="learningTitle">내 영상에서 배운 것</h2></div>
           <p>조회수를 자랑하는 표가 아니라 다음 편을 바꾸는 근거입니다.</p>
-        </div>
-        <div class="filter-row" role="group" aria-label="채널 필터">
-          <button class="filter-button active" type="button" data-channel="all">전체</button>
-          <button class="filter-button" type="button" data-channel="parenting">육아실험실</button>
-          <button class="filter-button" type="button" data-channel="food">먹거리</button>
         </div>
         <div id="learningBoard" class="learning-board"></div>
       </section>
 
       <section class="section-block watch-section" aria-labelledby="watchTitle">
         <div class="section-heading">
-          <div><p class="section-number">06</p><h2 id="watchTitle">오늘 볼 영상 3개</h2></div>
+          <div><p class="section-number">07</p><h2 id="watchTitle">오늘 볼 영상 3개</h2></div>
           <p>재미로 저장하지 않고, 다음 제작에 쓸 장치를 하나씩 가져옵니다.</p>
         </div>
         <div id="watchBoard" class="watch-grid"></div>
@@ -78,7 +82,7 @@
 
       <section class="section-block" aria-labelledby="experimentTitle">
         <div class="section-heading">
-          <div><p class="section-number">07</p><h2 id="experimentTitle">다음 실험</h2></div>
+          <div><p class="section-number">08</p><h2 id="experimentTitle">다음 실험</h2></div>
           <p>D+1에는 훅, D+7에는 확산과 전환을 판정합니다.</p>
         </div>
         <div id="experimentBoard" class="experiment-grid"></div>

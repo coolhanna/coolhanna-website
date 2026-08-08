@@ -1,43 +1,48 @@
 {
-  "schemaVersion": 1,
+  "schemaVersion": 2,
+  "analyst": {
+    "youtube": "Claude",
+    "shortsOps": "GPT",
+    "rule": "같은 먹거리 채널을 각자 독립적으로 분석하고 제안의 적중률로 비교"
+  },
   "brief": {
-    "title": "오늘은 육아의 강한 훅을 짧은 본문으로 잇고, 먹거리는 설명을 선택 장면으로 바꾸는 날",
-    "why": "육아 Reels는 D+7의 논쟁 질문·역할반전 28.1만~72.0만 회와 D1 잠정 42.8만 회에서 훅은 강했지만 정면 해설 구간에서 이탈했고, 먹거리 Shorts는 비교·순위형이 5.7만~7.5만 회인 반면 추상적 건강 약속은 D+7 전 3,016회입니다.",
-    "guardrail": "육아와 먹거리를 한 영상 안에서 섞지 않습니다. 모녀의 생활감은 형식으로만 공유합니다."
+    "title": "먹거리는 설명보다 비교·선택·재구매 판정으로 보여줍니다",
+    "why": "먹거리 Shorts에서 비교·순위형은 5.7만~7.5만 회였고, 추상적인 건강 약속은 3천 회대였습니다. 앞으로 육아 채널은 운영하지 않고 가족먹거리 성장에 집중합니다.",
+    "guardrail": "건강 효과를 단정하지 않습니다. 맛·가격·차이·누구에게 맞는지·다시 살 1개를 화면으로 증명합니다."
   },
   "todayActions": [
     {
-      "id": "action-food-hook-rebuild",
-      "slot": "먹거리 1",
-      "actionSource": "먹거리 최대 하방 편차 1순위 — D+7 전 조기 신호",
+      "id": "food-hook-three-products",
+      "slot": "제작 1",
+      "actionSource": "먹거리 성과 편차 1순위",
       "channelId": "food",
       "type": "기획",
       "title": "라면 3개를 첫 화면에 놓는 비교 훅 확정",
-      "evidence": "8월 8일 live 조회: ‘속편한 라면’ 3,005회(조기 신호), 복숭아 순위 66,066회, 김 순위 56,927회. 먹거리 표본은 5편이라 중앙값 게이트는 아직 금지합니다.",
-      "deliverable": "일반·건면·대체면 3개가 동시에 보이고 ‘맛·가격·다시 살 1개’를 약속하는 첫 2초 촬영안",
-      "doneWhen": "제품 3개, 첫 화면 배치, 마지막 판정 기준 3개를 한 장에 확정하면 완료"
+      "evidence": "속편한 라면 3,005회, 복숭아 순위 66,066회, 김 순위 56,927회로 선택 구조의 우위가 확인됐습니다.",
+      "deliverable": "일반·건면·대체면을 맛·가격·재구매로 판정하는 첫 2초 촬영안",
+      "doneWhen": "제품 3개와 마지막 판정 기준을 확정하면 완료"
     },
     {
-      "id": "action-parenting-middle-cut",
-      "slot": "육아 1",
-      "actionSource": "육아 최대 의미 편차 1순위 — D+7 성공 후 중간 이탈 보정",
-      "channelId": "parenting",
-      "type": "대본 보정",
-      "title": "지디샴푸 ‘오해’의 설명부를 한 장면으로 압축",
-      "evidence": "Reels D+7에서 화장 허용 기준 720,358회·체크지 질문 280,664회가 후반 설명에서 이탈했고, 8월 8일 D1 잠정 ‘비교 질문’도 427,808회·공유율 1.94%였지만 정면 해설 9.86~29.76초 뒤 평균 시청 29.7초에서 이탈 신호가 잡혔습니다.",
-      "deliverable": "상황극 훅은 유지하고 제품 설명 4개를 욕실의 실제 사용 장면 1개로 바꾼 촬영용 대본",
-      "doneWhen": "첫 3초 사건, 1개 시연, 마지막 티키타카가 각각 한 문장으로 읽히면 완료"
+      "id": "food-next-ranking",
+      "slot": "제작 2",
+      "actionSource": "순위형 2편 연속 검증",
+      "channelId": "food",
+      "type": "후속 기획",
+      "title": "다음 순위·비교 소재 후보 3개만 남기기",
+      "evidence": "복숭아와 김 모두 끝까지 결과를 기다리는 구조가 유지율과 조회수를 만들었습니다.",
+      "deliverable": "같은 가격대 또는 같은 용도의 제품 3~5개 후보표",
+      "doneWhen": "구매 가능성과 화면 차이가 분명한 후보 3개를 고르면 완료"
     },
     {
-      "id": "action-watch-two-verify-one-empty",
-      "slot": "실험 1",
+      "id": "food-reference-apply",
+      "slot": "학습 1",
       "actionSource": "레퍼런스→제작 연결 병목",
-      "channelId": "both",
+      "channelId": "food",
       "type": "학습",
-      "title": "검증된 추천 2편에서 장치 하나씩 채택",
-      "evidence": "같은 주제 훅은 8월 8일 live 9,488,064회로 재확인했고, 인접 구조는 현재 Obsidian 분석에 사건 선행 구조가 남아 있습니다. 소규모 계정 돌파는 검증 실패로 빈칸입니다.",
-      "deliverable": "짜장라면의 첫 화면 약속 1개와 칼 광고의 사건→제품 등장 순서 1개를 오늘 두 촬영안에 연결",
-      "doneWhen": "육아 1개·먹거리 1개 촬영안에 채택 장치가 문장으로 들어가면 완료"
+      "title": "오늘 볼 영상 2편에서 장치 하나씩 채택",
+      "evidence": "저장 개수가 아니라 실제 촬영안에 들어간 장치 수로 학습 성과를 판단합니다.",
+      "deliverable": "첫 화면 약속 1개와 결과 공개 방식 1개를 다음 촬영안에 연결",
+      "doneWhen": "두 장치가 촬영안 문장으로 들어가면 완료"
     }
   ],
   "judgementQueue": [
@@ -50,24 +55,10 @@
       "checkpoint": "D+7",
       "dueAt": "2026-08-13",
       "status": "기다리는 중",
-      "earlySignal": "8월 8일 live 3,005회. D+7 전 조기 신호일 뿐 실패 확정 아님.",
-      "baseline": "먹거리 표본 5편 — 표본 부족, 중앙값 게이트 미실행",
-      "gateOrder": "훅 → 중간 구성 → 행동",
-      "nextDecision": "D+7에 훅이 -20% 아래면 본문은 두고 첫 2초만 교체"
-    },
-    {
-      "id": "judge-wash-d7",
-      "videoId": "4kZsga5pXes",
-      "channelId": "parenting",
-      "platform": "YouTube Shorts",
-      "title": "밖에서 씻김당하기",
-      "checkpoint": "D+7",
-      "dueAt": "2026-08-12",
-      "status": "기다리는 중",
-      "earlySignal": "8월 8일 live 68,083회·계속 시청 79.0%·평균 시청률 88.4%. D+7 전 신호.",
-      "baseline": "육아 최근 20편 중앙값 64,443회와 D+7에 비교",
-      "gateOrder": "훅 → 중간 구성 → 구독 전환",
-      "nextDecision": "상위 20%면 ‘설명 전 행동 한 컷’을 다음 육아 3편 중 1편에 재시험"
+      "earlySignal": "3,005회. D+7 전 조기 신호일 뿐 실패 확정이 아닙니다.",
+      "baseline": "먹거리 표본 5편 — 8편까지 판정 보류",
+      "gateOrder": "첫 화면 → 비교 장면 → 마지막 선택",
+      "nextDecision": "D+7 하위면 본문은 두고 첫 2초만 교체"
     },
     {
       "id": "judge-kim-d7",
@@ -77,61 +68,37 @@
       "title": "김덕후 최애김 1~7위",
       "checkpoint": "D+7",
       "dueAt": "2026-08-09",
-      "status": "곧 판정",
-      "earlySignal": "8월 8일 live 56,927회·평균 시청률 67.6%. D+7 전 신호.",
-      "baseline": "먹거리 표본 5편 — 표본 부족, 중앙값 게이트 미실행",
-      "gateOrder": "훅 → 중간 구성 → 상품 질문",
-      "nextDecision": "유지율과 상품 질문이 둘 다 중앙값 이상이면 순위형을 다음 3편 중 1편에 사용"
+      "status": "판정 시점",
+      "earlySignal": "56,927회·평균 시청률 67.6%.",
+      "baseline": "먹거리 표본 축적 중",
+      "gateOrder": "순위 약속 → 비교 근거 → 다시 살 1개",
+      "nextDecision": "상품 질문까지 강하면 다음 3편 중 1편에 순위형 재시험"
     }
   ],
   "queuePolicy": {
     "overdueLimit": 3,
-    "pendingCount": 3,
+    "pendingCount": 2,
     "overdueCount": 0,
     "locked": false,
-    "message": "판정 대기 3개 중 기한이 지난 카드는 0개입니다. 기한 전 카드는 새 아이디어 잠금에 포함하지 않습니다."
+    "message": "판정 대기 2개 중 기한이 지난 카드는 0개입니다. 기한 전 카드는 새 아이디어 잠금에 포함하지 않습니다."
   },
   "channels": [
     {
-      "id": "parenting",
-      "name": "육아실험실",
-      "role": "공감 → 관점 → 신뢰",
-      "weeklyTarget": 3,
-      "publishedThisWeek": 1,
-      "sampleSize": 20,
-      "gateEnabled": true,
-      "primaryMetric": "공유·구독 전환",
-      "nextMove": "D+7 성공의 질문·역할반전 훅은 유지하고, 후반 설명을 실제 시연 1개로 압축",
-      "recent20Median": 64443,
-      "sampleLabel": "최근 20편 중앙값 게이트 사용",
-      "rule": "생활 장면 → 오해 → 진짜 이유 → 엄마의 자기반성 → 개그 회수"
-    },
-    {
       "id": "food",
-      "name": "먹거리",
+      "name": "가족먹거리",
       "role": "발견 → 비교 → 구매 판단",
       "weeklyTarget": 4,
       "publishedThisWeek": 4,
       "sampleSize": 5,
       "gateEnabled": false,
-      "primaryMetric": "시청 유지·상품 질문",
-      "nextMove": "표본을 8편까지 쌓되 다음 편은 세 제품 동시 노출→차이 시연→재구매 1개로 닫기",
+      "primaryMetric": "시청 유지·상품 질문·구독 전환",
+      "nextMove": "표본을 8편까지 쌓고 세 제품 동시 노출→차이 시연→다시 살 1개로 닫기",
       "recent20Median": null,
       "sampleLabel": "표본 부족(5편) — 중앙값 게이트 미실행",
       "rule": "물건 먼저 → 차이 시연 → 모녀 판정 → 누구에게 맞는지 → 다시 살 1개"
     }
   ],
   "pipeline": [
-    {
-      "id": "gd-shampoo-1",
-      "channelId": "parenting",
-      "title": "지디샴푸 1편 — 오해",
-      "stage": "대본 확정",
-      "next": "촬영",
-      "sourcePath": "/Users/gimhanna/Obsidian Vault/한나/01_콘텐츠/릴스/광고협찬/2026-08-07_지디샴푸_사춘기마음번역소_1편_오해.md",
-      "blocker": "없음",
-      "note": "595자·63~68초. 추격과 욕실 동선, 마지막 개그 회수 유지."
-    },
     {
       "id": "food-three-noodles",
       "channelId": "food",
@@ -140,17 +107,27 @@
       "next": "제품 3개 확정",
       "sourcePath": "",
       "blocker": "제품 후보와 가격 확인 필요",
-      "note": "‘속편한 라면’의 건강 설명을 반복하지 않고 눈가림 시식과 결과표로 전환."
+      "note": "건강 설명을 반복하지 않고 눈가림 시식과 결과표로 전환"
     },
     {
-      "id": "gd-shampoo-2",
-      "channelId": "parenting",
-      "title": "지디샴푸 2편 — 변화",
-      "stage": "대기",
-      "next": "1편 촬영 후 대본",
-      "sourcePath": "/Users/gimhanna/Obsidian Vault/한나/01_콘텐츠/릴스/광고협찬/2026-08-07_지디샴푸_사춘기마음번역소_1편_오해.md",
-      "blocker": "1편과 같은 장면·훅을 피해야 함",
-      "note": "기름기 변화가 화면 증거가 되게. 감동 결말 대신 티키타카."
+      "id": "food-next-ranking",
+      "channelId": "food",
+      "title": "다음 쿠팡 먹거리 순위",
+      "stage": "후보 수집",
+      "next": "3개 카테고리 압축",
+      "sourcePath": "",
+      "blocker": "화면 차이가 분명한 제품군 필요",
+      "note": "가격대와 용도가 비슷한 제품만 비교"
+    },
+    {
+      "id": "editing-training",
+      "channelId": "food",
+      "title": "먹거리 편집 자동화 학습",
+      "stage": "1/5 분석",
+      "next": "대본형 녹화 1개",
+      "sourcePath": "",
+      "blocker": "판단 이유 음성 설명 필요",
+      "note": "대본형 3개·대본 없는 먹거리형 5개가 1차 목표"
     }
   ],
   "ownVideos": [
@@ -163,7 +140,7 @@
       "publishedAt": "2026-07-30",
       "metric": "평균 시청 55초·65.0%",
       "learning": "아이가 실제로 해내는 증거가 긴 길이를 버티게 했습니다.",
-      "nextUse": "조리법 설명보다 혜린의 선택·실패·완성을 전면에 둡니다.",
+      "nextUse": "조리 설명보다 혜린의 선택·실패·완성을 전면에 둡니다.",
       "hookText": "파스타 초딩도 만들어요",
       "sourceRefIds": [
         "proof-by-doing"
@@ -180,7 +157,7 @@
       "publishedAt": "2026-07-31",
       "metric": "평균 시청 49초·67.7%",
       "learning": "순위와 마지막 선택이 시청 이유를 끝까지 유지했습니다.",
-      "nextUse": "모든 비교 영상은 ‘그래서 다시 살 1개’로 닫습니다.",
+      "nextUse": "모든 비교 영상은 다시 살 1개로 닫습니다.",
       "hookText": "현시점 쿠팡 복숭아 순위 1~5위",
       "sourceRefIds": [
         "ranking-choice"
@@ -197,27 +174,10 @@
       "publishedAt": "2026-08-02",
       "metric": "평균 시청 44초·67.6%",
       "learning": "개인 취향을 숨기지 않은 순위가 구매 판단이 됐습니다.",
-      "nextUse": "객관적 최고 대신 한나용·혜린용·가성비용을 나눕니다.",
+      "nextUse": "한나용·혜린용·가성비용을 나눕니다.",
       "hookText": "김덕후 최애김 1~7위",
       "sourceRefIds": [
         "ranking-choice"
-      ],
-      "status": "게시",
-      "isRetest": false
-    },
-    {
-      "id": "4kZsga5pXes",
-      "channelId": "parenting",
-      "title": "밖에서 씻김당하기",
-      "url": "https://www.youtube.com/shorts/4kZsga5pXes",
-      "viewCount": 68083,
-      "publishedAt": "2026-08-05",
-      "metric": "계속 시청 79.0%·평균 시청률 88.4%",
-      "learning": "설명보다 행동이 먼저 보이는 첫 장면이 스와이프를 막았습니다.",
-      "nextUse": "육아 영상도 정면 설명 전에 사건 한 컷을 둡니다.",
-      "hookText": "씻기는 행동 화면",
-      "sourceRefIds": [
-        "action-before-explanation"
       ],
       "status": "게시",
       "isRetest": false
@@ -230,9 +190,9 @@
       "viewCount": 3005,
       "publishedAt": "2026-08-06",
       "metric": "초반 9/10",
-      "learning": "‘건강한·속편한’ 약속만으로는 무엇이 다른지 첫 화면에서 보이지 않았습니다.",
-      "nextUse": "다음 편은 일반 라면과 같은 화면에 놓고 맛·가격·재구매를 바로 비교합니다.",
-      "hookText": "속편한 라면 드실분? 건강한 라면!",
+      "learning": "추상적인 건강 약속만으로는 무엇이 다른지 첫 화면에서 보이지 않았습니다.",
+      "nextUse": "일반 라면과 같은 화면에 놓고 맛·가격·재구매를 바로 비교합니다.",
+      "hookText": "속편한 라면 드실분?",
       "sourceRefIds": [],
       "status": "게시",
       "isRetest": false
@@ -245,41 +205,41 @@
       "title": "이연복 짜장라면 레시피",
       "creator": "라면남자",
       "url": "https://youtube.com/shorts/pujiDXuvcFo",
-      "signal": "2026-08-08 live 9,488,064회·채널 구독자 75,000명",
-      "evidence": "yt-dlp 공개 메타데이터로 조회수·채널 규모·영상 URL을 2026-08-08 재확인했습니다.",
+      "signal": "9,488,064회·구독자 75,000명",
+      "evidence": "공개 메타데이터로 조회수와 채널 규모 확인",
       "lane": "같은 주제 훅",
-      "slotRule": "내 주제 안에서 성과가 확인된 영상 — 훅과 첫 화면을 봅니다.",
-      "watchFor": "첫 화면에 완성 음식과 ‘면 2개·스프 3개’ 차이를 동시에 보여주는 방식",
-      "hannaMove": "라면 3종을 한 화면에 놓고 혜린이 눈가림으로 1등을 고르게 합니다.",
-      "avoid": "레시피를 그대로 복제하거나 건강 효과를 단정하지 않습니다."
+      "slotRule": "성과가 확인된 같은 주제에서 첫 화면만 봅니다.",
+      "watchFor": "완성 음식과 차이를 동시에 보여주는 첫 화면",
+      "hannaMove": "라면 3종을 한 화면에 놓고 혜린이 눈가림으로 1등 선택",
+      "avoid": "레시피 복제와 건강 효과 단정"
     },
     {
-      "id": "watch-ad-story",
-      "channelId": "parenting",
-      "title": "요리유튜버 칼 광고 콩트",
-      "creator": "dragonha.j",
-      "url": "https://www.instagram.com/reel/DbM2ncjOj4Y/",
-      "signal": "현재 Obsidian 벤치마크 분석에서 제품 설명 전 사건형 콩트 구조 확인",
-      "evidence": "2026-07-26 저장된 현재 Reels 분석본에 ‘칼 어디 거예요?’ 사건을 먼저 만들고 제품을 등장시키는 구조가 기록돼 있습니다. 공개 조회수는 확보되지 않아 정량 성과 주장은 하지 않습니다.",
-      "lane": "인접 카테고리 구조",
-      "slotRule": "다른 제품군의 사건형 광고 — 제품 등장 구조를 봅니다.",
-      "watchFor": "칼을 설명하기 전에 ‘칼 어디 거예요?’라는 사건을 여러 장르로 확장하는 방식",
-      "hannaMove": "지디샴푸는 제품 설명 전에 혜린의 짜증을 엄마가 엉뚱하게 오해하는 사건을 끝까지 끌고 갑니다.",
-      "avoid": "장르 전환 자체를 따라 하기보다 제품 등장 타이밍만 가져옵니다."
+      "id": "watch-blind-choice",
+      "channelId": "food",
+      "title": "블라인드 맛비교 결과 공개 구조",
+      "creator": "레퍼런스 후보",
+      "url": "https://www.youtube.com/results?search_query=blind+taste+test+shorts",
+      "signal": "알고리즘 밖 구조 탐색",
+      "evidence": "브랜드를 가리고 반응과 결과 순서를 보기 위한 탐색 슬롯",
+      "lane": "결과 공개 방식",
+      "slotRule": "과장 리액션이 아니라 결과를 기다리게 하는 순서만 봅니다.",
+      "watchFor": "가격·브랜드를 언제 공개하는지",
+      "hannaMove": "한나와 혜린의 예상이 갈린 뒤 가격 공개",
+      "avoid": "영어권 과장 리액션 복제"
     },
     {
       "id": "watch-breakout-empty",
-      "channelId": "both",
+      "channelId": "food",
       "title": "검증된 소규모 계정 돌파 영상 없음",
       "creator": "",
       "url": "https://www.youtube.com/",
-      "signal": "명시적 빈 슬롯",
-      "evidence": "후보 Blind taste test는 686,748회였지만 채널 구독자 2,380,000명으로 확인되어 소규모 계정 돌파 기준에서 제외했습니다.",
-      "lane": "알고리즘 탈출·소규모 계정 돌파",
-      "slotRule": "조회수뿐 아니라 게시 당시 소규모 계정임이 함께 검증될 때만 채웁니다.",
-      "watchFor": "비워 둠 — 검증 가능한 후보가 생길 때까지 시청 과제 없음",
-      "hannaMove": "빈 슬롯을 억지로 채우지 않고 오늘은 검증된 두 장치만 제작에 반영합니다.",
-      "avoid": "대형 채널 영상을 소규모 돌파 사례로 오인하지 않습니다.",
+      "signal": "빈 슬롯",
+      "evidence": "게시 당시 소규모 계정임이 확인될 때만 채움",
+      "lane": "알고리즘 탈출",
+      "slotRule": "조회수와 게시 당시 채널 규모를 함께 검증",
+      "watchFor": "후보가 생길 때까지 시청 과제 없음",
+      "hannaMove": "검증된 두 장치만 제작에 반영",
+      "avoid": "대형 채널을 소규모 돌파 사례로 오인",
       "isEmpty": true
     }
   ],
@@ -288,35 +248,39 @@
       "id": "experiment-food-choice",
       "channelId": "food",
       "title": "건강 설명 vs 눈가림 선택",
-      "hypothesis": "추상적인 건강 약속 대신 세 제품을 동시에 보여주고 마지막 1등을 약속하면 초반 이탈이 줄어듭니다.",
-      "successMetric": "D+7 계속 시청·평균 시청률이 먹거리 최근 20편 중앙값보다 20% 이상 높음",
-      "decisionRule": "성공하면 비교·순위 포맷을 다음 3편 중 1편에 재시험. -20% 아래면 본문을 버리기 전에 첫 2초만 교체.",
+      "hypothesis": "세 제품을 동시에 보여주고 마지막 1등을 약속하면 초반 이탈이 줄어듭니다.",
+      "successMetric": "D+7 계속 시청·평균 시청률이 먹거리 기준보다 20% 이상 높음",
+      "decisionRule": "성공하면 다음 3편 중 1편에 재시험하고, 실패하면 첫 2초만 교체",
       "checkpoints": [
-        "D+7 본판정"
+        "D+7"
       ]
     },
     {
-      "id": "experiment-parenting-action",
-      "channelId": "parenting",
-      "title": "정면 설명 전 사건 한 컷",
-      "hypothesis": "혜린의 행동이나 모녀 충돌을 첫 2초에 두면 육아 메시지까지 도달하는 사람이 늘어납니다.",
-      "successMetric": "공유율·구독 전환이 육아 최근 20편 중앙값보다 20% 이상 높음",
-      "decisionRule": "성공하면 다음 육아 3편 중 1편에 재시험. -20% 아래면 사건의 이해 가능성과 첫 대사만 수정.",
+      "id": "experiment-price-reveal",
+      "channelId": "food",
+      "title": "처음 가격 공개 vs 마지막 가격 공개",
+      "hypothesis": "맛 판정 뒤 가격을 공개하면 결과까지 보는 사람이 늘어납니다.",
+      "successMetric": "평균 시청률과 상품 질문이 함께 상승",
+      "decisionRule": "상승하면 비교형의 기본 순서로 채택",
       "checkpoints": [
         "D+1",
         "D+7"
       ]
     }
   ],
+  "editingTraining": {
+    "target": 8,
+    "reviewed": 1,
+    "scripted": "0/3",
+    "unscripted": "1/5",
+    "next": "대본형 편집 1개를 판단 이유와 함께 녹화"
+  },
   "decisionRules": [
-    "최근 20편 중앙값 대비 +20% 이상이면 장치를 다음 3편 안에서 한 번만 재시험합니다.",
-    "-20% 아래면 훅 → 중간 구성 → 행동 순서로 첫 번째 실패 지점 하나만 바꿉니다.",
-    "육아는 공유·구독, 먹거리는 유지율·상품 질문으로 판정합니다.",
-    "Instagram D+1은 포장 신호, YouTube Shorts는 D+7을 본판정으로 봅니다.",
-    "레퍼런스는 저장 수가 아니라 실제 제작에 채택된 장치 수로 평가합니다.",
-    "레인 표본이 8편 미만이면 ±20% 게이트 판정을 보류하고 게시 수만 쌓습니다.",
-    "훅 재테스트 게시물은 중앙값 표본에서 제외하고 원본과 1:1로만 비교합니다.",
-    "오늘 액션은 육아 1·먹거리 1·실험 1로 제한하고, 각 레인에서 편차가 가장 큰 하나만 올립니다."
+    "먹거리만 운영하며 육아 채널 제안은 만들지 않습니다.",
+    "최근 표본 8편 전에는 성급한 성공·실패 판정을 하지 않습니다.",
+    "한 번에 첫 화면, 중간 구성, 마지막 행동 중 하나만 바꿉니다.",
+    "YouTube는 Claude, 숏폼 운영실은 GPT가 독립 분석하고 제안 적중률로 비교합니다.",
+    "레퍼런스는 저장 수가 아니라 실제 제작에 채택된 장치 수로 평가합니다."
   ],
-  "generatedAt": "2026-08-08T10:57:52.272Z"
+  "generatedAt": "2026-08-08T14:02:28.838Z"
 }
