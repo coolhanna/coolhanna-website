@@ -258,5 +258,12 @@ dd { margin: 5px 0 0; font-size: 13px; line-height: 1.5; }
 }
 
 @media (max-width: 680px) {
-  .at-a-glance .weekly-brief, .at-a-glance .action-grid, .at-a-glance .watch-grid { grid-template-columns: 1fr; }
+  .at-a-glance .ops-header { flex-direction: row; align-items: center; }
+  .at-a-glance .header-meta { flex-direction: row; align-items: center; }
+  .at-a-glance .weekly-brief { grid-template-columns: minmax(0, 1.2fr) minmax(112px, .8fr); }
+  .at-a-glance .action-grid, .at-a-glance .watch-grid { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+  .at-a-glance .action-card, .at-a-glance .watch-card { padding: 7px; }
+  .at-a-glance .action-card h3, .at-a-glance .watch-card h3 { font-size: 11px; }
+  .at-a-glance .action-card p, .at-a-glance .watch-card dd { font-size: 8px; }
+  .at-a-glance .check-button { font-size: 8px; }
 }
