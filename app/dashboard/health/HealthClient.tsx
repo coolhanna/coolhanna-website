@@ -1,452 +1,232 @@
 "use client";
 
-// 건강 탭 — 애플워치 데이터 (coolhanna-health). 어제 요약 + 핵심 카드 + 이번주 + 이번달.
-// 원칙(SPEC §10): 원인(수면·달리기·근력)/결과(심박·HRV) 분리, 평균엔 n 표기,
-// 없는 데이터는 회색 대시, 상태색은 경보 조건에만. 상세는 health.coolhanna.com.
+// 건강 탭 v2 — "하루" 중심 갈아엎기 (2026-08-09 한나 지시, 정본 §7-3).
+// 1차 소스 = 하루음성기록 원장 + 클로드 해석(실제 먹고 아프고 움직인 하루).
+// 워치·날씨는 교차 확인 층. 유추를 사실로 승격하지 않는다.
 
-type Dict = Record<string, any>;
+import { useState } from "react";
 
-const Dash = () => <span style={{ color: "var(--color-rule)" }}>—</span>;
+interface WatchDay {
+  sleep: number | null;
+  rhr: number | null;
+  hrv: number | null;
+  steps: number | null;
+  exercise_min: number | null;
+  walk_min: number | null;
+  walk_night_min: number | null;
+  run_min: number | null;
+}
 
-const fmt = (v: any, suffix = "") =>
-  v === null || v === undefined ? <Dash /> : <>{v}{suffix}</>;
+interface WeatherDay {
+  rain: number | null;
+  tmax: number | null;
+  app_tmax: number | null;
+}
 
-// 수면시간 → 파랑 램프 (순차 단일 색상)
+interface LedgerDay {
+  has_interp: boolean;
+  flags: string[];
+  gap: string;
+  day_type?: string;
+  body?: string;
+  carry?: string;
+  questions?: string;
+}
+
+interface DayRow {
+  date: string;
+  watch: WatchDay | null;
+  weather: WeatherDay | null;
+  ledger: LedgerDay | null;
+}
+
+interface HealthDaysResponse {
+  days?: DayRow[];
+  today_comment?: string;
+  error?: string;
+}
+
+const WEEKDAYS = ["일", "월", "화", "수", "목", "금", "토"];
+
+function dayLabel(iso: string): string {
+  const d = new Date(iso + "T00:00:00");
+  return `${d.getMonth() + 1}.${d.getDate()} (${WEEKDAYS[d.getDay()]})`;
+}
+
 function sleepColor(h: number | null): string {
-  if (h === null || h === undefined) return "transparent";
-  if (h < 4) return "#eaf1fb";
+  if (h === null || h === undefined) return "var(--color-rule)";
   if (h < 5) return "#c4d8f5";
   if (h < 6) return "#8fb4e8";
   if (h < 7) return "#5588d4";
   return "#2c5cb8";
 }
 
-function Card({ title, children }: { title: string; children: React.ReactNode }) {
+const Dash = () => <span style={{ color: "var(--color-rule)" }}>—</span>;
+
+function Num({ v, suffix = "", digits = 0 }: { v: number | null | undefined; suffix?: string; digits?: number }) {
+  if (v === null || v === undefined) return <Dash />;
+  return <>{digits ? v.toFixed(digits) : Math.round(v).toLocaleString("ko-KR")}{suffix}</>;
+}
+
+function Chip({ children, tone }: { children: React.ReactNode; tone?: "accent" | "hot" | "rain" | "flag" | "mute" }) {
+  const style: React.CSSProperties =
+    tone === "accent" ? { backgroundColor: "var(--accent)", color: "#fff" }
+    : tone === "hot" ? { backgroundColor: "#FDE8E4", color: "#9C3A1F" }
+    : tone === "rain" ? { backgroundColor: "#E5EDFB", color: "#25457F" }
+    : tone === "flag" ? { backgroundColor: "#FBEFE0", color: "#8A4B1E" }
+    : { backgroundColor: "var(--color-paper, #f4f2ec)", color: "var(--color-muted)" };
   return (
-    <section
-      className="rounded-xl p-4"
-      style={{ background: "#fff", border: "1px solid var(--color-rule)" }}
-    >
-      <h3 className="text-[11px] font-semibold mb-2" style={{ color: "var(--color-muted)" }}>
-        {title}
-      </h3>
+    <span className="text-[10px] px-1.5 py-0.5 rounded-full font-semibold whitespace-nowrap" style={style}>
       {children}
-    </section>
+    </span>
   );
 }
 
-function Stat({ label, value, goal, tone }: { label: string; value: React.ReactNode; goal: string; tone?: string }) {
-  const color = tone === "danger" ? "#b3261e" : tone === "warn" ? "#b06000" : tone === "good" ? "#3a7d3a" : "var(--color-ink)";
+function WeatherChips({ w }: { w: WeatherDay | null }) {
+  if (!w) return null;
+  const feel = w.app_tmax ?? w.tmax;
   return (
-    <div className="rounded-xl p-4" style={{ background: "#fff", border: "1px solid var(--color-rule)" }}>
-      <div className="text-[11px]" style={{ color: "var(--color-muted)" }}>{label}</div>
-      <div className="text-2xl font-bold tabular-nums" style={{ color }}>{value}</div>
-      <div className="text-[11px]" style={{ color: "var(--color-rule)" }}>{goal}</div>
+    <>
+      {feel !== null && (
+        <Chip tone={feel >= 33 ? "hot" : "mute"}>체감 {Math.round(feel)}°</Chip>
+      )}
+      {(w.rain ?? 0) >= 1 && <Chip tone="rain">☔ {Math.round(w.rain!)}mm</Chip>}
+    </>
+  );
+}
+
+// 접힌 본문 — 첫 문장만 보여주고 펼치면 전문
+function clamp(lines: number): React.CSSProperties {
+  return { display: "-webkit-box", WebkitLineClamp: lines, WebkitBoxOrient: "vertical", overflow: "hidden" };
+}
+
+function DayCard({ day }: { day: DayRow }) {
+  const [open, setOpen] = useState(false);
+  const { watch, weather, ledger } = day;
+  const empty = !watch && !weather && !ledger;
+
+  if (empty) {
+    return (
+      <div className="rounded-xl px-4 py-2 text-[12px]" style={{ border: "1px dashed var(--color-rule)", color: "var(--color-muted)" }}>
+        {dayLabel(day.date)} — 기록 없음
+      </div>
+    );
+  }
+
+  return (
+    <article
+      className="rounded-xl p-4"
+      style={{ background: "#fff", border: "1px solid var(--color-rule)", cursor: ledger?.has_interp ? "pointer" : "default" }}
+      onClick={() => ledger?.has_interp && setOpen(!open)}
+    >
+      <div className="flex items-center gap-1.5 flex-wrap">
+        <span className="text-[13px] font-bold tabular-nums">{dayLabel(day.date)}</span>
+        {ledger?.day_type ? (
+          <Chip tone="accent">{ledger.day_type.split("(")[0].trim()}</Chip>
+        ) : (
+          <Chip tone="mute">녹음 없음</Chip>
+        )}
+        {(ledger?.flags || []).map((f) => <Chip key={f} tone="flag">{f}</Chip>)}
+        <span className="ml-auto flex gap-1.5"><WeatherChips w={weather} /></span>
+      </div>
+
+      <div className="mt-2 text-[12.5px] tabular-nums flex flex-wrap gap-x-3 gap-y-1" style={{ color: "var(--color-ink)" }}>
+        <span>
+          <span className="inline-block w-2 h-2 rounded-sm mr-1" style={{ backgroundColor: sleepColor(watch?.sleep ?? null) }} />
+          잠 <Num v={watch?.sleep} suffix="h" digits={1} />
+        </span>
+        <span>심박 <Num v={watch?.rhr} /></span>
+        <span>HRV <Num v={watch?.hrv} /></span>
+        <span>걸음 <Num v={watch?.steps} /></span>
+        <span>걷기 <Num v={watch?.walk_min} suffix="분" /></span>
+        <span>운동 <Num v={watch?.exercise_min} suffix="분" /></span>
+        {(watch?.run_min ?? 0) > 0 && <span>뛰기 <Num v={watch?.run_min} suffix="분" /></span>}
+      </div>
+
+      {ledger?.has_interp && ledger.body && (
+        <div className="mt-2.5 text-[13px] leading-relaxed" style={{ color: "var(--color-ink)" }}>
+          <p style={open ? undefined : clamp(2)} className="whitespace-pre-line">{ledger.body}</p>
+          {open && ledger.carry && (
+            <div className="mt-3">
+              <b className="text-[11px]" style={{ color: "var(--color-muted)" }}>오늘로 이어지는 것</b>
+              <p className="whitespace-pre-line mt-1">{ledger.carry}</p>
+            </div>
+          )}
+          {open && ledger.questions && ledger.questions !== "없음" && (
+            <div className="mt-3">
+              <b className="text-[11px]" style={{ color: "var(--color-muted)" }}>확인하고 싶은 것</b>
+              <p className="whitespace-pre-line mt-1">{ledger.questions}</p>
+            </div>
+          )}
+          {ledger.gap && open && (
+            <p className="mt-2 text-[11px]" style={{ color: "var(--color-muted)" }}>녹음 공백 {ledger.gap}</p>
+          )}
+          <p className="mt-1 text-[10.5px]" style={{ color: "var(--color-rule)" }}>
+            {open ? "접기 ↑" : "펼치기 — 몸 해석 전문 + 이어지는 것 ↓"}
+          </p>
+        </div>
+      )}
+    </article>
+  );
+}
+
+// 14일 스트립 — 수면 막대 + 원장 유무 점
+function Strip({ days }: { days: DayRow[] }) {
+  const asc = [...days].reverse();
+  return (
+    <div className="flex items-end gap-1" style={{ height: 44 }}>
+      {asc.map((d) => {
+        const h = d.watch?.sleep ?? null;
+        const barH = h === null ? 3 : Math.max(6, Math.min(36, (h / 9) * 36));
+        return (
+          <div key={d.date} className="flex flex-col items-center gap-0.5" title={`${dayLabel(d.date)} 잠 ${h ?? "—"}h`}>
+            <div className="rounded-sm" style={{ width: 14, height: barH, backgroundColor: sleepColor(h) }} />
+            <div
+              className="rounded-full"
+              style={{ width: 5, height: 5, backgroundColor: d.ledger ? "var(--accent)" : "var(--color-rule)" }}
+            />
+          </div>
+        );
+      })}
     </div>
   );
 }
 
-function TrendChart({ trend }: { trend: Dict[] }) {
-  if (!trend?.length) return <Dash />;
-  const W = 640, H = 150, TOP = 8, BOT = 24, L = 28;
-  const vals = trend.map((r) => r.rhr7).filter((v) => v !== null);
-  const lo = Math.floor(Math.min(...vals, 57) - 1);
-  const hi = Math.ceil(Math.max(...vals, 64) + 1);
-  const x = (i: number) => L + (i / Math.max(1, trend.length - 1)) * (W - L - 4);
-  const y = (v: number) => TOP + (1 - (v - lo) / (hi - lo)) * (H - TOP - BOT);
-  const line = trend
-    .map((r, i) => (r.rhr7 === null ? null : `${x(i).toFixed(1)},${y(r.rhr7).toFixed(1)}`))
-    .filter(Boolean)
-    .join(" ");
-  return (
-    <svg viewBox={`0 0 ${W} ${H}`} className="w-full" role="img" aria-label="심박 7일 평균 90일 추세">
-      {[{ v: 58, c: "#3a7d3a" }, { v: 63, c: "#b3261e" }].map(({ v, c }) => (
-        <g key={v}>
-          <line x1={L} x2={W - 4} y1={y(v)} y2={y(v)} stroke={c} strokeWidth={1} strokeDasharray="4 3" />
-          <text x={0} y={y(v) + 3.5} fontSize={10} fill="var(--color-muted)">{v}</text>
-        </g>
-      ))}
-      <polyline points={line} fill="none" stroke="var(--color-ink)" strokeWidth={1.8}
-        strokeLinejoin="round" strokeLinecap="round" />
-      {trend.map((r, i) =>
-        r.run ? <rect key={i} x={x(i) - 1} y={H - BOT + 8} width={2} height={9} fill="#5588d4" /> : null
-      )}
-      <text x={L} y={H - 2} fontSize={10} fill="var(--color-muted)">← 90일 전</text>
-      <text x={W - 40} y={H - 2} fontSize={10} fill="var(--color-muted)">오늘</text>
-    </svg>
-  );
-}
-
-export default function HealthClient({ data }: { data: Dict }) {
-  if (data?.error) {
-    return <main className="max-w-page mx-auto px-5 sm:px-8 py-10 text-sm" style={{ color: "var(--color-muted)" }}>
-      건강 데이터 연결 실패: {data.error}</main>;
+export default function HealthClient({ data }: { data: HealthDaysResponse }) {
+  if (data.error || !data.days) {
+    return <main className="max-w-page mx-auto px-5 sm:px-8 py-8 text-[13px]" style={{ color: "var(--danger, #b3261e)" }}>{data.error || "데이터 없음"}</main>;
   }
-  const t = data?.today ?? {};
-  const w = data?.week ?? {};
-  const m = data?.month ?? {};
-  const c = m.cards ?? {};
-  const s = t.sleep ?? {};
-  const ins = data?.insights ?? {};
-  const st = data?.story ?? {};
+  const days = data.days;
+  const today = days[0];
 
   return (
-    <main className="max-w-page mx-auto px-5 sm:px-8 pb-16">
-      <div className="flex items-baseline justify-between pt-6 pb-1">
-        <h1 className="text-2xl font-bold">건강</h1>
-        <a href="https://health.coolhanna.com" target="_blank" rel="noreferrer"
-          className="text-[12px] hover:opacity-70" style={{ color: "var(--color-muted)" }}>
-          상세 대시보드 ↗
+    <main className="max-w-page mx-auto px-5 sm:px-8 py-6">
+      <div className="flex items-baseline justify-between mb-4">
+        <h1 className="text-[17px] font-extrabold">건강 — 하루 중심</h1>
+        <a href="https://health.coolhanna.com" target="_blank" rel="noreferrer" className="text-[11px] underline" style={{ color: "var(--color-muted)" }}>
+          워치 상세 →
         </a>
       </div>
-      <p className="text-[13px] mb-5" style={{ color: "var(--color-muted)" }}>
-        애플워치 자동 수집 · 비교 기준은 항상 본인 7일 평균 · 의료기기 아님
-      </p>
 
-      {t.sentence && <p className="text-xl font-semibold mb-4" style={{ letterSpacing: "-0.01em" }}>{t.sentence}</p>}
-
-      {/* AI 일일 해석 — 매일 08:00 claude가 그날 데이터로 생성 */}
-      {st.comment?.text && (
-        <div className="rounded-xl p-4 mb-5 text-[14px] leading-relaxed"
-          style={{ background: "var(--color-ink)", color: "var(--color-paper)" }}>
-          <div className="text-[10px] font-semibold mb-1 opacity-60">
-            오늘의 해석 · {st.comment.date} · AI가 실측 데이터로 작성
-          </div>
-          {st.comment.text}
+      {/* 오늘 카드 — 코치 한 줄 + 오늘 날씨 + 14일 잠 스트립 */}
+      <section className="rounded-xl p-4 mb-4 text-white" style={{ backgroundColor: "#1c1c1a" }}>
+        <div className="flex items-center gap-2 flex-wrap">
+          <span className="text-[13px] font-bold">오늘 {dayLabel(today.date)}</span>
+          <WeatherChips w={today.weather} />
         </div>
-      )}
-
-      {/* §6.1 핵심 카드 — 롤링 기준 */}
-      <div className="grid grid-cols-2 sm:grid-cols-5 gap-3 mb-6">
-        <Stat label="최근 30일 달리기" value={fmt(c.run30, "일")} goal="하한 4 · 목표 12~14"
-          tone={c.run30 < 8 ? "danger" : c.run30 >= 12 ? "good" : undefined} />
-        <Stat label="심박 7일 평균" value={<>{fmt(c.rhr7)} <span className="text-[11px] font-normal" style={{ color: "var(--color-muted)" }}>n={c.rhr7_n}</span></>}
-          goal="목표 58 이하 · 경보 63"
-          tone={c.rhr7 > 63 ? "danger" : c.rhr7 <= 58 ? "good" : undefined} />
-        <Stat label="5h 미만 밤 (14일)" value={fmt(c.short14, "일")} goal="목표 0"
-          tone={c.short14 > 0 ? "warn" : "good"} />
-        <Stat label="근력 (7일)" value={fmt(c.strength7, "회")} goal="목표 2" />
-        <Stat label="체지방률" value={fmt(c.body_fat, "%")} goal="체중계 연동 필요" />
-      </div>
-
-      <div className="grid sm:grid-cols-2 gap-3 mb-6">
-        {/* 어젯밤 수면 (원인) */}
-        <Card title={`어젯밤 수면 (${t.night ?? "—"}) — 원인`}>
-          <div className="text-3xl font-bold tabular-nums mb-1">
-            {fmt(s.hours, "시간")}{" "}
-            <span className="text-[12px] font-normal" style={{ color: "var(--color-muted)" }}>
-              7일 평균 {fmt(s.avg7)}h · n={s.n7}
-            </span>
-          </div>
-          <div className="text-[13px] tabular-nums mb-2" style={{ color: "var(--color-muted)" }}>
-            취침 {fmt(s.bedtime)} → 기상 {fmt(s.waketime)}
-          </div>
-          {s.hours ? (
-            <div className="flex h-3 rounded-full overflow-hidden">
-              <div style={{ width: `${((s.deep || 0) / s.hours) * 100}%`, background: "#2c5cb8" }} />
-              <div style={{ width: `${((s.core || 0) / s.hours) * 100}%`, background: "#8fb4e8" }} />
-              <div style={{ width: `${((s.rem || 0) / s.hours) * 100}%`, background: "#c4d8f5" }} />
-              <div className="flex-1" style={{ background: "var(--color-rule)" }} />
-            </div>
-          ) : null}
-        </Card>
-
-        {/* 심박·HRV (결과) */}
-        <Card title="안정시 심박 · HRV — 결과">
-          <div className="grid grid-cols-2 gap-3">
-            {[
-              { k: "심박", d: t.rhr, unit: "bpm", lowerBetter: true },
-              { k: "HRV", d: t.hrv, unit: "ms", lowerBetter: false },
-            ].map(({ k, d, unit, lowerBetter }) => {
-              const delta = d?.value != null && d?.avg7 != null ? Math.round((d.value - d.avg7) * 10) / 10 : null;
-              const good = delta !== null && (lowerBetter ? delta < 0 : delta > 0);
-              return (
-                <div key={k}>
-                  <div className="text-[11px]" style={{ color: "var(--color-muted)" }}>{k}</div>
-                  <div className="text-3xl font-bold tabular-nums">
-                    {fmt(d?.value)} <span className="text-[12px] font-normal" style={{ color: "var(--color-muted)" }}>{unit}</span>
-                  </div>
-                  {delta !== null && (
-                    <div className="text-[12px] tabular-nums font-semibold"
-                      style={{ color: good ? "#3a7d3a" : "#b06000" }}>
-                      {delta > 0 ? "+" : ""}{delta} vs 7일 <span className="font-normal" style={{ color: "var(--color-muted)" }}>({d.avg7}, n={d.n7})</span>
-                    </div>
-                  )}
-                </div>
-              );
-            })}
-          </div>
-        </Card>
-      </div>
-
-      {/* 이번주 */}
-      <Card title={`이번주 (${w.start ?? "—"}~) · 막대=수면 · ●달리기 ▲근력 · 숫자=심박`}>
-        <div className="grid grid-cols-7 gap-2 text-center mb-3">
-          {(w.days ?? []).map((d: Dict) => (
-            <div key={d.date}>
-              <div className="text-[12px] font-semibold tabular-nums h-5">{d.rhr ?? ""}</div>
-              <div className="h-16 flex items-end justify-center">
-                <div className="w-4 rounded-t"
-                  style={{
-                    height: d.sleep ? `${Math.min(64, (d.sleep / 9) * 64)}px` : "3px",
-                    background: d.sleep === null ? "var(--color-rule)" : d.sleep < 5 ? "#b06000" : "#5588d4",
-                  }} />
-              </div>
-              <div className="text-[10px] h-4">
-                {d.run && <span style={{ color: "#2c5cb8" }}>●</span>}
-                {d.strength && <span>▲</span>}
-              </div>
-              <div className="text-[11px]" style={{ color: "var(--color-muted)" }}>{d.dow}</div>
-            </div>
-          ))}
-        </div>
-        {w.totals && (
-          <div className="flex gap-5 text-[12px] tabular-nums" style={{ color: "var(--color-muted)" }}>
-            <span>달리기 <b style={{ color: "var(--color-ink)" }}>{w.totals.run_days}일</b></span>
-            <span>5h 미만 <b style={{ color: w.totals.short_nights > 0 ? "#b06000" : "var(--color-ink)" }}>{w.totals.short_nights}일</b></span>
-            <span>근력 <b style={{ color: "var(--color-ink)" }}>{w.totals.strength_days}일</b></span>
-            <span>심박 평균 <b style={{ color: "var(--color-ink)" }}>{w.totals.rhr_avg ?? "—"}</b> (n={w.totals.rhr_n})</span>
-          </div>
+        {data.today_comment && (
+          <p className="mt-2 text-[13px] leading-relaxed" style={{ color: "#e8e6e0" }}>{data.today_comment}</p>
         )}
-      </Card>
+        <div className="mt-3"><Strip days={days} /></div>
+        <p className="mt-1 text-[10px]" style={{ color: "#8a8880" }}>
+          막대 = 잠(14일) · 점 = 하루기록 있는 날. 하루기록(녹음)이 1차, 워치는 교차 확인.
+        </p>
+      </section>
 
-      <div className="h-3" />
-
-      {/* 이번달 히트맵 + 추세 */}
-      <div className="grid sm:grid-cols-2 gap-3">
-        <Card title={`${m.month ?? ""} · 색=수면시간 · ●달리기 ▲근력`}>
-          <div className="grid grid-cols-7 gap-1">
-            {["월", "화", "수", "목", "금", "토", "일"].map((d) => (
-              <div key={d} className="text-center text-[10px]" style={{ color: "var(--color-rule)" }}>{d}</div>
-            ))}
-            {Array.from({ length: m.days?.[0]?.dow ?? 0 }).map((_, i) => <div key={`p${i}`} />)}
-            {(m.days ?? []).map((d: Dict) => {
-              const darkbg = d.sleep >= 6;
-              return (
-                <div key={d.date} title={`${d.date} 수면 ${d.sleep ?? "—"}h`}
-                  className="aspect-square rounded relative text-[9px]"
-                  style={{
-                    background: d.future ? "transparent" : sleepColor(d.sleep),
-                    border: `1px solid ${d.future ? "var(--color-rule)" : d.sleep == null ? "var(--color-rule)" : "transparent"}`,
-                    borderStyle: d.future ? "dashed" : "solid",
-                  }}>
-                  <span className="absolute top-0 left-1 tabular-nums"
-                    style={{ color: darkbg ? "rgba(255,255,255,.8)" : "var(--color-muted)" }}>{d.day}</span>
-                  <span className="absolute bottom-0 right-0.5" style={{ color: darkbg ? "#fff" : "#2c5cb8" }}>
-                    {d.run ? "●" : ""}{d.strength ? "▲" : ""}
-                  </span>
-                </div>
-              );
-            })}
-          </div>
-        </Card>
-        <Card title="90일 추세 · 선=심박 7일 평균 · 막대=달리기">
-          <TrendChart trend={m.trend ?? []} />
-        </Card>
-      </div>
-
-      <div className="h-3" />
-
-      {/* 오늘 활동 + 식단 (실시간, 매시간 갱신) */}
-      <div className="grid sm:grid-cols-2 gap-3 mb-3">
-        <Card title="오늘 활동 (매시간 갱신 — 진행 중)">
-          <div className="grid grid-cols-4 gap-2 text-center">
-            {[
-              { k: "걸음", v: ins.activity?.steps?.toLocaleString?.("ko-KR") },
-              { k: "운동(분)", v: ins.activity?.exercise_min },
-              { k: "햇빛(분)", v: ins.activity?.daylight_min },
-              { k: "활동 kcal", v: ins.activity?.active_kcal },
-            ].map(({ k, v }) => (
-              <div key={k}>
-                <div className="text-xl font-bold tabular-nums">{v ?? <Dash />}</div>
-                <div className="text-[11px]" style={{ color: "var(--color-muted)" }}>{k}</div>
-              </div>
-            ))}
-          </div>
-        </Card>
-        <Card title="오늘 식단 (봇에 사진 보내면 기록됨)">
-          {ins.meals?.length ? (
-            <ul className="text-[13px] space-y-1">
-              {ins.meals.map((meal: Dict) => (
-                <li key={meal.ts}>
-                  <b>{meal.meal_type}</b>{" "}
-                  <span style={{ color: "var(--color-muted)" }}>{meal.summary || "기록됨"}</span>
-                </li>
-              ))}
-            </ul>
-          ) : (
-            <p className="text-[13px]" style={{ color: "var(--color-muted)" }}>
-              아직 기록 없음 — 텔레그램 봇에 음식 사진 + "아침/점심/저녁" 캡션
-            </p>
-          )}
-        </Card>
-      </div>
-
-      {/* 한나 실측 인사이트 — 원지표 관계 (합성점수 아님) */}
-      <div className="grid sm:grid-cols-2 gap-3 mb-3">
-        <Card title="수면 길이 → 다음날 심박 (최근 60일 실측)">
-          {(ins.sleep_to_rhr ?? []).map((b: Dict) => {
-            const best = b.rhr !== null && b.rhr === Math.min(...(ins.sleep_to_rhr ?? []).filter((x: Dict) => x.rhr !== null).map((x: Dict) => x.rhr));
-            return (
-              <div key={b.bucket} className="flex items-center gap-2 py-1 text-[13px] tabular-nums">
-                <span className="w-12" style={{ color: "var(--color-muted)" }}>{b.bucket}</span>
-                <div className="flex-1 h-4 rounded"
-                  style={{ background: best ? "#3a7d3a" : "#8fb4e8", opacity: b.n ? 1 : 0.2,
-                    width: b.rhr ? `${((b.rhr - 50) / 20) * 100}%` : "2%", maxWidth: "70%" }} />
-                <b>{b.rhr ?? "—"}</b>
-                <span className="text-[11px]" style={{ color: "var(--color-muted)" }}>n={b.n}</span>
-              </div>
-            );
-          })}
-          <p className="text-[11px] mt-1" style={{ color: "var(--color-muted)" }}>
-            한나 몸은 6~7시간에서 심박이 가장 낮다. 더 잔다고 더 내려가지 않음.
-          </p>
-        </Card>
-        <Card title={`월 달리기 일수 → 그달 심박 (15개월 실측) · 지금 롤링 30일 = ${ins.run30 ?? "—"}일`}>
-          {(ins.run_to_rhr ?? []).map((b: Dict) => {
-            const cur = ins.run30 >= 10 ? "10일+" : ins.run30 >= 6 ? "6-9일" : ins.run30 >= 1 ? "1-5일" : "0일";
-            const isCur = b.bucket === cur;
-            return (
-              <div key={b.bucket} className="flex items-center gap-2 py-1 text-[13px] tabular-nums"
-                style={{ fontWeight: isCur ? 700 : 400 }}>
-                <span className="w-12" style={{ color: isCur ? "var(--color-ink)" : "var(--color-muted)" }}>
-                  {b.bucket}{isCur ? " ←" : ""}</span>
-                <div className="flex-1 h-4 rounded"
-                  style={{ background: b.bucket === "0일" ? "#b3261e" : "#5588d4", opacity: b.n ? 1 : 0.15,
-                    width: b.rhr ? `${((b.rhr - 55) / 15) * 100}%` : "2%", maxWidth: "70%" }} />
-                <b>{b.rhr ?? "—"}</b>
-                <span className="text-[11px]" style={{ color: "var(--color-muted)" }}>n={b.n}</span>
-              </div>
-            );
-          })}
-          <p className="text-[11px] mt-1" style={{ color: "var(--color-muted)" }}>
-            0일이 되면 두 달 만에 72까지 간 적 있음(2025-12). 하한은 월 4일.
-          </p>
-        </Card>
-      </div>
-
-      {/* 리듬·주기·보조지표 */}
-      <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 mb-3">
-        <Stat label="기상시각 흔들림 (14일)" value={fmt(ins.variability?.wake_sd_min, "분")}
-          goal={`취침 ${ins.variability?.bed_sd_min ?? "—"}분 · 장기 평균 236분`}
-          tone={ins.variability?.wake_sd_min > 120 ? "warn" : ins.variability?.wake_sd_min <= 75 ? "good" : undefined} />
-        <Stat label="생리 예정"
-          value={ins.cycle?.dday && ins.cycle?.median
-            ? (ins.cycle.median - ins.cycle.dday >= 0 ? `${ins.cycle.median - ins.cycle.dday}일 뒤` : "예정일 지남")
-            : "—"}
-          goal={`주기 ${ins.cycle?.dday ?? "—"}일째 · 중앙값 ${ins.cycle?.median ?? "—"}일`}
-          tone={ins.cycle?.dday && ins.cycle?.median && ins.cycle.median - ins.cycle.dday <= 3 ? "warn" : undefined} />
-        <Stat label="VO2max" value={fmt(ins.aux?.vo2max?.value)}
-          goal={ins.aux?.vo2max?.date ?? "—"} />
-        <Stat label="심박 회복(1분)" value={fmt(ins.aux?.hr_recovery?.value)}
-          goal={ins.aux?.hr_recovery?.date ?? "—"} />
-      </div>
-
-      {/* ── 2년의 스토리 ── */}
-      <div className="grid grid-cols-2 gap-3 mb-3">
-        <div className="rounded-xl p-4" style={{ background: "#eef4ea", border: "1px solid var(--color-rule)" }}>
-          <div className="text-[11px]" style={{ color: "var(--color-muted)" }}>최고의 달</div>
-          <div className="text-xl font-bold tabular-nums" style={{ color: "#3a7d3a" }}>
-            {st.best?.ym ?? "—"} · 심박 {st.best?.rhr ?? "—"}
-          </div>
-          <div className="text-[11px]" style={{ color: "var(--color-muted)" }}>
-            달리기 {st.best?.run_days}일 (n={st.best?.n})
-          </div>
-        </div>
-        <div className="rounded-xl p-4" style={{ background: "#f7e9e7", border: "1px solid var(--color-rule)" }}>
-          <div className="text-[11px]" style={{ color: "var(--color-muted)" }}>최악의 달</div>
-          <div className="text-xl font-bold tabular-nums" style={{ color: "#b3261e" }}>
-            {st.worst?.ym ?? "—"} · 심박 {st.worst?.rhr ?? "—"}
-          </div>
-          <div className="text-[11px]" style={{ color: "var(--color-muted)" }}>
-            달리기 {st.worst?.run_days}일 — 서서히 무너졌고 알아채지 못했다
-          </div>
-        </div>
-      </div>
-
-      <Card title="2년의 스토리 · 선=월평균 심박 · 막대=그달 달리기 일수 (2024-01~)">
-        <StoryChart monthly={st.monthly ?? []} />
-      </Card>
-
-      <div className="h-3" />
-
-      <div className="grid sm:grid-cols-2 gap-3">
-        <Card title="요일 패턴 (최근 180일) · 그 요일 밤의 수면 / 그날 심박">
-          <div className="grid grid-cols-7 gap-1 text-center text-[12px] tabular-nums">
-            {(st.weekday ?? []).map((d: Dict) => {
-              const worstSleep = d.sleep !== null && d.sleep === Math.min(...(st.weekday ?? []).filter((x: Dict) => x.sleep !== null).map((x: Dict) => x.sleep));
-              return (
-                <div key={d.dow} className="rounded-lg py-2"
-                  style={{ background: worstSleep ? "#f7e9e7" : "transparent" }}>
-                  <div style={{ color: "var(--color-muted)" }}>{d.dow}</div>
-                  <div className="font-bold">{d.sleep ?? "—"}<span className="text-[9px]">h</span></div>
-                  <div style={{ color: "var(--color-muted)" }}>{d.rhr ?? "—"}</div>
-                </div>
-              );
-            })}
-          </div>
-          <p className="text-[11px] mt-2" style={{ color: "var(--color-muted)" }}>
-            빨간 칸 = 수면이 가장 무너지는 요일. 수면은 n≈26, 심박은 그날 기준.
-          </p>
-        </Card>
-        <Card title="생리 주기 단계별 심박·HRV (전체 실측) — 표시만, 보정 안 함">
-          <table className="w-full text-[12px] tabular-nums">
-            <thead>
-              <tr style={{ color: "var(--color-muted)" }}>
-                <th className="text-left font-normal pb-1">단계</th>
-                <th className="text-right font-normal">심박</th>
-                <th className="text-right font-normal">HRV</th>
-              </tr>
-            </thead>
-            <tbody>
-              {(st.phases ?? []).map((p: Dict) => (
-                <tr key={p.phase} style={{ borderTop: "1px solid var(--color-rule)" }}>
-                  <td className="py-1">{p.phase}</td>
-                  <td className="text-right font-semibold">{p.rhr ?? "—"} <span className="text-[10px] font-normal" style={{ color: "var(--color-muted)" }}>n={p.rhr_n}</span></td>
-                  <td className="text-right font-semibold">{p.hrv ?? "—"} <span className="text-[10px] font-normal" style={{ color: "var(--color-muted)" }}>n={p.hrv_n}</span></td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-          <p className="text-[11px] mt-2" style={{ color: "var(--color-muted)" }}>
-            단계 간 최대 차이는 달리기 효과의 1/3 수준 — 그래서 baseline 보정을 안 한다.
-          </p>
-        </Card>
+      {/* 하루 카드 — 원장+해석+워치+날씨 병합, 최신부터 */}
+      <div className="flex flex-col gap-2.5">
+        {days.map((d) => <DayCard key={d.date} day={d} />)}
       </div>
     </main>
-  );
-}
-
-function StoryChart({ monthly }: { monthly: Dict[] }) {
-  if (!monthly?.length) return <Dash />;
-  const W = 680, H = 190, TOP = 10, BOT = 34, L = 30;
-  const vals = monthly.map((m) => m.rhr);
-  const lo = Math.floor(Math.min(...vals) - 2);
-  const hi = Math.ceil(Math.max(...vals) + 2);
-  const x = (i: number) => L + (i / Math.max(1, monthly.length - 1)) * (W - L - 8);
-  const y = (v: number) => TOP + (1 - (v - lo) / (hi - lo)) * (H - TOP - BOT - 22);
-  const line = monthly.map((m, i) => `${x(i).toFixed(1)},${y(m.rhr).toFixed(1)}`).join(" ");
-  const maxRun = Math.max(...monthly.map((m) => m.run_days), 1);
-  return (
-    <svg viewBox={`0 0 ${W} ${H}`} className="w-full" role="img" aria-label="2년 월별 심박과 달리기">
-      <line x1={L} x2={W - 8} y1={y(58)} y2={y(58)} stroke="#3a7d3a" strokeWidth={1} strokeDasharray="4 3" />
-      <text x={0} y={y(58) + 3.5} fontSize={10} fill="var(--color-muted)">58</text>
-      {monthly.map((m, i) => (
-        <rect key={m.ym} x={x(i) - 4} width={8}
-          y={H - BOT - (m.run_days / maxRun) * 26} height={(m.run_days / maxRun) * 26}
-          fill={m.run_days === 0 ? "#b3261e" : "#5588d4"} rx={1.5} />
-      ))}
-      <polyline points={line} fill="none" stroke="var(--color-ink)" strokeWidth={2}
-        strokeLinejoin="round" strokeLinecap="round" />
-      {monthly.map((m, i) =>
-        m.ym.endsWith("-01") || i === 0 || i === monthly.length - 1 ? (
-          <text key={`l${m.ym}`} x={x(i)} y={H - 4} fontSize={9} fill="var(--color-muted)"
-            textAnchor="middle">{m.ym.slice(2).replace("-", ".")}</text>
-        ) : null)}
-      <text x={W - 8} y={y(monthly[monthly.length - 1].rhr) - 6} fontSize={10}
-        textAnchor="end" fontWeight={700} fill="var(--color-ink)">
-        {monthly[monthly.length - 1].rhr}
-      </text>
-    </svg>
   );
 }
