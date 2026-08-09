@@ -42,6 +42,7 @@ interface DayRow {
 interface HealthDaysResponse {
   days?: DayRow[];
   today_comment?: string;
+  today_comment_date?: string;
   error?: string;
 }
 
@@ -130,7 +131,7 @@ function DayCard({ day, defaultOpen }: { day: DayRow; defaultOpen: boolean }) {
         )}
         <Row label="워치">
           <span className="tabular-nums flex flex-wrap gap-x-3 gap-y-0.5">
-            <span>잠 <Num v={watch?.sleep} suffix="h" digits={1} /></span>
+            <span>밤잠 <Num v={watch?.sleep} suffix="h" digits={1} /></span>
             <span>심박 <Num v={watch?.rhr} /></span>
             <span>HRV <Num v={watch?.hrv} /></span>
             <span>걸음 <Num v={watch?.steps} /></span>
@@ -177,7 +178,9 @@ export default function HealthClient({ data }: { data: HealthDaysResponse }) {
   }
   const days = data.days;
   const today = days[0];
-  const firstLedgerDate = days.find((d) => d.ledger?.has_interp)?.date;
+  // 오늘은 아직 진행 중(녹음 미업로드) — 목록에는 어제부터. 오늘은 위 검정 카드가 담당.
+  const pastDays = days.slice(1);
+  const firstLedgerDate = pastDays.find((d) => d.ledger?.has_interp)?.date;
 
   return (
     <main className="max-w-page mx-auto px-5 sm:px-8 py-6">
@@ -200,12 +203,13 @@ export default function HealthClient({ data }: { data: HealthDaysResponse }) {
           <p className="mt-2.5 text-[13.5px] leading-relaxed" style={{ color: "#e8e6e0" }}>{data.today_comment}</p>
         )}
         <p className="mt-2 text-[10.5px]" style={{ color: "#8a8880" }}>
-          하루기록(녹음)이 1차 소스, 워치는 교차 확인 — 매일 새벽 5시 어제 하루가 카드로 쌓임.
+          {data.today_comment_date ? `코치 한 줄은 ${data.today_comment_date.slice(5).replace("-", "/")} 아침 기준 · ` : ""}
+          밤잠 = 그 날짜의 밤(다음날 아침 기상) · — = 워치에서 아직 안 넘어옴 · 새벽 5시 어제 하루가 카드로 쌓임.
         </p>
       </section>
 
       <div className="flex flex-col gap-3">
-        {days.map((d) => (
+        {pastDays.map((d) => (
           <DayCard key={d.date} day={d} defaultOpen={d.date === firstLedgerDate} />
         ))}
       </div>
