@@ -270,7 +270,7 @@ export interface YouTubeVideo {
   views: number;
   views_change_1d: number | null;
   duration_sec: number | null;
-  format: "숏폼" | "롱폼";
+  format: "숏폼" | "미드폼" | "롱폼";
 }
 
 export interface YouTubeSummary {
@@ -297,7 +297,7 @@ export interface YouTubeUpload {
   id: string;
   title: string | null;
   upload_date: string;
-  format: "숏폼" | "롱폼";
+  format: "숏폼" | "미드폼" | "롱폼";
   topic: "요리" | "교육";
   duration_sec: number | null;
   views: number | null;
@@ -309,7 +309,7 @@ export interface YouTubeUpload {
 }
 
 export interface YouTubeMatrixCell {
-  format: "숏폼" | "롱폼";
+  format: "숏폼" | "미드폼" | "롱폼";
   topic: "요리" | "교육";
   n: number;
   median: number;

@@ -59,7 +59,7 @@ export default function YouTubeClient({
     <main className="mx-auto max-w-3xl px-4 pb-20">
       <header className="flex items-end justify-between pt-6 pb-4">
         <div>
-          <h1 className="text-xl font-semibold">유튜브 숏폼</h1>
+          <h1 className="text-xl font-semibold">유튜브 — 요리 숏폼·미드폼</h1>
           <p className="text-[12px] mt-0.5" style={{ color: "var(--color-muted)" }}>
             {d.display_name} · 지표 {d.date} · 달력은{" "}
             <a href="/dashboard/uploads" className="underline">업로드 탭</a>
@@ -183,6 +183,11 @@ function VideoCard({ v }: { v: YouTubeUpload }) {
                 style={{ backgroundColor: vs.bg, color: vs.fg, border: vs.border ?? "none" }}
               >
                 {v.verdict}
+              </span>
+            )}
+            {v.format === "미드폼" && (
+              <span className="text-[9px] px-1.5 py-0.5 rounded-full font-bold text-white shrink-0" style={{ backgroundColor: "#7A5AC0" }}>
+                미드폼
               </span>
             )}
             <span className="truncate font-medium">{v.title}</span>
