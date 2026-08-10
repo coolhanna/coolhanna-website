@@ -126,6 +126,13 @@ export default function LifeDayClient({ data, days }: { data: LifeDayResponse | 
   const secondTimeline = timeline.slice(timelineSplit);
   const conversations = data.conversations || [];
   const verbatimQuotes = data.verbatim_quotes || [];
+  const speakerOrder = ["한나", "혜린", "남편", "타인", "화자 확인 필요"];
+  const quoteGroups = Object.entries(Object.groupBy(verbatimQuotes, (item) => item.speaker || "화자 확인 필요"))
+    .sort(([left], [right]) => {
+      const leftIndex = speakerOrder.indexOf(left);
+      const rightIndex = speakerOrder.indexOf(right);
+      return (leftIndex < 0 ? speakerOrder.length : leftIndex) - (rightIndex < 0 ? speakerOrder.length : rightIndex);
+    });
   const intake = data.intake || [];
   const signals = data.health_signals || [];
   const completed = data.completed || [];
@@ -169,6 +176,7 @@ export default function LifeDayClient({ data, days }: { data: LifeDayResponse | 
               <p className="text-[11px] sm:text-xs text-muted leading-relaxed mt-2.5 max-w-4xl">{data.summary}</p>
             </div>
             <div className="flex items-center gap-2 self-start">
+              <button type="button" onClick={() => window.location.reload()} aria-label="최신 기록 새로고침" className="text-[11px] px-2.5 py-1.5 rounded-full whitespace-nowrap" style={{ background: "var(--secondary-soft)", color: "var(--secondary-text)", border: "1px solid var(--border)" }}>↻ 새로고침</button>
               {data.source_note && <a href={`obsidian://open?vault=${encodeURIComponent("Obsidian Vault")}&file=${encodeURIComponent(data.source_note)}`} className="text-[11px] px-2.5 py-1.5 rounded-full whitespace-nowrap" style={{ background: "var(--bg-card-soft)", color: "var(--accent-text)", border: "1px solid var(--border)" }}>원본 기록 열기</a>}
               <span className="text-[11px] px-2.5 py-1.5 rounded-full whitespace-nowrap" style={{ background: "var(--accent-soft)", color: "var(--accent-text)" }}>{statusLabel}</span>
             </div>
@@ -221,12 +229,17 @@ export default function LifeDayClient({ data, days }: { data: LifeDayResponse | 
 
         {verbatimQuotes.length > 0 && (
           <Section title="그날 실제로 나온 말">
-            <div className="grid grid-cols-1 lg:grid-cols-2 gap-x-5 gap-y-0">
-              {verbatimQuotes.map((item, index) => (
-                <article key={`${item.time}-${index}`} className="grid grid-cols-[74px_1fr] gap-3 py-2.5" style={{ borderBottom: "1px solid var(--border)" }}>
-                  <div><p className="text-[10px] text-muted">{koreanTime(item.time)}</p><p className="text-[10px] font-semibold mt-1" style={{ color: item.speaker === "한나" ? "var(--accent-text)" : "var(--secondary-text)" }}>{item.speaker}</p></div>
-                  <blockquote className="text-xs font-medium leading-relaxed" style={{ borderLeft: `3px solid ${item.speaker === "한나" ? "var(--accent)" : "var(--secondary)"}`, paddingLeft: "10px" }}>“{item.quote}”</blockquote>
-                </article>
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-2.5">
+              {quoteGroups.map(([speaker, items], groupIndex) => (
+                <div key={speaker} className="rounded-xl p-3" style={{ background: groupIndex % 3 === 1 ? "var(--secondary-soft)" : groupIndex % 3 === 2 ? "var(--danger-soft)" : "var(--bg-card-soft)", border: "1px solid var(--border)" }}>
+                  <div className="flex items-center justify-between gap-2 pb-1.5"><h3 className="text-xs font-semibold">{speaker}</h3><span className="text-[10px] text-muted">{items?.length || 0}문장</span></div>
+                  {(items || []).sort((left, right) => timeValue(left.time) - timeValue(right.time)).map((item, index) => (
+                    <article key={`${item.time}-${index}`} className="grid grid-cols-[64px_1fr] gap-2.5 py-2" style={{ borderTop: "1px solid var(--border)" }}>
+                      <p className="text-[10px] text-muted">{koreanTime(item.time)}</p>
+                      <blockquote className="text-xs font-medium leading-relaxed">“{item.quote}”</blockquote>
+                    </article>
+                  ))}
+                </div>
               ))}
             </div>
           </Section>
