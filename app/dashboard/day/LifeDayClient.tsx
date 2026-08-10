@@ -6,8 +6,8 @@ import type { LifeDayResponse } from "@/lib/dashboard-api";
 
 function Section({ title, children }: { title: string; children: React.ReactNode }) {
   return (
-    <section className="rounded-2xl p-4" style={{ background: "var(--bg-card)", border: "1px solid var(--border)" }}>
-      <h2 className="text-sm font-semibold tracking-tight mb-3">{title}</h2>
+    <section className="rounded-2xl p-3 sm:p-4" style={{ background: "var(--bg-card)", border: "1px solid var(--border)" }}>
+      <h2 className="text-sm font-semibold tracking-tight mb-2.5">{title}</h2>
       {children}
     </section>
   );
@@ -34,26 +34,24 @@ function koreanTime(time: string) {
 
 function timeValue(time: string) {
   const parsed = parseTime(time);
-  return parsed ? parsed.hour * 60 + parsed.minuteNumber : Number.MAX_SAFE_INTEGER;
-}
-
-function hourValue(time: string) {
-  return parseTime(time)?.hour ?? 24;
+  if (!parsed) return Number.MAX_SAFE_INTEGER;
+  const minutes = parsed.hour * 60 + parsed.minuteNumber;
+  return parsed.hour < 6 ? minutes + 24 * 60 : minutes;
 }
 
 function TimelineColumn({ label, items }: { label: string; items: LifeDayResponse["timeline"] }) {
   const safeItems = items || [];
   return (
-    <div className="rounded-xl p-3 sm:p-4" style={{ background: "var(--bg-card-soft)", border: "1px solid var(--border)" }}>
-      <h3 className="text-[10px] font-semibold mb-3" style={{ color: "var(--accent-text)" }}>{label}</h3>
+    <div className="rounded-xl p-3" style={{ background: "var(--bg-card-soft)", border: "1px solid var(--border)" }}>
+      <h3 className="text-[10px] font-semibold mb-2.5" style={{ color: "var(--accent-text)" }}>{label}</h3>
       {safeItems.map((item, index) => (
-        <div key={`${item.time}-${item.title}`} className="grid grid-cols-[66px_12px_1fr] gap-2 min-h-[62px]">
+        <div key={`${item.time}-${item.title}`} className="grid grid-cols-[66px_12px_1fr] gap-2 min-h-[52px]">
           <span className="text-[10px] text-muted pt-px whitespace-nowrap">{koreanTime(item.time)}</span>
           <span className="relative flex justify-center">
             <span className="z-10 w-2 h-2 rounded-full mt-0.5" style={{ background: "var(--accent)" }} />
             {index < safeItems.length - 1 && <span className="absolute top-2.5 -bottom-0.5 w-px" style={{ background: "var(--border)" }} />}
           </span>
-          <div className="pb-3.5"><p className="text-xs font-medium leading-snug">{item.title}</p><p className="text-[11px] text-muted leading-relaxed mt-1">{item.detail}</p></div>
+          <div className="pb-2.5"><p className="text-xs font-medium leading-snug">{item.title}</p><p className="text-[11px] text-muted leading-relaxed mt-1">{item.detail}</p></div>
         </div>
       ))}
     </div>
@@ -115,16 +113,17 @@ export default function LifeDayClient({ data, days }: { data: LifeDayResponse | 
 
   const statusLabel = data.status === "feedback_applied" ? "피드백 반영" : data.status === "feedback_needed" ? "확인 필요" : "분석 기록";
   const timeline = [...(data.timeline || [])].sort((a, b) => timeValue(a.time) - timeValue(b.time));
-  const morningTimeline = timeline.filter((item) => hourValue(item.time) < 12);
-  const afternoonTimeline = timeline.filter((item) => hourValue(item.time) >= 12);
+  const dayTimeline = timeline.filter((item) => timeValue(item.time) < 21 * 60);
+  const nightTimeline = timeline.filter((item) => timeValue(item.time) >= 21 * 60);
   const conversations = data.conversations || [];
+  const verbatimQuotes = data.verbatim_quotes || [];
   const intake = data.intake || [];
   const signals = data.health_signals || [];
   const completed = data.completed || [];
   const pending = data.pending || [];
   const ideas = data.ideas || [];
   const shopping = data.shopping || [];
-  const questions = data.questions || [];
+  const questions = (data.questions || []).filter((question) => question.status !== "answered");
   const weather = data.weather;
   const activeDate = data.date;
 
@@ -150,17 +149,20 @@ export default function LifeDayClient({ data, days }: { data: LifeDayResponse | 
 
   return (
     <main className="dashboard-root min-h-screen bg-paper text-ink">
-      <div className="max-w-page mx-auto px-5 sm:px-8 py-6 space-y-4">
+      <div className="max-w-page mx-auto px-5 sm:px-8 py-5 space-y-3">
         <DayArchive days={days} activeDate={data.date} />
 
-        <section className="rounded-2xl p-4 sm:p-5" style={{ background: "var(--bg-card)", border: "1.5px solid var(--accent)", boxShadow: "0 2px 10px rgba(70,80,60,.04)" }}>
+        <section className="rounded-2xl p-3.5 sm:p-4" style={{ background: "var(--bg-card)", border: "1.5px solid var(--accent)", boxShadow: "0 2px 10px rgba(70,80,60,.04)" }}>
           <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-3">
             <div>
               <p className="text-[10px] text-muted mb-1.5">{data.date} · 생활녹음 {data.recording?.duration}</p>
               <h1 className="text-base sm:text-lg font-semibold tracking-tight leading-relaxed max-w-4xl">{data.headline}</h1>
               <p className="text-[11px] sm:text-xs text-muted leading-relaxed mt-2.5 max-w-4xl">{data.summary}</p>
             </div>
-            <span className="text-[11px] px-2.5 py-1.5 rounded-full whitespace-nowrap self-start" style={{ background: "var(--accent-soft)", color: "var(--accent-text)" }}>{statusLabel}</span>
+            <div className="flex items-center gap-2 self-start">
+              {data.source_note && <a href={`obsidian://open?vault=${encodeURIComponent("Obsidian Vault")}&file=${encodeURIComponent(data.source_note)}`} className="text-[11px] px-2.5 py-1.5 rounded-full whitespace-nowrap" style={{ background: "var(--bg-card-soft)", color: "var(--accent-text)", border: "1px solid var(--border)" }}>원본 기록 열기</a>}
+              <span className="text-[11px] px-2.5 py-1.5 rounded-full whitespace-nowrap" style={{ background: "var(--accent-soft)", color: "var(--accent-text)" }}>{statusLabel}</span>
+            </div>
           </div>
           <div className="grid grid-cols-2 lg:grid-cols-4 gap-2 mt-4">
             {[
@@ -208,10 +210,25 @@ export default function LifeDayClient({ data, days }: { data: LifeDayResponse | 
           </Section>
         )}
 
+        {verbatimQuotes.length > 0 && (
+          <Section title="오늘 한나가 실제로 한 중요한 말">
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-2">
+              {verbatimQuotes.map((item, index) => (
+                <article key={`${item.time}-${index}`} className="rounded-xl p-3" style={{ background: "var(--bg-card-soft)", border: "1px solid var(--border)" }}>
+                  <div className="flex items-center justify-between gap-2"><span className="text-[10px] text-muted">{koreanTime(item.time)}</span>{item.repeated && <span className="text-[9px] rounded-full px-2 py-0.5" style={{ background: "var(--accent-soft)", color: "var(--accent-text)" }}>반복해서 나온 관점</span>}</div>
+                  <blockquote className="text-sm font-medium leading-relaxed mt-2">“{item.quote}”</blockquote>
+                  {item.context && <p className="text-[11px] leading-relaxed text-muted mt-2">{item.context}</p>}
+                  {item.significance && <p className="text-[10px] leading-relaxed mt-1.5" style={{ color: "var(--accent-text)" }}>기억할 이유 · {item.significance}</p>}
+                </article>
+              ))}
+            </div>
+          </Section>
+        )}
+
         <Section title="시간대별 하루">
           <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-            <TimelineColumn label="오전" items={morningTimeline} />
-            <TimelineColumn label="오후" items={afternoonTimeline} />
+            <TimelineColumn label="오전 9시~오후 9시" items={dayTimeline} />
+            <TimelineColumn label="오후 9시~다음날 새벽" items={nightTimeline} />
           </div>
         </Section>
 
@@ -233,17 +250,17 @@ export default function LifeDayClient({ data, days }: { data: LifeDayResponse | 
         </div>
 
         <Section title="사람별 대화 · 맥락 · 한나의 관점">
-          <div className="space-y-3">
+          <div className="space-y-2">
             {conversations.map((conversation, index) => {
               const key = `${conversation.person}-${conversation.topic}-${index}`;
               const isOpen = expanded === key;
               return (
-                <button key={key} type="button" aria-expanded={isOpen} onClick={() => setExpanded(isOpen ? null : key)} className="w-full rounded-xl p-4 text-left transition" style={{ border: `1px solid ${isOpen ? "var(--accent)" : "var(--border)"}`, background: isOpen ? "var(--accent-soft)" : "var(--bg-card)" }}>
+                <button key={key} type="button" aria-expanded={isOpen} onClick={() => setExpanded(isOpen ? null : key)} className="w-full rounded-xl p-3 text-left transition" style={{ border: `1px solid ${isOpen ? "var(--accent)" : "var(--border)"}`, background: isOpen ? "var(--accent-soft)" : "var(--bg-card)" }}>
                   <div className="flex flex-wrap items-baseline gap-2"><span className="text-[11px] px-2 py-0.5 rounded-full" style={{ background: "var(--bg-card-soft)", color: "var(--text-secondary)" }}>{conversation.person}</span><strong className="text-sm">{conversation.topic}</strong></div>
                   <p className="text-xs leading-relaxed mt-2.5">{conversation.viewpoint}</p>
                   <p className="text-xs leading-relaxed mt-2" style={{ color: "var(--accent-text)" }}>“{conversation.quote}”</p>
                   <p className="text-[10px] text-muted mt-3">{isOpen ? "접기" : "상황과 관계 맥락 펼치기"}</p>
-                  {isOpen && <p className="text-xs leading-relaxed mt-3 pt-3" style={{ borderTop: "1px solid var(--border)" }}>{conversation.detail}</p>}
+                  {isOpen && <p className="text-xs leading-6 whitespace-pre-line mt-3 pt-3" style={{ borderTop: "1px solid var(--border)" }}>{conversation.detail}</p>}
                 </button>
               );
             })}

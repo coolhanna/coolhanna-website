@@ -94,6 +94,14 @@ export interface LifeDayConversation {
   detail: string;
 }
 
+export interface LifeDayVerbatimQuote {
+  time: string;
+  quote: string;
+  context: string;
+  significance: string;
+  repeated: boolean;
+}
+
 export interface LifeDayResponse {
   available: boolean;
   date: string;
@@ -111,6 +119,7 @@ export interface LifeDayResponse {
   intake?: Array<{ label: string; value: string }>;
   health_signals?: Array<{ title: string; detail: string; level: string }>;
   conversations?: LifeDayConversation[];
+  verbatim_quotes?: LifeDayVerbatimQuote[];
   completed?: string[];
   pending?: string[];
   ideas?: string[];
@@ -134,6 +143,7 @@ export interface LifeDayResponse {
     answered_at: string;
   }>;
   source_note?: string;
+  source_audio_folder?: string;
 }
 
 export interface LifeDaysResponse {
