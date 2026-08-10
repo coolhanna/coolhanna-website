@@ -96,6 +96,7 @@ export interface LifeDayConversation {
 
 export interface LifeDayVerbatimQuote {
   time: string;
+  speaker: string;
   quote: string;
   context: string;
   significance: string;

@@ -39,6 +39,14 @@ function timeValue(time: string) {
   return parsed.hour < 6 ? minutes + 24 * 60 : minutes;
 }
 
+function timelineRangeLabel(items: LifeDayResponse["timeline"], fallback: string) {
+  if (!items?.length) return fallback;
+  const first = items[0];
+  const last = items[items.length - 1];
+  const lastLabel = timeValue(last.time) >= 24 * 60 ? `다음날 ${koreanTime(last.time)}` : koreanTime(last.time);
+  return `${koreanTime(first.time)}~${lastLabel}`;
+}
+
 function TimelineColumn({ label, items }: { label: string; items: LifeDayResponse["timeline"] }) {
   const safeItems = items || [];
   return (
@@ -113,8 +121,9 @@ export default function LifeDayClient({ data, days }: { data: LifeDayResponse | 
 
   const statusLabel = data.status === "feedback_applied" ? "피드백 반영" : data.status === "feedback_needed" ? "확인 필요" : "분석 기록";
   const timeline = [...(data.timeline || [])].sort((a, b) => timeValue(a.time) - timeValue(b.time));
-  const dayTimeline = timeline.filter((item) => timeValue(item.time) < 21 * 60);
-  const nightTimeline = timeline.filter((item) => timeValue(item.time) >= 21 * 60);
+  const timelineSplit = Math.ceil(timeline.length / 2);
+  const firstTimeline = timeline.slice(0, timelineSplit);
+  const secondTimeline = timeline.slice(timelineSplit);
   const conversations = data.conversations || [];
   const verbatimQuotes = data.verbatim_quotes || [];
   const intake = data.intake || [];
@@ -188,10 +197,10 @@ export default function LifeDayClient({ data, days }: { data: LifeDayResponse | 
 
         {questions.length > 0 && (
           <Section title="한나 확인">
-            <div className="space-y-3">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-2.5">
               {questions.map((question, index) => (
-                <div key={question.id} className="rounded-xl p-3" style={{ background: "var(--bg-card-soft)", border: "1px solid var(--border)" }}>
-                  <p className="text-[10px] text-muted">{index + 1} · {question.category}</p>
+                <div key={question.id} className="rounded-xl p-3" style={{ background: index % 3 === 1 ? "var(--secondary-soft)" : index % 3 === 2 ? "var(--danger-soft)" : "var(--bg-card-soft)", border: "1px solid var(--border)" }}>
+                  <p className="text-[10px] font-semibold" style={{ color: index % 3 === 1 ? "var(--secondary-text)" : index % 3 === 2 ? "var(--danger-text)" : "var(--accent-text)" }}>{index + 1} · {question.category}</p>
                   <p className="text-xs font-medium mt-1">{question.question}</p>
                   {question.status === "answered" ? (
                     <p className="text-[11px] leading-relaxed mt-2" style={{ color: "var(--accent-text)" }}>한나 답변 · {question.answer}</p>
@@ -211,14 +220,12 @@ export default function LifeDayClient({ data, days }: { data: LifeDayResponse | 
         )}
 
         {verbatimQuotes.length > 0 && (
-          <Section title="오늘 한나가 실제로 한 중요한 말">
-            <div className="grid grid-cols-1 lg:grid-cols-2 gap-2">
+          <Section title="그날 실제로 나온 말">
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-x-5 gap-y-0">
               {verbatimQuotes.map((item, index) => (
-                <article key={`${item.time}-${index}`} className="rounded-xl p-3" style={{ background: "var(--bg-card-soft)", border: "1px solid var(--border)" }}>
-                  <div className="flex items-center justify-between gap-2"><span className="text-[10px] text-muted">{koreanTime(item.time)}</span>{item.repeated && <span className="text-[9px] rounded-full px-2 py-0.5" style={{ background: "var(--accent-soft)", color: "var(--accent-text)" }}>반복해서 나온 관점</span>}</div>
-                  <blockquote className="text-sm font-medium leading-relaxed mt-2">“{item.quote}”</blockquote>
-                  {item.context && <p className="text-[11px] leading-relaxed text-muted mt-2">{item.context}</p>}
-                  {item.significance && <p className="text-[10px] leading-relaxed mt-1.5" style={{ color: "var(--accent-text)" }}>기억할 이유 · {item.significance}</p>}
+                <article key={`${item.time}-${index}`} className="grid grid-cols-[74px_1fr] gap-3 py-2.5" style={{ borderBottom: "1px solid var(--border)" }}>
+                  <div><p className="text-[10px] text-muted">{koreanTime(item.time)}</p><p className="text-[10px] font-semibold mt-1" style={{ color: item.speaker === "한나" ? "var(--accent-text)" : "var(--secondary-text)" }}>{item.speaker}</p></div>
+                  <blockquote className="text-xs font-medium leading-relaxed" style={{ borderLeft: `3px solid ${item.speaker === "한나" ? "var(--accent)" : "var(--secondary)"}`, paddingLeft: "10px" }}>“{item.quote}”</blockquote>
                 </article>
               ))}
             </div>
@@ -227,8 +234,8 @@ export default function LifeDayClient({ data, days }: { data: LifeDayResponse | 
 
         <Section title="시간대별 하루">
           <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-            <TimelineColumn label="오전 9시~오후 9시" items={dayTimeline} />
-            <TimelineColumn label="오후 9시~다음날 새벽" items={nightTimeline} />
+            <TimelineColumn label={timelineRangeLabel(firstTimeline, "앞 시간대")} items={firstTimeline} />
+            <TimelineColumn label={timelineRangeLabel(secondTimeline, "뒤 시간대")} items={secondTimeline} />
           </div>
         </Section>
 
