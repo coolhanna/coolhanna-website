@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import Link from "next/link";
 import type { LifeDayResponse } from "@/lib/dashboard-api";
 
@@ -94,6 +94,24 @@ export default function LifeDayClient({ data, days }: { data: LifeDayResponse | 
   const [expanded, setExpanded] = useState<string | null>(null);
   const [answers, setAnswers] = useState<Record<string, string>>({});
   const [feedbackState, setFeedbackState] = useState<"idle" | "saving" | "saved" | "error">("idle");
+  const processingStatus = "error" in data ? "idle" : data.feedback_processing?.status || "idle";
+  const processingDate = "error" in data ? "" : data.date;
+
+  useEffect(() => {
+    if (!processingDate || !["pending", "processing"].includes(processingStatus)) return;
+    const timer = window.setInterval(async () => {
+      try {
+        const response = await fetch(`/api/dashboard/proxy/life-day/${encodeURIComponent(processingDate)}`, { cache: "no-store" });
+        if (!response.ok) return;
+        const latest = (await response.json()) as LifeDayResponse;
+        const latestStatus = latest.feedback_processing?.status || "idle";
+        if (latestStatus === "complete" || latestStatus === "failed") window.location.reload();
+      } catch {
+        // 일시적인 연결 오류는 다음 폴링에서 다시 확인한다.
+      }
+    }, 10000);
+    return () => window.clearInterval(timer);
+  }, [processingDate, processingStatus]);
 
   if ("error" in data) {
     return (
@@ -119,7 +137,17 @@ export default function LifeDayClient({ data, days }: { data: LifeDayResponse | 
     );
   }
 
-  const statusLabel = data.status === "feedback_applied" ? "피드백 반영" : data.status === "feedback_needed" ? "확인 필요" : "분석 기록";
+  const statusLabel = processingStatus === "pending" || processingStatus === "processing"
+    ? "답변 반영 중"
+    : processingStatus === "complete"
+      ? "반영 완료"
+      : processingStatus === "failed"
+        ? "반영 확인 필요"
+        : data.status === "feedback_applied"
+          ? "피드백 저장"
+          : data.status === "feedback_needed"
+            ? "확인 필요"
+            : "분석 기록";
   const timeline = [...(data.timeline || [])].sort((a, b) => timeValue(a.time) - timeValue(b.time));
   const timelineSplit = Math.ceil(timeline.length / 2);
   const firstTimeline = timeline.slice(0, timelineSplit);
@@ -154,8 +182,8 @@ export default function LifeDayClient({ data, days }: { data: LifeDayResponse | 
         body: JSON.stringify({ answers: submitted }),
       });
       if (!response.ok) throw new Error(`feedback ${response.status}`);
-      const result = (await response.json()) as { note_synced?: boolean };
-      if (result.note_synced === false) throw new Error("feedback note sync failed");
+      const result = (await response.json()) as { note_synced?: boolean; processing_status?: string };
+      if (result.processing_status !== "pending") throw new Error("feedback recomposition was not queued");
       setFeedbackState("saved");
       window.location.reload();
     } catch {
@@ -167,6 +195,15 @@ export default function LifeDayClient({ data, days }: { data: LifeDayResponse | 
     <main className="dashboard-root min-h-screen bg-paper text-ink">
       <div className="max-w-page mx-auto px-5 sm:px-8 py-5 space-y-3">
         <DayArchive days={days} activeDate={data.date} />
+
+        {(processingStatus === "pending" || processingStatus === "processing" || processingStatus === "complete" || processingStatus === "failed") && (
+          <div className="rounded-xl px-3 py-2.5 text-[11px]" style={{ background: processingStatus === "failed" ? "var(--danger-soft)" : "var(--accent-soft)", color: processingStatus === "failed" ? "var(--danger-text)" : "var(--accent-text)", border: "1px solid var(--border)" }}>
+            {processingStatus === "pending" && "답변을 저장했어요. 전체 기록 재구성을 기다리고 있어요."}
+            {processingStatus === "processing" && "답변을 바탕으로 요약·시간표·식사·완료 목록을 다시 구성하고 있어요."}
+            {processingStatus === "complete" && "답변이 전체 기록에 반영됐어요."}
+            {processingStatus === "failed" && "답변은 안전하게 저장됐지만 전체 기록 반영을 마치지 못했어요. 새벽 분석에서 다시 반영하고, 문제가 계속되면 알려드릴게요."}
+          </div>
+        )}
 
         <section className="rounded-2xl p-3.5 sm:p-4" style={{ background: "var(--bg-card)", border: "1.5px solid var(--accent)", boxShadow: "0 2px 10px rgba(70,80,60,.04)" }}>
           <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-3">

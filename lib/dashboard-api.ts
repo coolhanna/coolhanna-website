@@ -107,6 +107,13 @@ export interface LifeDayResponse {
   available: boolean;
   date: string;
   status?: string;
+  feedback_processing?: {
+    status: "idle" | "pending" | "processing" | "complete" | "failed";
+    requested_at: string;
+    completed_at: string;
+    last_error: string;
+    answer_ids: string[];
+  };
   recording?: {
     duration: string;
     ranges: string[];
