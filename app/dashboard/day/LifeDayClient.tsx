@@ -206,17 +206,17 @@ export default function LifeDayClient({ data, days }: { data: LifeDayResponse | 
         )}
 
         <section className="rounded-2xl p-3.5 sm:p-4" style={{ background: "var(--bg-card)", border: "1.5px solid var(--accent)", boxShadow: "0 2px 10px rgba(70,80,60,.04)" }}>
-          <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-3">
-            <div>
-              <p className="text-[10px] text-muted mb-1.5">{data.date} · 생활녹음 {data.recording?.duration}</p>
-              <h1 className="text-base sm:text-lg font-semibold tracking-tight leading-relaxed max-w-4xl">{data.headline}</h1>
-              <p className="text-[11px] sm:text-xs text-muted leading-relaxed mt-2.5 max-w-4xl">{data.summary}</p>
+          <div>
+            <div className="flex flex-wrap items-center justify-between gap-2">
+              <p className="text-[10px] text-muted">{data.date} · 생활녹음 {data.recording?.duration}</p>
+              <div className="flex flex-wrap items-center justify-end gap-2">
+                <button type="button" onClick={() => window.location.reload()} aria-label="최신 기록 새로고침" className="text-[11px] px-2.5 py-1.5 rounded-full whitespace-nowrap" style={{ background: "var(--secondary-soft)", color: "var(--secondary-text)", border: "1px solid var(--border)" }}>↻ 새로고침</button>
+                {data.source_note && <a href={`obsidian://open?vault=${encodeURIComponent("Obsidian Vault")}&file=${encodeURIComponent(data.source_note)}`} className="text-[11px] px-2.5 py-1.5 rounded-full whitespace-nowrap" style={{ background: "var(--bg-card-soft)", color: "var(--accent-text)", border: "1px solid var(--border)" }}>원본 기록 열기</a>}
+                <span className="text-[11px] px-2.5 py-1.5 rounded-full whitespace-nowrap" style={{ background: "var(--accent-soft)", color: "var(--accent-text)" }}>{statusLabel}</span>
+              </div>
             </div>
-            <div className="flex items-center gap-2 self-start">
-              <button type="button" onClick={() => window.location.reload()} aria-label="최신 기록 새로고침" className="text-[11px] px-2.5 py-1.5 rounded-full whitespace-nowrap" style={{ background: "var(--secondary-soft)", color: "var(--secondary-text)", border: "1px solid var(--border)" }}>↻ 새로고침</button>
-              {data.source_note && <a href={`obsidian://open?vault=${encodeURIComponent("Obsidian Vault")}&file=${encodeURIComponent(data.source_note)}`} className="text-[11px] px-2.5 py-1.5 rounded-full whitespace-nowrap" style={{ background: "var(--bg-card-soft)", color: "var(--accent-text)", border: "1px solid var(--border)" }}>원본 기록 열기</a>}
-              <span className="text-[11px] px-2.5 py-1.5 rounded-full whitespace-nowrap" style={{ background: "var(--accent-soft)", color: "var(--accent-text)" }}>{statusLabel}</span>
-            </div>
+            <h1 className="mt-2 text-base sm:text-lg font-semibold tracking-tight leading-relaxed text-balance">{data.headline}</h1>
+            <p className="text-[11px] sm:text-xs text-muted leading-relaxed mt-2.5 max-w-6xl">{data.summary}</p>
           </div>
           <div className="grid grid-cols-2 lg:grid-cols-4 gap-2 mt-4">
             {[
