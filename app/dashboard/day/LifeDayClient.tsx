@@ -215,8 +215,10 @@ export default function LifeDayClient({ data, days }: { data: LifeDayResponse | 
                 <span className="text-[11px] px-2.5 py-1.5 rounded-full whitespace-nowrap" style={{ background: "var(--accent-soft)", color: "var(--accent-text)" }}>{statusLabel}</span>
               </div>
             </div>
-            <h1 className="mt-2 text-base sm:text-lg font-semibold tracking-tight leading-relaxed text-balance">{data.headline}</h1>
-            <p className="text-[11px] sm:text-xs text-muted leading-relaxed mt-2.5 max-w-6xl">{data.summary}</p>
+            <div className="max-w-5xl mx-auto mt-3">
+              <h1 className="text-base sm:text-lg font-semibold tracking-tight leading-relaxed text-balance">{data.headline}</h1>
+              <p className="text-[11px] sm:text-xs text-muted leading-[1.85] mt-2.5 max-w-4xl">{data.summary}</p>
+            </div>
           </div>
           <div className="grid grid-cols-2 lg:grid-cols-4 gap-2 mt-4">
             {[
