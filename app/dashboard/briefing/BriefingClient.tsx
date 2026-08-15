@@ -72,30 +72,19 @@ function MdLite({ md }: { md: string }) {
   );
 }
 
-function QuestionCard({ q, onAnswered }: { q: BoardQuestion; onAnswered: () => void }) {
-  const [text, setText] = useState("");
-  const [state, setState] = useState<"idle" | "saving" | "error">("idle");
-
-  async function save() {
-    if (!text.trim()) return;
-    setState("saving");
-    try {
-      const r = await fetch("/api/dashboard/proxy/briefing/answer", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ id: q.id, answer: text.trim() }),
-      });
-      if (!r.ok) throw new Error(String(r.status));
-      onAnswered();
-    } catch {
-      setState("error");
-    }
-  }
-
+function QuestionCard({
+  q,
+  value,
+  onChange,
+}: {
+  q: BoardQuestion;
+  value?: string;
+  onChange?: (id: string, text: string) => void;
+}) {
   return (
-    <div className="rounded-xl p-3" style={{ background: "#fff", border: "1px solid var(--border)" }}>
+    <div className="rounded-xl p-3" style={{ background: "var(--bg-card, #fff)", border: "1px solid var(--border)" }}>
       <div className="flex items-baseline gap-2">
-        <span className="text-[10px] font-bold whitespace-nowrap" style={{ color: "var(--accent-text, var(--accent))" }}>
+        <span className="text-[10px] font-bold whitespace-nowrap" style={{ color: "var(--accent-text)" }}>
           {dayLabel(q.date)}
         </span>
         {q.status === "open" && daysOpen(q.date) >= 1 && (
@@ -106,7 +95,7 @@ function QuestionCard({ q, onAnswered }: { q: BoardQuestion; onAnswered: () => v
       </div>
       <p className="text-[13px] font-medium leading-relaxed mt-1">{q.question}</p>
       {q.status === "answered" ? (
-        <div className="mt-2 rounded-lg px-3 py-2 text-[12px] leading-relaxed" style={{ background: "var(--color-paper, #faf9f5)" }}>
+        <div className="mt-2 rounded-lg px-3 py-2 text-[12px] leading-relaxed" style={{ background: "var(--bg-card-soft, #faf9f5)" }}>
           <b className="text-[10px]" style={{ color: "var(--text-secondary)" }}>
             내 답변 · {q.answered_at.slice(5, 10).replace("-", "/")}
             {q.applied && " · 반영됨"}
@@ -114,27 +103,15 @@ function QuestionCard({ q, onAnswered }: { q: BoardQuestion; onAnswered: () => v
           <p className="mt-0.5 whitespace-pre-line">{q.answer}</p>
         </div>
       ) : (
-        <div className="mt-2 flex gap-2 items-end">
-          <textarea
-            value={text}
-            onChange={(e) => setText(e.target.value)}
-            rows={2}
-            placeholder="편하게 답해줘 — 다음날 새벽에 회수해서 반영해"
-            className="flex-1 resize-y rounded-lg px-3 py-2 text-[12px] outline-none"
-            style={{ background: "var(--color-paper, #faf9f5)", border: "1px solid var(--border)" }}
-          />
-          <button
-            type="button"
-            onClick={save}
-            disabled={state === "saving" || !text.trim()}
-            className="text-[12px] font-bold px-3 py-2 rounded-lg text-white disabled:opacity-40 whitespace-nowrap"
-            style={{ backgroundColor: "var(--accent)" }}
-          >
-            {state === "saving" ? "저장 중" : "답하기"}
-          </button>
-        </div>
+        <textarea
+          value={value || ""}
+          onChange={(e) => onChange?.(q.id, e.target.value)}
+          rows={2}
+          placeholder="편하게 답해줘 — 아래 저장 버튼 하나로 한꺼번에 저장돼"
+          className="mt-2 w-full resize-y rounded-lg px-3 py-2 text-[12px] outline-none"
+          style={{ background: "var(--bg-card-soft, #faf9f5)", border: "1px solid var(--border)" }}
+        />
       )}
-      {state === "error" && <p className="text-[11px] mt-1" style={{ color: "var(--danger, #b3261e)" }}>저장 실패 — 다시 시도해줘</p>}
     </div>
   );
 }
@@ -145,10 +122,32 @@ export default function BriefingClient({ data }: { data: BriefingResponse }) {
   }
   const open = data.open || [];
   const answered = data.answered_recent || [];
-  const refresh = () => window.location.reload();
+  const [answers, setAnswers] = useState<Record<string, string>>({});
+  const [saveState, setSaveState] = useState<"idle" | "saving" | "error">("idle");
+  const setAnswer = (id: string, text: string) => setAnswers((cur) => ({ ...cur, [id]: text }));
+
+  async function saveAll() {
+    const filled = Object.entries(answers).filter(([, v]) => v.trim());
+    if (filled.length === 0) return;
+    setSaveState("saving");
+    try {
+      for (const [id, answer] of filled) {
+        const r = await fetch("/api/dashboard/proxy/briefing/answer", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ id, answer: answer.trim() }),
+        });
+        if (!r.ok) throw new Error(String(r.status));
+      }
+      window.location.reload();
+    } catch {
+      setSaveState("error");
+    }
+  }
 
   return (
-    <main className="max-w-page mx-auto px-5 sm:px-8 py-6">
+    <main className="dashboard-root min-h-screen bg-paper text-ink">
+      <div className="max-w-page mx-auto px-5 sm:px-8 py-6">
       {/* 날짜 아카이브 */}
       <nav className="flex items-center gap-2 overflow-x-auto pb-2 mb-4">
         <span className="text-[10px] whitespace-nowrap" style={{ color: "var(--text-secondary)" }}>지난 브리핑</span>
@@ -178,7 +177,20 @@ export default function BriefingClient({ data }: { data: BriefingResponse }) {
             </span>
           </h2>
           <div className="flex flex-col gap-2">
-            {open.map((q) => <QuestionCard key={q.id} q={q} onAnswered={refresh} />)}
+            {open.map((q) => <QuestionCard key={q.id} q={q} value={answers[q.id]} onChange={setAnswer} />)}
+          </div>
+          <div className="mt-3 flex items-center gap-3">
+            <button
+              type="button"
+              onClick={saveAll}
+              disabled={saveState === "saving" || !Object.values(answers).some((v) => v.trim())}
+              className="rounded-lg px-4 py-2.5 text-[13px] font-bold text-white disabled:opacity-40"
+              style={{ backgroundColor: "var(--accent, #4a5c3a)" }}
+            >
+              {saveState === "saving" ? "저장 중…" : "답변 전체 저장"}
+            </button>
+            <span className="text-[11px]" style={{ color: "var(--text-secondary)" }}>적은 것만 저장돼 — 나머지는 열려 있음으로 남아</span>
+            {saveState === "error" && <span className="text-[11px]" style={{ color: "var(--danger-text, #b3261e)" }}>일부 저장 실패 — 다시 눌러줘</span>}
           </div>
         </section>
       )}
@@ -193,10 +205,11 @@ export default function BriefingClient({ data }: { data: BriefingResponse }) {
         <section className="mt-5">
           <h2 className="text-[13px] font-bold mb-2" style={{ color: "var(--text-secondary)" }}>답한 질문 (최근 {answered.length}개)</h2>
           <div className="flex flex-col gap-2">
-            {answered.map((q) => <QuestionCard key={q.id} q={q} onAnswered={refresh} />)}
+            {answered.map((q) => <QuestionCard key={q.id} q={q} />)}
           </div>
         </section>
       )}
+      </div>
     </main>
   );
 }
