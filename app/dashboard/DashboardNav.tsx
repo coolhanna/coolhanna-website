@@ -8,6 +8,7 @@ import { usePathname } from "next/navigation";
 
 const TABS = [
   { label: "운영", href: "/dashboard" },
+  { label: "브리핑", href: "/dashboard/briefing" },
   { label: "하루", href: "/dashboard/day" },
   { label: "큐레이션", href: "/dashboard/curation" },
   { label: "릴스", href: "/dashboard/reels" },
