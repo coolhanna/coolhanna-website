@@ -15,6 +15,8 @@ interface WatchDay {
   walk_min: number | null;
   walk_night_min: number | null;
   run_min: number | null;
+  spo2: number | null;
+  wrist_temp: number | null;
 }
 
 interface WeatherDay {
@@ -138,6 +140,8 @@ function DayCard({ day, defaultOpen }: { day: DayRow; defaultOpen: boolean }) {
             <span>걷기 <Num v={watch?.walk_min} suffix="분" /></span>
             <span>운동 <Num v={watch?.exercise_min} suffix="분" /></span>
             {(watch?.run_min ?? 0) > 0 && <span>뛰기 <Num v={watch?.run_min} suffix="분" /></span>}
+            {watch?.spo2 != null && <span>산소 <Num v={watch?.spo2} suffix="%" /></span>}
+            {watch?.wrist_temp != null && <span>손목 <Num v={watch?.wrist_temp} suffix="°" digits={1} /></span>}
           </span>
         </Row>
       </div>
