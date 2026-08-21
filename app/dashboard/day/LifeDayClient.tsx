@@ -35,16 +35,23 @@ function koreanTime(time: string) {
 function timeValue(time: string) {
   const parsed = parseTime(time);
   if (!parsed) return Number.MAX_SAFE_INTEGER;
-  const minutes = parsed.hour * 60 + parsed.minuteNumber;
-  return parsed.hour < 6 ? minutes + 24 * 60 : minutes;
+  return parsed.hour * 60 + parsed.minuteNumber;
 }
 
-function timelineRangeLabel(items: LifeDayResponse["timeline"], fallback: string) {
+function relativeTimeValue(time: string, dayStartTime: string) {
+  const value = timeValue(time);
+  const startValue = timeValue(dayStartTime);
+  if (value === Number.MAX_SAFE_INTEGER || startValue === Number.MAX_SAFE_INTEGER) return value;
+  return value < startValue ? value + 24 * 60 : value;
+}
+
+function timelineRangeLabel(items: LifeDayResponse["timeline"], fallback: string, dayStartTime: string) {
   if (!items?.length) return fallback;
   const first = items[0];
   const last = items[items.length - 1];
-  const lastLabel = timeValue(last.time) >= 24 * 60 ? `다음날 ${koreanTime(last.time)}` : koreanTime(last.time);
-  return `${koreanTime(first.time)}~${lastLabel}`;
+  const firstLabel = relativeTimeValue(first.time, dayStartTime) >= 24 * 60 ? `다음날 ${koreanTime(first.time)}` : koreanTime(first.time);
+  const lastLabel = relativeTimeValue(last.time, dayStartTime) >= 24 * 60 ? `다음날 ${koreanTime(last.time)}` : koreanTime(last.time);
+  return `${firstLabel}~${lastLabel}`;
 }
 
 function TimelineColumn({ label, items }: { label: string; items: LifeDayResponse["timeline"] }) {
@@ -148,7 +155,8 @@ export default function LifeDayClient({ data, days }: { data: LifeDayResponse | 
           : data.status === "feedback_needed"
             ? "확인 필요"
             : "분석 기록";
-  const timeline = [...(data.timeline || [])].sort((a, b) => timeValue(a.time) - timeValue(b.time));
+  const timelineStartTime = data.timeline?.[0]?.time || "00:00";
+  const timeline = [...(data.timeline || [])].sort((a, b) => relativeTimeValue(a.time, timelineStartTime) - relativeTimeValue(b.time, timelineStartTime));
   const timelineSplit = Math.ceil(timeline.length / 2);
   const firstTimeline = timeline.slice(0, timelineSplit);
   const secondTimeline = timeline.slice(timelineSplit);
@@ -272,7 +280,7 @@ export default function LifeDayClient({ data, days }: { data: LifeDayResponse | 
               {quoteGroups.map(([speaker, items], groupIndex) => (
                 <div key={speaker} className="rounded-xl p-3" style={{ background: groupIndex % 3 === 1 ? "var(--secondary-soft)" : groupIndex % 3 === 2 ? "var(--danger-soft)" : "var(--bg-card-soft)", border: "1px solid var(--border)" }}>
                   <div className="flex items-center justify-between gap-2 pb-1.5"><h3 className="text-xs font-semibold">{speaker}</h3><span className="text-[10px] text-muted">{items?.length || 0}문장</span></div>
-                  {(items || []).sort((left, right) => timeValue(left.time) - timeValue(right.time)).map((item, index) => (
+                  {(items || []).sort((left, right) => relativeTimeValue(left.time, timelineStartTime) - relativeTimeValue(right.time, timelineStartTime)).map((item, index) => (
                     <article key={`${item.time}-${index}`} className="grid grid-cols-[64px_1fr] gap-2.5 py-2" style={{ borderTop: "1px solid var(--border)" }}>
                       <p className="text-[10px] text-muted">{koreanTime(item.time)}</p>
                       <blockquote className="text-xs font-medium leading-relaxed">“{item.quote}”</blockquote>
@@ -286,8 +294,8 @@ export default function LifeDayClient({ data, days }: { data: LifeDayResponse | 
 
         <Section title="시간대별 하루">
           <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-            <TimelineColumn label={timelineRangeLabel(firstTimeline, "앞 시간대")} items={firstTimeline} />
-            <TimelineColumn label={timelineRangeLabel(secondTimeline, "뒤 시간대")} items={secondTimeline} />
+            <TimelineColumn label={timelineRangeLabel(firstTimeline, "앞 시간대", timelineStartTime)} items={firstTimeline} />
+            <TimelineColumn label={timelineRangeLabel(secondTimeline, "뒤 시간대", timelineStartTime)} items={secondTimeline} />
           </div>
         </Section>
 
