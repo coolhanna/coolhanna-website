@@ -88,3 +88,19 @@ test("a manual meal answer resolves the matching uncertain audio entry", () => {
   assert.ok(day.confirmed.some((entry) => entry.meal === "점심" && entry.value === "복숭아 1개"));
   assert.ok(!day.uncertain.some((entry) => entry.value === "복숭아 1개"));
 });
+
+test("an uncertain consumption is not presented as a meal-only correction", () => {
+  const day = prepareFoodDay({
+    date: "2026-08-20",
+    source_status: "ok",
+    confirmed: [],
+    uncertain: [
+      { label: "섭취 여부", value: "치킨 주문 정황", meal: "기타", source: "life_audio" },
+    ],
+    excluded: [],
+    nutrition: emptyNutrition,
+  }, "2026-08-22");
+
+  assert.equal(day.uncertain[0]?.question_kind, "consumption");
+  assert.equal(day.uncertain[0]?.question, "치킨 주문 정황은 실제로 먹은 게 맞아?");
+});
