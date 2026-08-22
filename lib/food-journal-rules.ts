@@ -155,10 +155,12 @@ export function estimateFoodCalories(
       recognizedItemCount += 1;
     };
 
-    const oilRoutine = new RegExp(
-      `올리브유(?:\\s*(${SPOKEN_COUNT})\\s*큰술)?\\s*\\+\\s*레몬즙`,
-    ).exec(segment);
-    if (oilRoutine && oilRoutine.index != null) {
+    const oilMatcher = new RegExp(
+      `올리브유(?:\\s*(${SPOKEN_COUNT})\\s*큰술)?\\s*(?:\\+|과|와)\\s*레몬즙`,
+      "g",
+    );
+    for (let oilRoutine = oilMatcher.exec(segment); oilRoutine; oilRoutine = oilMatcher.exec(segment)) {
+      if (oilRoutine.index == null) continue;
       const count = foodCount(oilRoutine[1]);
       addRecognized(
         oilRoutine.index,
@@ -169,10 +171,12 @@ export function estimateFoodCalories(
       );
     }
 
-    const mixCoffee = new RegExp(
+    const mixMatcher = new RegExp(
       `(?:믹스커피|맥심\\s*커피)(?:\\s*(${SPOKEN_COUNT})\\s*잔)?`,
-    ).exec(segment);
-    if (mixCoffee && mixCoffee.index != null) {
+      "g",
+    );
+    for (let mixCoffee = mixMatcher.exec(segment); mixCoffee; mixCoffee = mixMatcher.exec(segment)) {
+      if (mixCoffee.index == null) continue;
       const start = mixCoffee.index;
       const end = start + mixCoffee[0].length;
       const overlaps = Array.from({ length: end - start }, (_, index) => start + index)
