@@ -31,6 +31,20 @@ export interface FoodJournalDay extends Omit<FoodCalendarDay, "confirmed" | "unc
 
 const MEAL_LABEL_RE = /(아침|점심|저녁|간식|야식)/;
 const TIME_RE = /^(?:[01]\d|2[0-3]):[0-5]\d$/;
+const KOREAN_COUNTS: Record<string, number> = {
+  한: 1,
+  두: 2,
+  세: 3,
+  네: 4,
+  다섯: 5,
+  여섯: 6,
+  일곱: 7,
+  여덟: 8,
+  아홉: 9,
+  열: 10,
+};
+const SPOKEN_COUNT = "\\d+|한|두|세|네|다섯|여섯|일곱|여덟|아홉|열";
+const SERVING_UNIT = "개|잔|큰술|줄|인분|공기|그릇|컵";
 const ROUTINE_ENTRIES = [
   {
     label: "아침 고정 루틴",
@@ -77,6 +91,11 @@ function normalizeFood(value: string): string {
   return value.replace(/[^0-9A-Za-z가-힣]/g, "").toLowerCase();
 }
 
+function foodCount(value?: string): number {
+  if (!value) return 1;
+  return Number(value) || KOREAN_COUNTS[value] || 1;
+}
+
 function isIgnoredSegment(segment: string): boolean {
   const clean = segment.trim();
   if (!clean) return true;
@@ -115,6 +134,7 @@ export function estimateFoodCalories(
   const bases = new Set<string>();
   let anyMatched = false;
   let hasUnrecognizedFood = false;
+  let recognizedItemCount = 0;
   for (const segment of segments) {
     const occupied = new Set<number>();
     let segmentMatched = false;
@@ -132,11 +152,14 @@ export function estimateFoodCalories(
       bases.add(basis);
       segmentMatched = true;
       anyMatched = true;
+      recognizedItemCount += 1;
     };
 
-    const oilRoutine = /올리브유(?:\s*(\d+)\s*큰술)?\s*\+\s*레몬즙/.exec(segment);
+    const oilRoutine = new RegExp(
+      `올리브유(?:\\s*(${SPOKEN_COUNT})\\s*큰술)?\\s*\\+\\s*레몬즙`,
+    ).exec(segment);
     if (oilRoutine && oilRoutine.index != null) {
-      const count = Number(oilRoutine[1] || 1);
+      const count = foodCount(oilRoutine[1]);
       addRecognized(
         oilRoutine.index,
         oilRoutine.index + oilRoutine[0].length,
@@ -146,46 +169,53 @@ export function estimateFoodCalories(
       );
     }
 
-    const mixCoffee = /(?:믹스커피|맥심\s*커피)(?:\s*(\d+)\s*잔)?/.exec(segment);
+    const mixCoffee = new RegExp(
+      `(?:믹스커피|맥심\\s*커피)(?:\\s*(${SPOKEN_COUNT})\\s*잔)?`,
+    ).exec(segment);
     if (mixCoffee && mixCoffee.index != null) {
       const start = mixCoffee.index;
       const end = start + mixCoffee[0].length;
       const overlaps = Array.from({ length: end - start }, (_, index) => start + index)
         .some((index) => occupied.has(index));
       if (!overlaps) {
-        const count = Number(mixCoffee[1] || 1);
+        const count = foodCount(mixCoffee[1]);
         addRecognized(start, end, 45 * count, 70 * count, `믹스커피 ${count}잔 기준`);
       }
     }
 
     for (const [pattern, ruleMin, ruleMax, basis] of CALORIE_RULES) {
-      const match = new RegExp(pattern.source, pattern.flags).exec(segment);
-      if (!match || match.index == null) continue;
-      const start = match.index;
-      const end = start + match[0].length;
-      if (Array.from({ length: end - start }, (_, index) => start + index)
-        .some((index) => occupied.has(index))) continue;
-      for (let index = start; index < end; index += 1) occupied.add(index);
+      const flags = pattern.flags.includes("g") ? pattern.flags : `${pattern.flags}g`;
+      const matcher = new RegExp(pattern.source, flags);
+      for (let match = matcher.exec(segment); match; match = matcher.exec(segment)) {
+        if (match.index == null) continue;
+        const start = match.index;
+        const end = start + match[0].length;
+        if (Array.from({ length: end - start }, (_, index) => start + index)
+          .some((index) => occupied.has(index))) continue;
 
-      const quantity = segment.slice(end).match(
-        /^\s*(\d+)\s*(개|잔|큰술|줄|인분|공기|그릇)/,
-      );
-      const count = Number(quantity?.[1] || 1);
-      const unit = quantity?.[2] || "";
-      addRecognized(
-        start,
-        end + (quantity?.[0].length || 0),
-        ruleMin * count,
-        ruleMax * count,
-        count > 1 ? `${match[0]} ${count}${unit} 기준` : basis,
-      );
+        const quantity = segment.slice(end).match(
+          new RegExp(`^\\s*(${SPOKEN_COUNT})\\s*(${SERVING_UNIT})`),
+        );
+        const count = foodCount(quantity?.[1]);
+        const unit = quantity?.[2] || "";
+        addRecognized(
+          start,
+          end + (quantity?.[0].length || 0),
+          ruleMin * count,
+          ruleMax * count,
+          count > 1 ? `${match[0].trim()} ${count}${unit} 기준` : basis,
+        );
+      }
     }
 
     const residue = Array.from(segment)
       .map((character, index) => occupied.has(index) ? " " : character)
       .join("")
       .replace(/\d{1,2}:\d{2}(?:\s*~\s*\d{1,2}:\d{2})?/g, " ")
-      .replace(/(?:한|두|세|네|몇)\s*(?:개|잔|큰술|줄|인분|공기|그릇|컵)/g, " ")
+      .replace(
+        new RegExp(`(?:${SPOKEN_COUNT}|몇)\\s*(?:${SERVING_UNIT})`, "g"),
+        " ",
+      )
       .replace(/\d+(?:\.\d+)?\s*(?:개|잔|큰술|줄|인분|공기|그릇|컵)/g, " ")
       .replace(/(?:그리고|이랑|랑|와|과|먹고|먹음|먹었(?:다|어|고)?)/g, " ")
       .replace(/(?:큰|작은|보통|컵|조금(?:씩)?|일부|정도|섭취|흐름|발언|실제|추가)/g, " ")
@@ -196,7 +226,9 @@ export function estimateFoodCalories(
     return {
       min,
       max,
-      basis: bases.size === 1 ? [...bases][0] : "일반적인 1회 섭취량 기준",
+      basis: recognizedItemCount === 1 && bases.size === 1
+        ? [...bases][0]
+        : "일반적인 1회 섭취량 기준",
       ...(hasUnrecognizedFood ? { partial: true } : {}),
     };
   }
