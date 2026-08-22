@@ -18,6 +18,7 @@ const emptyNutrition = {
 
 test("water and breath mints are removed without deleting real dishes", () => {
   assert.equal(sanitizeFoodValue("물 섭취 발언 · 이클립스 · 복숭아 1개"), "복숭아 1개");
+  assert.equal(sanitizeFoodValue("이클립스 먹고 복숭아 1개"), "복숭아 1개");
   assert.equal(sanitizeFoodValue("생수 한 잔"), "");
   assert.equal(sanitizeFoodValue("물냉면 · 국물 조금"), "물냉면 · 국물 조금");
 });
@@ -42,6 +43,16 @@ test("rough calorie ranges use portions when known and stay conservative", () =>
     min: 450,
     max: 600,
     basis: "일반 1회분 기준",
+  });
+  assert.deepEqual(estimateFoodCalories("달걀 3개", "아침"), {
+    min: 180,
+    max: 270,
+    basis: "달걀 3개 기준",
+  });
+  assert.deepEqual(estimateFoodCalories("김밥 · 치킨", "저녁"), {
+    min: 750,
+    max: 1_350,
+    basis: "일반적인 1회 섭취량 기준",
   });
 });
 
@@ -103,4 +114,54 @@ test("an uncertain consumption is not presented as a meal-only correction", () =
 
   assert.equal(day.uncertain[0]?.question_kind, "consumption");
   assert.equal(day.uncertain[0]?.question, "치킨 주문 정황은 실제로 먹은 게 맞아?");
+});
+
+test("a time-less recorded morning routine is confirmed once without a duplicate question", () => {
+  const day = prepareFoodDay({
+    date: "2026-08-20",
+    source_status: "ok",
+    confirmed: [
+      { label: "섭취", value: "맥심 커피 1잔", meal: "기타", source: "life_audio" },
+    ],
+    uncertain: [],
+    excluded: [],
+    nutrition: emptyNutrition,
+  }, "2026-08-22");
+
+  assert.equal(day.confirmed.filter((entry) => /(?:믹스커피|맥심 커피)/.test(entry.value)).length, 1);
+  assert.ok(day.confirmed.some((entry) => entry.value === "맥심 커피 1잔" && entry.meal === "아침"));
+  assert.ok(!day.uncertain.some((entry) => /커피/.test(entry.value)));
+});
+
+test("the same food at a different time remains a separate question", () => {
+  const day = prepareFoodDay({
+    date: "2026-08-20",
+    source_status: "ok",
+    confirmed: [
+      { label: "섭취", value: "복숭아 1개", meal: "기타", source: "life_audio", time: "20:00" },
+      { label: "점심", value: "복숭아 1개", meal: "점심", source: "manual", time: "12:00" },
+    ],
+    uncertain: [],
+    excluded: [],
+    nutrition: emptyNutrition,
+  }, "2026-08-22");
+
+  assert.ok(day.uncertain.some((entry) => entry.value === "복숭아 1개" && entry.time === "20:00"));
+});
+
+test("partially matched compound food is labelled as a partial calorie range", () => {
+  const day = prepareFoodDay({
+    date: "2026-08-20",
+    source_status: "ok",
+    confirmed: [
+      { label: "점심", value: "김밥 · 정체불명 반찬", meal: "점심", source: "life_audio" },
+    ],
+    uncertain: [],
+    excluded: [],
+    nutrition: emptyNutrition,
+  }, "2026-08-22");
+
+  const meal = day.confirmed.find((entry) => entry.value.includes("김밥"));
+  assert.equal(meal?.calorie_partial, true);
+  assert.equal(day.estimated_calorie_partial, true);
 });
