@@ -109,34 +109,59 @@ export function estimateFoodCalories(
   const normalized = value.replace(/\s+/g, " ").trim();
   if (!normalized) return null;
   if (/올리브유/.test(normalized) && /레몬즙/.test(normalized)) {
-    return { min: 105, max: 135, basis: "올리브유 1큰술 기준" };
+    const count = Number(normalized.match(/올리브유\s*(\d+)\s*큰술/)?.[1] || 1);
+    return {
+      min: 105 * count,
+      max: 135 * count,
+      basis: `올리브유 ${count}큰술 기준`,
+    };
   }
   if (/(?:믹스커피|맥심\s*커피)/.test(normalized)) {
-    return { min: 45, max: 70, basis: "믹스커피 1잔 기준" };
+    const count = Number(
+      normalized.match(/(?:믹스커피|맥심\s*커피)\s*(\d+)\s*잔/)?.[1] || 1,
+    );
+    return {
+      min: 45 * count,
+      max: 70 * count,
+      basis: `믹스커피 ${count}잔 기준`,
+    };
   }
 
   const segments = normalized.split(/\s*[·;,]\s*/).filter(Boolean);
   let min = 0;
   let max = 0;
   const bases = new Set<string>();
-  let matched = 0;
+  let matchedSegments = 0;
   for (const segment of segments) {
-    const rule = CALORIE_RULES.find(([pattern]) => pattern.test(segment));
-    if (!rule) continue;
-    const eggCount = /(?:달걀|계란)/.test(segment)
-      ? Number(segment.match(/(\d+)\s*개/)?.[1] || 1)
-      : 1;
-    min += rule[1] * eggCount;
-    max += rule[2] * eggCount;
-    bases.add(eggCount > 1 ? `달걀 ${eggCount}개 기준` : rule[3]);
-    matched += 1;
+    const occupied = new Set<number>();
+    let segmentMatched = false;
+    for (const [pattern, ruleMin, ruleMax, basis] of CALORIE_RULES) {
+      const match = new RegExp(pattern.source, pattern.flags).exec(segment);
+      if (!match || match.index == null) continue;
+      const start = match.index;
+      const end = start + match[0].length;
+      if (Array.from({ length: end - start }, (_, index) => start + index)
+        .some((index) => occupied.has(index))) continue;
+      for (let index = start; index < end; index += 1) occupied.add(index);
+
+      const quantity = segment.slice(end).match(
+        /^\s*(\d+)\s*(개|잔|큰술|줄|인분|공기|그릇)/,
+      );
+      const count = Number(quantity?.[1] || 1);
+      const unit = quantity?.[2] || "";
+      min += ruleMin * count;
+      max += ruleMax * count;
+      bases.add(count > 1 ? `${match[0]} ${count}${unit} 기준` : basis);
+      segmentMatched = true;
+    }
+    if (segmentMatched) matchedSegments += 1;
   }
-  if (matched) {
+  if (matchedSegments) {
     return {
       min,
       max,
       basis: bases.size === 1 ? [...bases][0] : "일반적인 1회 섭취량 기준",
-      ...(matched < segments.length ? { partial: true } : {}),
+      ...(matchedSegments < segments.length ? { partial: true } : {}),
     };
   }
 
