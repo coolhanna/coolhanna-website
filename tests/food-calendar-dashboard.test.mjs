@@ -13,7 +13,9 @@ test("dashboard replaces short-form operations with the food reflection calendar
   const nav = read("app/dashboard/DashboardNav.tsx");
   assert.ok(nav.includes('{ label: "먹은 것", href: "/dashboard/meals" }'));
   assert.ok(!nav.includes("숏폼운영실"));
-  assert.ok(!fs.existsSync(path.join(root, "public/shorts-ops")));
+  for (const asset of ["shorts.html", "shorts-app.js", "shorts-styles.css", "data/shorts-ops.json"]) {
+    assert.ok(!fs.existsSync(path.join(root, "public/shorts-ops", asset)), `legacy asset remains: ${asset}`);
+  }
 });
 
 test("food calendar exposes reflection, nutrition confidence, and immediate entry", () => {

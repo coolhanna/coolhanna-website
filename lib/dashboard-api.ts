@@ -78,6 +78,10 @@ export const dash = {
   youtube: () => api<YouTubeTabResponse>("/api/dashboard/youtube"),
   // 통합 업로드 캘린더 — 릴스 3계정 + 유튜브 숏/롱
   uploads: () => api<UploadsResponse>("/api/dashboard/uploads"),
+  foodCalendar: (month?: string) =>
+    api<FoodCalendarResponse>(
+      `/api/dashboard/food-calendar${month ? `?month=${encodeURIComponent(month)}` : ""}`,
+    ),
 };
 
 export interface LifeDayTimelineItem {
@@ -171,6 +175,57 @@ export interface UploadEntry {
 
 export interface UploadsResponse {
   uploads: UploadEntry[];
+}
+
+export type FoodEntryStatus = "confirmed" | "uncertain" | "excluded";
+
+export interface FoodCalendarEntry {
+  label: string;
+  value: string;
+  meal: "아침" | "점심" | "저녁" | "간식" | "기타";
+  source: "life_audio" | "manual";
+}
+
+export interface FoodNutritionEstimate {
+  calorie_min: number | null;
+  calorie_max: number | null;
+  confidence: "unknown" | "low" | "medium" | "high";
+  concern: string;
+  advice: string;
+  basis: string[];
+}
+
+export interface FoodCalendarDay {
+  date: string;
+  confirmed: FoodCalendarEntry[];
+  uncertain: FoodCalendarEntry[];
+  excluded: FoodCalendarEntry[];
+  nutrition: FoodNutritionEstimate;
+}
+
+export interface FoodReflection {
+  recorded_days: number;
+  window: string[];
+  group_days: {
+    protein: number;
+    vegetable: number;
+    fruit: number;
+    processed: number;
+  };
+  concern: string;
+  next_action: string;
+  notice: string;
+}
+
+export interface FoodCalendarResponse {
+  month: string;
+  days: FoodCalendarDay[];
+  reflection: FoodReflection;
+  generated: string;
+  nutrition_sources: {
+    reference: string;
+    food_database: string;
+  };
 }
 
 export type TranscriptionStatus = "ok" | "no_speech" | "no_audio" | "failed" | "unknown";

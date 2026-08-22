@@ -15,7 +15,7 @@ const TABS = [
   { label: "벤치마크", href: "/dashboard/reels-benchmark" },
   { label: "유튜브", href: "/dashboard/youtube" },
   { label: "업로드", href: "/dashboard/uploads" },
-  { label: "숏폼운영실", href: "/dashboard/shorts-ops" },
+  { label: "먹은 것", href: "/dashboard/meals" },
   { label: "생각", href: "/dashboard/thoughts" },
   { label: "건강", href: "/dashboard/health" },
   { label: "진행", href: "/dashboard/pipeline" },
