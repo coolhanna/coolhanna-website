@@ -250,7 +250,9 @@ function FoodEntryForm({ date, disabled, onBusyChange, onSaved }: {
 }
 
 export default function MealsCalendarClient({ initial }: { initial: FoodCalendarResponse | ApiError }) {
-  const initialError = "error" in initial ? initial.error : foodCalendarError(initial);
+  const incoming: unknown = initial;
+  const apiError = isObject(incoming) && typeof incoming.error === "string" && incoming.error ? incoming.error : "";
+  const initialError = apiError || foodCalendarError(incoming);
   const validInitial = initialError ? null : initial as FoodCalendarResponse;
   const nowMonth = currentMonth();
   const [data, setData] = useState<FoodCalendarResponse | null>(validInitial);
@@ -371,7 +373,7 @@ export default function MealsCalendarClient({ initial }: { initial: FoodCalendar
               const isToday = date === todayString();
               const active = date === selected;
               return (
-                <button key={date} onClick={() => setSelected(date)} aria-label={`${date}, ${day?.confirmed.length || 0}개 기록`} aria-pressed={active} className="min-h-[76px] sm:min-h-[128px] p-1.5 sm:p-2 text-left align-top transition" style={{ background: active ? "#fff8e6" : "#fffdf7", boxShadow: active ? "inset 0 0 0 2px #78805f" : "none" }}>
+                <button key={date} onClick={() => setSelected(date)} disabled={mutating} aria-label={`${date}, ${day?.confirmed.length || 0}개 기록`} aria-pressed={active} className="min-h-[76px] sm:min-h-[128px] p-1.5 sm:p-2 text-left align-top transition disabled:cursor-wait" style={{ background: active ? "#fff8e6" : "#fffdf7", boxShadow: active ? "inset 0 0 0 2px #78805f" : "none" }}>
                   <span className="inline-flex h-5 min-w-5 items-center justify-center rounded-full px-1 text-[10px] tabular-nums" style={{ background: isToday ? "#20251c" : "transparent", color: isToday ? "white" : "#777168", fontWeight: isToday ? 800 : 500 }}>{index + 1}</span>
                   <div className="mt-1 space-y-1">
                     {day?.confirmed.slice(0, 3).map((entry, entryIndex) => <MealTag key={`${entry.source}-${entry.meal}-${entryIndex}`} entry={entry} compact />)}
@@ -402,7 +404,7 @@ export default function MealsCalendarClient({ initial }: { initial: FoodCalendar
             {selectedDay.uncertain.length > 0 && <div className="mt-3 rounded-xl p-3" style={{ background: "#fff1de", color: "#7b472c" }}><p className="text-[10px] font-black">모르는 건 확인할게요</p>{selectedDay.uncertain.map((entry, index) => <p key={index} className="mt-1 text-[11px] leading-relaxed">{entry.label}: {entry.value}</p>)}<a href={`/dashboard/day?date=${encodeURIComponent(selectedDay.date)}`} className="mt-2 inline-block text-[10px] font-black underline underline-offset-2">하루 기록에서 답하기 →</a></div>}
           </section>
           <DayNutrition day={selectedDay} />
-          <FoodEntryForm key={selectedDay.date} date={selectedDay.date} disabled={loading} onBusyChange={updateMutationState} onSaved={updateCalendar} />
+          <FoodEntryForm key={selectedDay.date} date={selectedDay.date} disabled={loading || mutating} onBusyChange={updateMutationState} onSaved={updateCalendar} />
         </aside>}
       </div>
 
