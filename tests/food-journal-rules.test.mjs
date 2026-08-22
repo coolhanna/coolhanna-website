@@ -33,6 +33,11 @@ test("rough calorie ranges use portions when known and stay conservative", () =>
     max: 70,
     basis: "믹스커피 1잔 기준",
   });
+  assert.deepEqual(estimateFoodCalories("맥심 커피 1잔", "아침"), {
+    min: 45,
+    max: 70,
+    basis: "믹스커피 1잔 기준",
+  });
   assert.deepEqual(estimateFoodCalories("신라면 큰 컵", "점심"), {
     min: 450,
     max: 600,
