@@ -184,12 +184,13 @@ export interface FoodCalendarEntry {
   value: string;
   meal: "아침" | "점심" | "저녁" | "간식" | "기타";
   source: "life_audio" | "manual";
+  time?: string;
 }
 
 export interface FoodNutritionEstimate {
   calorie_min: number | null;
   calorie_max: number | null;
-  confidence: "unknown" | "low" | "medium" | "high";
+  confidence: "unknown" | "stale" | "low" | "medium" | "high";
   concern: string;
   advice: string;
   basis: string[];
@@ -197,6 +198,7 @@ export interface FoodNutritionEstimate {
 
 export interface FoodCalendarDay {
   date: string;
+  source_status?: "ok" | "missing" | "read_error" | "invalid_json" | "invalid_schema" | "date_mismatch";
   confirmed: FoodCalendarEntry[];
   uncertain: FoodCalendarEntry[];
   excluded: FoodCalendarEntry[];
@@ -223,6 +225,7 @@ export interface FoodCalendarResponse {
   reflection: FoodReflection;
   generated: string;
   nutrition_sources: {
+    scope: "general_reference_only";
     reference: string;
     food_database: string;
   };

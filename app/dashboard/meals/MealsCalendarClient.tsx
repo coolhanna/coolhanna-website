@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useMemo, useRef, useState } from "react";
 import type {
   FoodCalendarDay,
   FoodCalendarEntry,
@@ -19,19 +19,28 @@ const MEAL_COLORS: Record<string, { bg: string; fg: string }> = {
 };
 
 function currentMonth(): string {
-  const now = new Date();
-  return `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}`;
+  return kstDateString().slice(0, 7);
 }
 
 function todayString(): string {
-  const now = new Date();
-  return `${currentMonth()}-${String(now.getDate()).padStart(2, "0")}`;
+  return kstDateString();
+}
+
+function kstDateString(): string {
+  const parts = new Intl.DateTimeFormat("en-CA", {
+    timeZone: "Asia/Seoul",
+    year: "numeric",
+    month: "2-digit",
+    day: "2-digit",
+  }).formatToParts(new Date());
+  const value = Object.fromEntries(parts.map((part) => [part.type, part.value]));
+  return `${value.year}-${value.month}-${value.day}`;
 }
 
 function shiftMonth(month: string, delta: number): string {
   const [year, number] = month.split("-").map(Number);
-  const shifted = new Date(year, number - 1 + delta, 1);
-  return `${shifted.getFullYear()}-${String(shifted.getMonth() + 1).padStart(2, "0")}`;
+  const shifted = new Date(Date.UTC(year, number - 1 + delta, 1));
+  return `${shifted.getUTCFullYear()}-${String(shifted.getUTCMonth() + 1).padStart(2, "0")}`;
 }
 
 function shortFood(value: string): string {
@@ -40,16 +49,78 @@ function shortFood(value: string): string {
 }
 
 function confidenceLabel(value: string): string {
-  return ({ high: "높음", medium: "보통", low: "낮음", unknown: "판단 보류" } as Record<string, string>)[value] || "판단 보류";
+  return ({ high: "높음", medium: "보통", low: "낮음", unknown: "판단 보류", stale: "다시 계산 필요" } as Record<string, string>)[value] || "판단 보류";
 }
 
-async function proxyJson<T>(path: string, init?: RequestInit): Promise<T> {
+function isObject(value: unknown): value is Record<string, unknown> {
+  return Boolean(value) && typeof value === "object";
+}
+
+function foodCalendarError(value: unknown): string {
+  if (!isObject(value)) return "달력 응답 형식이 올바르지 않아요.";
+  const data = value as Partial<FoodCalendarResponse>;
+  if (
+    typeof data.month !== "string" || !Array.isArray(data.days) ||
+    !data.reflection || typeof data.reflection !== "object" ||
+    !data.reflection.group_days || !data.nutrition_sources ||
+    typeof data.generated !== "string"
+  ) return "달력 응답에 필수 정보가 빠졌어요.";
+  const reflection = data.reflection;
+  if (
+    typeof reflection.recorded_days !== "number" || !Array.isArray(reflection.window) ||
+    !reflection.window.every((item) => typeof item === "string") ||
+    typeof reflection.concern !== "string" || typeof reflection.next_action !== "string" ||
+    typeof reflection.notice !== "string" ||
+    !Object.values(reflection.group_days).every((item) => typeof item === "number") ||
+    data.nutrition_sources.scope !== "general_reference_only" ||
+    typeof data.nutrition_sources.reference !== "string" ||
+    typeof data.nutrition_sources.food_database !== "string"
+  ) return "회고 응답의 내용이 올바르지 않아요.";
+  for (const day of data.days) {
+    if (
+      typeof day?.date !== "string" || !Array.isArray(day.confirmed) ||
+      !Array.isArray(day.uncertain) || !Array.isArray(day.excluded) ||
+      !day.nutrition || !Array.isArray(day.nutrition.basis)
+    ) return "날짜별 식단 응답이 손상됐어요.";
+    const entries = [...day.confirmed, ...day.uncertain, ...day.excluded];
+    if (entries.some((entry) =>
+      !entry || typeof entry.label !== "string" || typeof entry.value !== "string" ||
+      typeof entry.meal !== "string" || typeof entry.source !== "string"
+    )) return "식단 항목의 내용이 손상됐어요.";
+    const nutrition = day.nutrition;
+    if (
+      ![nutrition.calorie_min, nutrition.calorie_max].every((item) => item === null || typeof item === "number") ||
+      typeof nutrition.confidence !== "string" || typeof nutrition.concern !== "string" ||
+      typeof nutrition.advice !== "string" || !nutrition.basis.every((item) => typeof item === "string")
+    ) return "영양 추정 응답의 내용이 손상됐어요.";
+  }
+  return "";
+}
+
+function assertFoodCalendar(value: unknown): asserts value is FoodCalendarResponse {
+  const problem = foodCalendarError(value);
+  if (problem) throw new Error(problem);
+}
+
+async function proxyJson<T>(path: string, init?: RequestInit, validate?: (value: unknown) => void): Promise<T> {
   const response = await fetch(`/api/dashboard/proxy/${path}`, {
     ...init,
     headers: { "Content-Type": "application/json", ...(init?.headers || {}) },
   });
-  const data = await response.json();
-  if (!response.ok) throw new Error(data?.detail || data?.error || `요청 실패 (${response.status})`);
+  const body = await response.text();
+  let data: unknown = null;
+  if (body) {
+    try {
+      data = JSON.parse(body);
+    } catch {
+      throw new Error(`서버가 JSON이 아닌 응답을 보냈어요 (${response.status}).`);
+    }
+  }
+  if (!response.ok) {
+    const problem = data && typeof data === "object" ? data as { detail?: string; error?: string } : {};
+    throw new Error(problem.detail || problem.error || `요청 실패 (${response.status})`);
+  }
+  if (validate) validate(data);
   return data as T;
 }
 
@@ -76,7 +147,7 @@ function MealTag({ entry, compact = false }: { entry: FoodCalendarEntry; compact
       style={{ background: style.bg, color: style.fg }}
       title={entry.value}
     >
-      <span className={compact ? "hidden sm:inline text-[8px] font-black mr-1" : "text-[10px] font-black mr-1.5"}>{entry.meal}</span>
+      <span className={compact ? "hidden sm:inline text-[8px] font-black mr-1" : "text-[10px] font-black mr-1.5"}>{entry.meal}{!compact && entry.time ? ` ${entry.time}` : ""}</span>
       <span className={compact ? "text-[9px] sm:text-[10px] leading-tight" : "text-[12px] leading-relaxed"}>{compact ? shortFood(entry.value) : entry.value}</span>
     </div>
   );
@@ -109,7 +180,12 @@ function DayNutrition({ day }: { day: FoodCalendarDay }) {
   );
 }
 
-function FoodEntryForm({ date, onSaved }: { date: string; onSaved: (day: FoodCalendarDay) => void }) {
+function FoodEntryForm({ date, disabled, onBusyChange, onSaved }: {
+  date: string;
+  disabled: boolean;
+  onBusyChange: (busy: boolean) => void;
+  onSaved: (calendar: FoodCalendarResponse) => void;
+}) {
   const [meal, setMeal] = useState<MealKind>("저녁");
   const [time, setTime] = useState("");
   const [text, setText] = useState("");
@@ -118,15 +194,17 @@ function FoodEntryForm({ date, onSaved }: { date: string; onSaved: (day: FoodCal
 
   async function submit(event: React.FormEvent) {
     event.preventDefault();
-    if (!text.trim() || busy) return;
+    if (!text.trim() || busy || disabled) return;
     setBusy(true);
+    onBusyChange(true);
     setMessage("");
     try {
-      const result = await proxyJson<{ day: FoodCalendarDay }>(`food-calendar/${date}`, {
+      const result = await proxyJson<{ day: FoodCalendarDay; calendar: FoodCalendarResponse }>(`food-calendar/${date}`, {
         method: "POST",
         body: JSON.stringify({ meal, text: text.trim(), time: time || null }),
       });
-      onSaved(result.day);
+      assertFoodCalendar(result.calendar);
+      onSaved(result.calendar);
       setText("");
       setTime("");
       setMessage("바로 반영했어요. 다음 자동 분석에도 합쳐집니다.");
@@ -134,6 +212,7 @@ function FoodEntryForm({ date, onSaved }: { date: string; onSaved: (day: FoodCal
       setMessage(`저장하지 못했어요: ${(error as Error).message}`);
     } finally {
       setBusy(false);
+      onBusyChange(false);
     }
   }
 
@@ -144,64 +223,85 @@ function FoodEntryForm({ date, onSaved }: { date: string; onSaved: (day: FoodCal
         <span className="text-[10px]" style={{ color: "#858178" }}>{date.slice(5).replace("-", ".")}</span>
       </div>
       <div className="grid grid-cols-[88px_1fr] gap-2 mt-3">
-        <select value={meal} onChange={(event) => setMeal(event.target.value as MealKind)} className="rounded-xl px-2 py-2 text-[12px]" style={{ border: "1px solid #ded9cb", background: "white" }}>
+        <label className="sr-only" htmlFor={`meal-${date}`}>끼니</label>
+        <select id={`meal-${date}`} disabled={disabled || busy} value={meal} onChange={(event) => setMeal(event.target.value as MealKind)} className="rounded-xl px-2 py-2 text-[12px] disabled:opacity-50" style={{ border: "1px solid #ded9cb", background: "white" }}>
           {(["아침", "점심", "저녁", "간식"] as MealKind[]).map((item) => <option key={item}>{item}</option>)}
         </select>
-        <input type="time" value={time} onChange={(event) => setTime(event.target.value)} className="rounded-xl px-3 py-2 text-[12px]" style={{ border: "1px solid #ded9cb", background: "white" }} aria-label="먹은 시간" />
+        <label className="sr-only" htmlFor={`time-${date}`}>먹은 시간</label>
+        <input id={`time-${date}`} disabled={disabled || busy} type="time" value={time} onChange={(event) => setTime(event.target.value)} className="rounded-xl px-3 py-2 text-[12px] disabled:opacity-50" style={{ border: "1px solid #ded9cb", background: "white" }} />
       </div>
+      <label className="sr-only" htmlFor={`food-${date}`}>먹은 음식</label>
       <textarea
+        id={`food-${date}`}
+        disabled={disabled || busy}
         value={text}
         onChange={(event) => setText(event.target.value)}
         placeholder="예: 삶은 달걀 1개와 복숭아 반 개"
         rows={3}
-        className="mt-2 w-full resize-none rounded-xl px-3 py-2.5 text-[12px] leading-relaxed outline-none"
+        className="mt-2 w-full resize-none rounded-xl px-3 py-2.5 text-[12px] leading-relaxed outline-none disabled:opacity-50"
         style={{ border: "1px solid #ded9cb", background: "white" }}
       />
-      <button disabled={busy || !text.trim()} className="mt-2 w-full rounded-xl py-2.5 text-[12px] font-black text-white disabled:opacity-40" style={{ background: "#6f7753" }}>
+      <button disabled={disabled || busy || !text.trim()} className="mt-2 w-full rounded-xl py-2.5 text-[12px] font-black text-white disabled:opacity-40" style={{ background: "#6f7753" }}>
         {busy ? "반영 중…" : "이 날짜에 추가"}
       </button>
-      {message && <p className="mt-2 text-[10.5px] leading-relaxed" style={{ color: message.startsWith("저장하지") ? "#a53e2c" : "#587044" }}>{message}</p>}
+      {message && <p aria-live="polite" className="mt-2 text-[10.5px] leading-relaxed" style={{ color: message.startsWith("저장하지") ? "#a53e2c" : "#587044" }}>{message}</p>}
     </form>
   );
 }
 
 export default function MealsCalendarClient({ initial }: { initial: FoodCalendarResponse | ApiError }) {
-  const failed = "error" in initial;
+  const initialError = "error" in initial ? initial.error : foodCalendarError(initial);
+  const validInitial = initialError ? null : initial as FoodCalendarResponse;
   const nowMonth = currentMonth();
-  const [data, setData] = useState<FoodCalendarResponse | null>(failed ? null : initial);
-  const [month, setMonth] = useState(failed ? nowMonth : initial.month);
+  const [data, setData] = useState<FoodCalendarResponse | null>(validInitial);
+  const [month, setMonth] = useState(validInitial?.month || nowMonth);
   const [selected, setSelected] = useState(todayString());
   const [loading, setLoading] = useState(false);
-  const [error, setError] = useState(failed ? initial.error : "");
+  const [mutating, setMutating] = useState(false);
+  const [error, setError] = useState(initialError);
+  const requestSequence = useRef(0);
 
   const selectedDay = data?.days.find((day) => day.date === selected) || data?.days.find((day) => day.confirmed.length > 0) || data?.days[0];
 
   const calendar = useMemo(() => {
     const [year, number] = month.split("-").map(Number);
-    const daysInMonth = new Date(year, number, 0).getDate();
-    const leadBlank = (new Date(year, number - 1, 1).getDay() + 6) % 7;
+    const daysInMonth = new Date(Date.UTC(year, number, 0)).getUTCDate();
+    const leadBlank = (new Date(Date.UTC(year, number - 1, 1)).getUTCDay() + 6) % 7;
     return { year, number, daysInMonth, leadBlank };
   }, [month]);
 
   async function loadMonth(target: string) {
+    const requestId = ++requestSequence.current;
     setLoading(true);
     setError("");
     try {
-      const next = await proxyJson<FoodCalendarResponse>(`food-calendar?month=${encodeURIComponent(target)}`);
+      const next = await proxyJson<FoodCalendarResponse>(`food-calendar?month=${encodeURIComponent(target)}`, undefined, assertFoodCalendar);
+      if (requestId !== requestSequence.current) return;
       setData(next);
       setMonth(target);
       const preferred = target === nowMonth ? todayString() : next.days.filter((day) => day.confirmed.length).at(-1)?.date;
       setSelected(preferred || `${target}-01`);
     } catch (loadError) {
+      if (requestId !== requestSequence.current) return;
       setError((loadError as Error).message);
     } finally {
-      setLoading(false);
+      if (requestId === requestSequence.current) setLoading(false);
     }
   }
 
-  function updateDay(day: FoodCalendarDay) {
-    setData((current) => current ? { ...current, days: current.days.map((item) => item.date === day.date ? day : item) } : current);
-    void loadMonth(month);
+  function updateCalendar(next: FoodCalendarResponse) {
+    requestSequence.current += 1;
+    setLoading(false);
+    setData(next);
+    setMonth(next.month);
+  }
+
+  function updateMutationState(busy: boolean) {
+    if (busy) {
+      requestSequence.current += 1;
+      setLoading(false);
+    }
+    setMutating(busy);
   }
 
   if (!data) {
@@ -213,7 +313,7 @@ export default function MealsCalendarClient({ initial }: { initial: FoodCalendar
   const total = reflection.recorded_days;
 
   return (
-    <main className="mx-auto max-w-[1180px] px-4 sm:px-7 pb-24" style={{ color: "#202019" }}>
+    <main className="dashboard-root mx-auto max-w-[1180px] px-4 sm:px-7 pb-24" style={{ color: "#202019" }}>
       <header className="pt-7 pb-5">
         <p className="text-[10px] font-black tracking-[.22em] uppercase" style={{ color: "#8d553e" }}>Food reflection · 생활 기록 기반</p>
         <div className="mt-2 flex flex-wrap items-end justify-between gap-3">
@@ -221,7 +321,7 @@ export default function MealsCalendarClient({ initial }: { initial: FoodCalendar
             <h1 className="text-[27px] sm:text-[34px] font-black tracking-[-.04em]">먹은 것, 그리고 다음 한 끼</h1>
             <p className="mt-1 text-[12px] sm:text-[13px]" style={{ color: "#6f6b62" }}>최근의 나를 혼내는 기록이 아니라, 오늘 하나를 바꾸기 위한 식사 회고</p>
           </div>
-          <button onClick={() => loadMonth(month)} disabled={loading} className="rounded-full px-3.5 py-2 text-[11px] font-bold" style={{ border: "1px solid #d8d2c3", background: "#fffdf8" }}>↻ {loading ? "읽는 중" : "원장 다시 읽기"}</button>
+          <button onClick={() => loadMonth(month)} disabled={loading || mutating} className="rounded-full px-3.5 py-2 text-[11px] font-bold disabled:opacity-40" style={{ border: "1px solid #d8d2c3", background: "#fffdf8" }}>↻ {loading ? "읽는 중" : mutating ? "저장 중" : "원장 다시 읽기"}</button>
         </div>
       </header>
 
@@ -251,10 +351,10 @@ export default function MealsCalendarClient({ initial }: { initial: FoodCalendar
 
       <div className="mt-7 flex flex-wrap items-center justify-between gap-3">
         <div className="flex items-center gap-2">
-          <button onClick={() => loadMonth(shiftMonth(month, -1))} className="h-9 w-9 rounded-full" style={{ border: "1px solid #d8d2c3" }} aria-label="이전 달">←</button>
+          <button onClick={() => loadMonth(shiftMonth(month, -1))} disabled={loading || mutating} className="h-9 w-9 rounded-full disabled:opacity-30" style={{ border: "1px solid #d8d2c3" }} aria-label="이전 달">←</button>
           <span className="w-32 text-center text-[16px] font-black tabular-nums">{calendar.year}년 {calendar.number}월</span>
-          <button onClick={() => loadMonth(shiftMonth(month, 1))} disabled={month >= nowMonth} className="h-9 w-9 rounded-full disabled:opacity-30" style={{ border: "1px solid #d8d2c3" }} aria-label="다음 달">→</button>
-          {month !== nowMonth && <button onClick={() => loadMonth(nowMonth)} className="ml-1 rounded-full px-3 py-1.5 text-[11px]" style={{ background: "#20251c", color: "white" }}>오늘</button>}
+          <button onClick={() => loadMonth(shiftMonth(month, 1))} disabled={loading || mutating || month >= nowMonth} className="h-9 w-9 rounded-full disabled:opacity-30" style={{ border: "1px solid #d8d2c3" }} aria-label="다음 달">→</button>
+          {month !== nowMonth && <button onClick={() => loadMonth(nowMonth)} disabled={loading || mutating} className="ml-1 rounded-full px-3 py-1.5 text-[11px] disabled:opacity-30" style={{ background: "#20251c", color: "white" }}>오늘</button>}
         </div>
         {error && <p className="text-[11px]" style={{ color: "#a53e2c" }}>{error}</p>}
       </div>
@@ -271,11 +371,11 @@ export default function MealsCalendarClient({ initial }: { initial: FoodCalendar
               const isToday = date === todayString();
               const active = date === selected;
               return (
-                <button key={date} onClick={() => setSelected(date)} className="min-h-[76px] sm:min-h-[128px] p-1.5 sm:p-2 text-left align-top transition" style={{ background: active ? "#fff8e6" : "#fffdf7", boxShadow: active ? "inset 0 0 0 2px #78805f" : "none" }}>
+                <button key={date} onClick={() => setSelected(date)} aria-label={`${date}, ${day?.confirmed.length || 0}개 기록`} aria-pressed={active} className="min-h-[76px] sm:min-h-[128px] p-1.5 sm:p-2 text-left align-top transition" style={{ background: active ? "#fff8e6" : "#fffdf7", boxShadow: active ? "inset 0 0 0 2px #78805f" : "none" }}>
                   <span className="inline-flex h-5 min-w-5 items-center justify-center rounded-full px-1 text-[10px] tabular-nums" style={{ background: isToday ? "#20251c" : "transparent", color: isToday ? "white" : "#777168", fontWeight: isToday ? 800 : 500 }}>{index + 1}</span>
                   <div className="mt-1 space-y-1">
                     {day?.confirmed.slice(0, 3).map((entry, entryIndex) => <MealTag key={`${entry.source}-${entry.meal}-${entryIndex}`} entry={entry} compact />)}
-                    {!hasFood && date <= todayString() && <span className="block text-[8px] sm:text-[9px]" style={{ color: "#bbb5aa" }}>기록 없음</span>}
+                    {!hasFood && date <= todayString() && <span className="block text-[9px] sm:text-[10px]" style={{ color: "#777168" }}>기록 없음</span>}
                     {(day?.confirmed.length || 0) > 3 && <span className="text-[8px]" style={{ color: "#777168" }}>+{day!.confirmed.length - 3}</span>}
                     {(day?.uncertain.length || 0) > 0 && <span className="block text-[8px] font-bold" style={{ color: "#b6653f" }}>확인 필요</span>}
                   </div>
@@ -292,17 +392,22 @@ export default function MealsCalendarClient({ initial }: { initial: FoodCalendar
               <span className="text-[10px]" style={{ color: "#858178" }}>{selectedDay.confirmed.length}개 기록</span>
             </div>
             <div className="mt-3 space-y-2">
+              {selectedDay.source_status && !["ok", "missing"].includes(selectedDay.source_status) && (
+                <p role="alert" className="rounded-xl px-3 py-2 text-[11px] font-bold" style={{ background: "#fff0e6", color: "#943f2d" }}>
+                  하루 원장을 정상적으로 읽지 못했어요. ‘기록 없음’으로 단정하지 않을게요.
+                </p>
+              )}
               {selectedDay.confirmed.length ? selectedDay.confirmed.map((entry, index) => <MealTag key={`${entry.source}-${index}`} entry={entry} />) : <p className="rounded-xl px-3 py-6 text-center text-[12px]" style={{ background: "#f3efe4", color: "#918b80" }}>먹지 않은 날이 아니라<br />아직 기록이 없는 날이에요.</p>}
             </div>
-            {selectedDay.uncertain.length > 0 && <div className="mt-3 rounded-xl p-3" style={{ background: "#fff1de", color: "#7b472c" }}><p className="text-[10px] font-black">모르는 건 확인할게요</p>{selectedDay.uncertain.map((entry, index) => <p key={index} className="mt-1 text-[11px] leading-relaxed">{entry.label}: {entry.value}</p>)}</div>}
+            {selectedDay.uncertain.length > 0 && <div className="mt-3 rounded-xl p-3" style={{ background: "#fff1de", color: "#7b472c" }}><p className="text-[10px] font-black">모르는 건 확인할게요</p>{selectedDay.uncertain.map((entry, index) => <p key={index} className="mt-1 text-[11px] leading-relaxed">{entry.label}: {entry.value}</p>)}<a href={`/dashboard/day?date=${encodeURIComponent(selectedDay.date)}`} className="mt-2 inline-block text-[10px] font-black underline underline-offset-2">하루 기록에서 답하기 →</a></div>}
           </section>
           <DayNutrition day={selectedDay} />
-          <FoodEntryForm date={selectedDay.date} onSaved={updateDay} />
+          <FoodEntryForm key={selectedDay.date} date={selectedDay.date} disabled={loading} onBusyChange={updateMutationState} onSaved={updateCalendar} />
         </aside>}
       </div>
 
       <footer className="mt-8 text-[9.5px] leading-relaxed" style={{ color: "#8d887e" }}>
-        영양 기준: {data.nutrition_sources.reference} · 성분 참고: {data.nutrition_sources.food_database}. 이 화면은 생활 회고용 추정이며 질병 진단이나 치료 지시가 아닙니다.
+        일반 참고 기준: {data.nutrition_sources.reference} · {data.nutrition_sources.food_database}. 실제 열량 산출에 사용한 근거는 해당 날의 basis에 별도 표시합니다. 이 화면은 생활 회고용 추정이며 질병 진단이나 치료 지시가 아닙니다.
       </footer>
     </main>
   );
