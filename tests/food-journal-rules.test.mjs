@@ -79,6 +79,22 @@ test("rough calorie ranges use portions when known and stay conservative", () =>
     max: 270,
     basis: "올리브유 2큰술 기준",
   });
+  assert.deepEqual(estimateFoodCalories("믹스커피 2잔 · 빵 1개", "아침"), {
+    min: 240,
+    max: 540,
+    basis: "일반적인 1회 섭취량 기준",
+  });
+  assert.deepEqual(estimateFoodCalories("올리브유 2큰술 + 레몬즙 + 달걀 2개", "아침"), {
+    min: 330,
+    max: 450,
+    basis: "일반적인 1회 섭취량 기준",
+  });
+  assert.deepEqual(estimateFoodCalories("김밥과 정체불명 반찬", "점심"), {
+    min: 350,
+    max: 550,
+    basis: "김밥 1줄 기준",
+    partial: true,
+  });
 });
 
 test("daily view adds the morning routine, flags late food, and asks unknown meals", () => {
