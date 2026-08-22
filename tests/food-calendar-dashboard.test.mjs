@@ -24,12 +24,27 @@ test("food calendar exposes reflection, nutrition confidence, and immediate entr
   const api = read("lib/dashboard-api.ts");
 
   assert.ok(page.includes("foodCalendar"));
-  for (const copy of ["최근 7일", "반성 포인트", "다음 한 끼", "칼로리", "단백질", "채소"]) {
+  for (const copy of ["최근 7일 회고", "다음 한 끼", "영양 기록", "단백질", "채소"]) {
     assert.ok(client.includes(copy), `missing reflection copy: ${copy}`);
   }
   assert.ok(client.includes("food-calendar/"));
   assert.ok(client.includes("추정"));
   assert.ok(api.includes("FoodCalendarResponse"));
+});
+
+test("food calendar follows the restrained dashboard visual system", () => {
+  const client = read("app/dashboard/meals/MealsCalendarClient.tsx");
+
+  assert.ok(client.includes("max-w-page"));
+  assert.ok(client.includes("var(--bg-card)"));
+  assert.ok(client.includes("var(--border)"));
+  assert.ok(client.includes("기록에서 읽은 흐름"));
+  assert.ok(client.includes("원장 확인 실패"));
+  assert.ok(client.includes("확인 필요"));
+  assert.ok(client.includes("sourceWasRead"));
+  assert.ok(!client.includes("font-black"));
+  assert.ok(!client.includes("rounded-[28px]"));
+  assert.ok(!client.includes("#20251c"));
 });
 
 test("legacy short-form URLs leave no embedded room behind", () => {
