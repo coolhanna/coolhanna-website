@@ -47,6 +47,17 @@ test("food calendar follows the restrained dashboard visual system", () => {
   assert.ok(!client.includes("#20251c"));
 });
 
+test("food calendar applies Hanna's journal rules and supports corrections", () => {
+  const client = read("app/dashboard/meals/MealsCalendarClient.tsx");
+
+  assert.ok(client.includes('from "@/lib/food-journal-rules"'));
+  assert.ok(client.includes("지난 날짜도 선택해서 기록할 수 있어요"));
+  assert.ok(client.includes("21시 이후 야식"));
+  assert.ok(client.includes("언제 먹었어?"));
+  assert.ok(client.includes("끼니 확정"));
+  assert.ok(client.includes('type="date"'));
+});
+
 test("legacy short-form URLs leave no embedded room behind", () => {
   const oldRoom = read("app/dashboard/shorts-ops/page.tsx");
   const oldEditing = read("app/dashboard/editing/page.tsx");
