@@ -89,7 +89,7 @@ test("a manual meal answer resolves the matching uncertain audio entry", () => {
     source_status: "ok",
     confirmed: [
       { label: "섭취", value: "복숭아 1개", meal: "기타", source: "life_audio" },
-      { label: "점심", value: "복숭아 1개", meal: "점심", source: "manual", time: "13:00" },
+      { label: "점심", value: "복숭아 1개", meal: "점심", source: "manual" },
     ],
     uncertain: [],
     excluded: [],
@@ -138,10 +138,11 @@ test("the same food at a different time remains a separate question", () => {
     date: "2026-08-20",
     source_status: "ok",
     confirmed: [
-      { label: "섭취", value: "복숭아 1개", meal: "기타", source: "life_audio", time: "20:00" },
       { label: "점심", value: "복숭아 1개", meal: "점심", source: "manual", time: "12:00" },
     ],
-    uncertain: [],
+    uncertain: [
+      { label: "섭취 여부", value: "복숭아 1개", meal: "기타", source: "life_audio", time: "20:00" },
+    ],
     excluded: [],
     nutrition: emptyNutrition,
   }, "2026-08-22");

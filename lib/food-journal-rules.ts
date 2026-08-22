@@ -6,6 +6,7 @@ export interface FoodCalorieRange {
   min: number;
   max: number;
   basis: string;
+  partial?: boolean;
 }
 
 export interface FoodJournalEntry extends Omit<FoodCalendarEntry, "source"> {
@@ -13,6 +14,7 @@ export interface FoodJournalEntry extends Omit<FoodCalendarEntry, "source"> {
   estimated_calorie_min: number | null;
   estimated_calorie_max: number | null;
   calorie_basis: string;
+  calorie_partial: boolean;
   late_night: boolean;
   question?: string;
   question_kind?: "meal" | "consumption";
@@ -50,6 +52,7 @@ const CALORIE_RULES: Array<[RegExp, number, number, string]> = [
   [/신라면|라면/, 450, 600, "일반 1회분 기준"],
   [/김치볶음밥/, 450, 700, "일반 1인분 기준"],
   [/김밥/, 350, 550, "김밥 1줄 기준"],
+  [/치킨/, 400, 800, "치킨 보통 1회분 기준"],
   [/마라탕/, 600, 1_000, "일반 1인분 기준"],
   [/삼계탕/, 700, 1_000, "일반 1인분 기준"],
   [/삼겹살/, 500, 900, "일반 1인분 기준"],
@@ -77,15 +80,24 @@ function normalizeFood(value: string): string {
 function isIgnoredSegment(segment: string): boolean {
   const clean = segment.trim();
   if (!clean) return true;
-  if (/(?:이클립스|민트\s*캔디|무설탕\s*캔디|껌)/i.test(clean)) return true;
   const withoutTime = clean.replace(/^\d{1,2}:\d{2}\s*/, "");
   return /^(?:물|물을|생수)(?:\s*(?:\d+(?:ml|mL|리터|L)|한\s*잔|두\s*잔|조금|많이|섭취|마심|마셨(?:다|음)?|마셔|발언))*$/i.test(withoutTime);
+}
+
+function removeBreathMints(segment: string): string {
+  return segment
+    .replace(
+      /(?:이클립스|민트\s*캔디|무설탕\s*캔디|껌)(?:\s*(?:먹고|먹음|먹었(?:다|어|고)?|섭취(?:했(?:다|고)?|함)?))?/gi,
+      "",
+    )
+    .replace(/^(?:그리고|또|및|와|과)\s+/, "")
+    .trim();
 }
 
 export function sanitizeFoodValue(value: string): string {
   return value
     .split(/\s*[·;,]\s*/)
-    .map((segment) => segment.trim())
+    .map(removeBreathMints)
     .filter((segment) => !isIgnoredSegment(segment))
     .join(" · ");
 }
@@ -111,9 +123,12 @@ export function estimateFoodCalories(
   for (const segment of segments) {
     const rule = CALORIE_RULES.find(([pattern]) => pattern.test(segment));
     if (!rule) continue;
-    min += rule[1];
-    max += rule[2];
-    bases.add(rule[3]);
+    const eggCount = /(?:달걀|계란)/.test(segment)
+      ? Number(segment.match(/(\d+)\s*개/)?.[1] || 1)
+      : 1;
+    min += rule[1] * eggCount;
+    max += rule[2] * eggCount;
+    bases.add(eggCount > 1 ? `달걀 ${eggCount}개 기준` : rule[3]);
     matched += 1;
   }
   if (matched) {
@@ -121,6 +136,7 @@ export function estimateFoodCalories(
       min,
       max,
       basis: bases.size === 1 ? [...bases][0] : "일반적인 1회 섭취량 기준",
+      ...(matched < segments.length ? { partial: true } : {}),
     };
   }
 
@@ -138,6 +154,18 @@ function isLateNight(time?: string): boolean {
   return Boolean(time && TIME_RE.test(time) && time >= "21:00");
 }
 
+function isOilRoutine(value: string): boolean {
+  return /올리브유/.test(value) && /레몬즙/.test(value);
+}
+
+function isMixCoffee(value: string): boolean {
+  return /(?:믹스커피|맥심\s*커피)/.test(value);
+}
+
+function isBreakfastRoutine(value: string): boolean {
+  return isOilRoutine(value) || isMixCoffee(value);
+}
+
 function inferAudioMeal(entry: FoodCalendarEntry): {
   meal: FoodCalendarEntry["meal"];
   question?: string;
@@ -145,6 +173,7 @@ function inferAudioMeal(entry: FoodCalendarEntry): {
   if (entry.source === "manual" || MEAL_LABEL_RE.test(entry.label)) {
     return { meal: entry.meal };
   }
+  if (isBreakfastRoutine(entry.value)) return { meal: "아침" };
   if (entry.time && TIME_RE.test(entry.time)) {
     if (entry.time < "10:30") return { meal: "아침" };
     if (entry.time < "15:00") return { meal: "점심" };
@@ -172,6 +201,7 @@ function decorateEntry(
     estimated_calorie_min: calories?.min ?? null,
     estimated_calorie_max: calories?.max ?? null,
     calorie_basis: calories?.basis ?? "",
+    calorie_partial: calories?.partial ?? false,
     late_night: isLateNight(entry.time),
     question: resolved.question,
     question_kind: resolved.question ? "meal" : undefined,
@@ -198,19 +228,21 @@ export function prepareFoodDay(day: FoodCalendarDay, today: string): FoodJournal
     });
   }
 
+  const entryKey = (entry: FoodJournalEntry) =>
+    `${normalizeFood(entry.value)}|${entry.time || ""}`;
   const manualValues = new Set(
     confirmed
       .filter((entry) => entry.source === "manual")
-      .map((entry) => normalizeFood(entry.value)),
+      .map(entryKey),
   );
-  const unresolved = uncertain.filter((entry) => !manualValues.has(normalizeFood(entry.value)));
+  const unresolved = uncertain.filter((entry) => !manualValues.has(entryKey(entry)));
 
   const hasDayEvidence =
     day.date <= today &&
     (day.source_status === "ok" || day.confirmed.length > 0 || day.uncertain.length > 0);
   if (hasDayEvidence) {
-    const hasOilRoutine = confirmed.some((entry) => /올리브유/.test(entry.value) && /레몬즙/.test(entry.value));
-    const hasMixCoffee = confirmed.some((entry) => /(?:믹스커피|맥심\s*커피)/.test(entry.value));
+    const hasOilRoutine = confirmed.some((entry) => isOilRoutine(entry.value));
+    const hasMixCoffee = confirmed.some((entry) => isMixCoffee(entry.value));
     const missingRoutine: FoodJournalEntry[] = [];
     for (const routine of ROUTINE_ENTRIES) {
       if ((routine.value.startsWith("올리브유") && hasOilRoutine) ||
@@ -233,7 +265,8 @@ export function prepareFoodDay(day: FoodCalendarDay, today: string): FoodJournal
     uncertain: unresolved,
     estimated_calorie_min: knownCalories.length ? calorieMin : null,
     estimated_calorie_max: knownCalories.length ? calorieMax : null,
-    estimated_calorie_partial: knownCalories.length < confirmed.length,
+    estimated_calorie_partial:
+      knownCalories.length < confirmed.length || knownCalories.some((entry) => entry.calorie_partial),
     late_night_count: confirmed.filter((entry) => entry.late_night).length,
   };
 }
