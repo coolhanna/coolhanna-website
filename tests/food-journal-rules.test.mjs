@@ -1,0 +1,85 @@
+import assert from "node:assert/strict";
+import test from "node:test";
+
+import {
+  estimateFoodCalories,
+  prepareFoodDay,
+  sanitizeFoodValue,
+} from "../lib/food-journal-rules.ts";
+
+const emptyNutrition = {
+  calorie_min: null,
+  calorie_max: null,
+  confidence: "unknown",
+  concern: "",
+  advice: "",
+  basis: [],
+};
+
+test("water and breath mints are removed without deleting real dishes", () => {
+  assert.equal(sanitizeFoodValue("물 섭취 발언 · 이클립스 · 복숭아 1개"), "복숭아 1개");
+  assert.equal(sanitizeFoodValue("생수 한 잔"), "");
+  assert.equal(sanitizeFoodValue("물냉면 · 국물 조금"), "물냉면 · 국물 조금");
+});
+
+test("rough calorie ranges use portions when known and stay conservative", () => {
+  assert.deepEqual(estimateFoodCalories("올리브유 1큰술 + 레몬즙", "아침"), {
+    min: 105,
+    max: 135,
+    basis: "올리브유 1큰술 기준",
+  });
+  assert.deepEqual(estimateFoodCalories("믹스커피 1잔", "아침"), {
+    min: 45,
+    max: 70,
+    basis: "믹스커피 1잔 기준",
+  });
+  assert.deepEqual(estimateFoodCalories("신라면 큰 컵", "점심"), {
+    min: 450,
+    max: 600,
+    basis: "일반 1회분 기준",
+  });
+});
+
+test("daily view adds the morning routine, flags late food, and asks unknown meals", () => {
+  const day = prepareFoodDay({
+    date: "2026-08-21",
+    source_status: "ok",
+    confirmed: [
+      { label: "음료", value: "물", meal: "간식", source: "life_audio", time: "09:00" },
+      { label: "간식", value: "이클립스", meal: "간식", source: "life_audio", time: "16:00" },
+      { label: "섭취", value: "김밥 한 줄", meal: "기타", source: "life_audio" },
+      { label: "저녁", value: "라면", meal: "저녁", source: "life_audio", time: "21:10" },
+    ],
+    uncertain: [],
+    excluded: [],
+    nutrition: emptyNutrition,
+  }, "2026-08-22");
+
+  assert.deepEqual(
+    day.confirmed.filter((entry) => entry.source === "routine").map((entry) => entry.value),
+    ["올리브유 1큰술 + 레몬즙", "믹스커피 1잔"],
+  );
+  assert.ok(!day.confirmed.some((entry) => /물|이클립스/.test(entry.value)));
+  assert.equal(day.late_night_count, 1);
+  assert.equal(day.confirmed.find((entry) => entry.value === "라면")?.late_night, true);
+  assert.equal(day.uncertain[0]?.question, "김밥 한 줄은 아침·점심·저녁·간식 중 언제 먹었어?");
+  assert.ok((day.estimated_calorie_min ?? 0) > 0);
+  assert.ok((day.estimated_calorie_max ?? 0) >= (day.estimated_calorie_min ?? 0));
+});
+
+test("a manual meal answer resolves the matching uncertain audio entry", () => {
+  const day = prepareFoodDay({
+    date: "2026-08-20",
+    source_status: "ok",
+    confirmed: [
+      { label: "섭취", value: "복숭아 1개", meal: "기타", source: "life_audio" },
+      { label: "점심", value: "복숭아 1개", meal: "점심", source: "manual", time: "13:00" },
+    ],
+    uncertain: [],
+    excluded: [],
+    nutrition: emptyNutrition,
+  }, "2026-08-22");
+
+  assert.ok(day.confirmed.some((entry) => entry.meal === "점심" && entry.value === "복숭아 1개"));
+  assert.ok(!day.uncertain.some((entry) => entry.value === "복숭아 1개"));
+});
