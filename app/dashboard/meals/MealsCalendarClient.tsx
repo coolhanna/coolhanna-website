@@ -3,9 +3,15 @@
 import { useMemo, useRef, useState } from "react";
 import type {
   FoodCalendarDay,
-  FoodCalendarEntry,
   FoodCalendarResponse,
 } from "@/lib/dashboard-api";
+import {
+  prepareFoodDay,
+} from "@/lib/food-journal-rules";
+import type {
+  FoodJournalDay,
+  FoodJournalEntry,
+} from "@/lib/food-journal-rules";
 
 type ApiError = { error: string };
 type MealKind = "아침" | "점심" | "저녁" | "간식";
@@ -190,7 +196,7 @@ function WeekMetric({
     </div>
   );
 }
-function CalendarMeal({ entry }: { entry: FoodCalendarEntry }) {
+function CalendarMeal({ entry }: { entry: FoodJournalEntry }) {
   const tone = MEAL_COLORS[entry.meal] || MEAL_COLORS.기타;
   return (
     <div className="flex min-w-0 items-center gap-1.5" title={entry.value}>
@@ -200,7 +206,7 @@ function CalendarMeal({ entry }: { entry: FoodCalendarEntry }) {
   );
 }
 
-function MealRow({ entry }: { entry: FoodCalendarEntry }) {
+function MealRow({ entry }: { entry: FoodJournalEntry }) {
   const tone = MEAL_COLORS[entry.meal] || MEAL_COLORS.기타;
   return (
     <div
@@ -218,14 +224,39 @@ function MealRow({ entry }: { entry: FoodCalendarEntry }) {
           </p>
         )}
       </div>
-      <p className="text-[12px] leading-relaxed">{entry.value}</p>
+      <div>
+        <div className="flex items-start justify-between gap-2">
+          <p className="text-[12px] leading-relaxed">{entry.value}</p>
+          {entry.source === "routine" && (
+            <span
+              className="shrink-0 rounded px-1.5 py-0.5 text-[9px] font-medium"
+              style={{ background: "var(--secondary-soft)", color: "var(--secondary-text)" }}
+            >
+              아침 고정
+            </span>
+          )}
+        </div>
+        {entry.estimated_calorie_min != null && entry.estimated_calorie_max != null && (
+          <p className="mt-1 text-[10px] tabular-nums" style={{ color: "var(--text-muted-new)" }}>
+            약 {entry.estimated_calorie_min.toLocaleString()}–{entry.estimated_calorie_max.toLocaleString()} kcal
+            {entry.calorie_basis ? ` · ${entry.calorie_basis}` : ""}
+          </p>
+        )}
+        {entry.late_night && (
+          <p className="mt-1 text-[10px] font-medium" style={{ color: "var(--danger)" }}>
+            21시 이후 야식
+          </p>
+        )}
+      </div>
     </div>
   );
 }
 
-function DayNutrition({ day }: { day: FoodCalendarDay }) {
+function DayNutrition({ day }: { day: FoodJournalDay }) {
   const nutrition = day.nutrition;
-  const hasCalories = nutrition.calorie_min != null && nutrition.calorie_max != null;
+  const calorieMin = day.estimated_calorie_min ?? nutrition.calorie_min;
+  const calorieMax = day.estimated_calorie_max ?? nutrition.calorie_max;
+  const hasCalories = calorieMin != null && calorieMax != null;
 
   return (
     <section
@@ -237,7 +268,7 @@ function DayNutrition({ day }: { day: FoodCalendarDay }) {
           <h3 className="text-[12px] font-semibold">영양 기록</h3>
           <p className="mt-1 text-[15px] font-medium tabular-nums">
             {hasCalories
-              ? `${nutrition.calorie_min?.toLocaleString()}–${nutrition.calorie_max?.toLocaleString()} kcal`
+              ? `약 ${calorieMin?.toLocaleString()}–${calorieMax?.toLocaleString()} kcal`
               : "양 정보가 부족해요"}
           </p>
         </div>
@@ -245,9 +276,20 @@ function DayNutrition({ day }: { day: FoodCalendarDay }) {
           className="rounded-full px-2 py-1 text-[10px] text-muted"
           style={{ background: "var(--bg-card-soft)" }}
         >
-          {confidenceLabel(nutrition.confidence)}
+          {day.estimated_calorie_min != null
+            ? day.estimated_calorie_partial ? "일부 음식 기준" : "대략 범위"
+            : confidenceLabel(nutrition.confidence)}
         </span>
       </div>
+
+      {day.late_night_count > 0 && (
+        <p
+          className="mt-3 rounded-lg px-3 py-2 text-[11px] font-medium"
+          style={{ background: "var(--danger-soft)", color: "var(--danger-text)" }}
+        >
+          21시 이후 야식 {day.late_night_count}개가 기록됐어요.
+        </p>
+      )}
 
       {nutrition.concern ? (
         <p
@@ -286,11 +328,13 @@ function DayNutrition({ day }: { day: FoodCalendarDay }) {
 function FoodEntryForm({
   date,
   disabled,
+  onDateChange,
   onBusyChange,
   onSaved,
 }: {
   date: string;
   disabled: boolean;
+  onDateChange: (date: string) => void;
   onBusyChange: (busy: boolean) => void;
   onSaved: (calendar: FoodCalendarResponse) => void;
 }) {
@@ -338,11 +382,19 @@ function FoodEntryForm({
       <div className="flex items-baseline justify-between gap-2">
         <div>
           <h3 className="text-[12px] font-semibold">빠진 음식 추가</h3>
-          <p className="mt-0.5 text-[10px] text-muted">기억난 즉시 적으면 이 날짜에 합쳐져요.</p>
+          <p className="mt-0.5 text-[10px] text-muted">지난 날짜도 선택해서 기록할 수 있어요.</p>
         </div>
-        <span className="text-[10px] tabular-nums" style={{ color: "var(--text-muted-new)" }}>
-          {date.slice(5).replace("-", ".")}
-        </span>
+        <label className="sr-only" htmlFor={`record-date-${date}`}>기록 날짜</label>
+        <input
+          id={`record-date-${date}`}
+          type="date"
+          value={date}
+          max={todayString()}
+          disabled={disabled || busy}
+          onChange={(event) => onDateChange(event.target.value)}
+          className="rounded-lg border px-2 py-1.5 text-[10px] tabular-nums outline-none disabled:opacity-50"
+          style={{ borderColor: "var(--border)", background: "var(--bg-card)" }}
+        />
       </div>
 
       <fieldset className="mt-3">
@@ -411,6 +463,59 @@ function FoodEntryForm({
   );
 }
 
+function MealQuestion({
+  date,
+  entry,
+  disabled,
+  onResolve,
+}: {
+  date: string;
+  entry: FoodJournalEntry;
+  disabled: boolean;
+  onResolve: (entry: FoodJournalEntry, meal: MealKind) => void;
+}) {
+  return (
+    <div
+      className="mt-2 rounded-lg border p-3"
+      style={{ borderColor: "var(--border)", background: "var(--danger-soft)" }}
+    >
+      <p className="text-[10px] font-medium" style={{ color: "var(--danger-text)" }}>
+        {entry.question_kind === "consumption" ? "섭취 확인" : "끼니 확정"}
+      </p>
+      <p className="mt-1 text-[11px] leading-relaxed">
+        {entry.question || `${entry.value}은 언제 먹었어?`}
+      </p>
+      {entry.question_kind === "consumption" && (
+        <p className="mt-1 text-[10px] text-muted">먹었다면 아래에서 끼니를 골라줘.</p>
+      )}
+      <div className="mt-2 grid grid-cols-4 overflow-hidden rounded-lg border" style={{ borderColor: "var(--border)" }}>
+        {MEAL_KINDS.map((meal) => (
+          <button
+            key={meal}
+            type="button"
+            disabled={disabled}
+            onClick={() => onResolve(entry, meal)}
+            aria-label={`${entry.value}을 ${meal}으로 끼니 확정`}
+            className="border-r bg-white px-1 py-2 text-[10px] font-medium last:border-r-0 disabled:opacity-40"
+            style={{ borderColor: "var(--border)", color: "var(--danger-text)" }}
+          >
+            {meal}
+          </button>
+        ))}
+      </div>
+      {entry.question_kind === "consumption" && (
+        <a
+          href={`/dashboard/day?date=${encodeURIComponent(date)}`}
+          className="mt-2 inline-block text-[10px] font-medium underline underline-offset-2"
+          style={{ color: "var(--danger-text)" }}
+        >
+          안 먹었다면 하루 기록에서 알려주기 →
+        </a>
+      )}
+    </div>
+  );
+}
+
 export default function MealsCalendarClient({
   initial,
 }: {
@@ -432,10 +537,21 @@ export default function MealsCalendarClient({
   const [error, setError] = useState(initialError);
   const requestSequence = useRef(0);
 
+  const preparedDays = useMemo(
+    () => data?.days.map((day) => prepareFoodDay(day, todayString())) || [],
+    [data],
+  );
   const selectedDay =
-    data?.days.find((day) => day.date === selected) ||
-    data?.days.find((day) => day.confirmed.length > 0) ||
-    data?.days[0];
+    preparedDays.find((day) => day.date === selected) ||
+    preparedDays.find((day) => day.confirmed.length > 0) ||
+    preparedDays[0];
+  const lateNightDays = useMemo(() => {
+    const [start, end] = data?.reflection.window || [];
+    if (!start || !end) return 0;
+    return preparedDays.filter(
+      (day) => day.date >= start && day.date <= end && day.late_night_count > 0,
+    ).length;
+  }, [data?.reflection.window, preparedDays]);
 
   const calendar = useMemo(() => {
     const [year, number] = month.split("-").map(Number);
@@ -444,7 +560,7 @@ export default function MealsCalendarClient({
     return { year, number, daysInMonth, leadBlank };
   }, [month]);
 
-  async function loadMonth(target: string) {
+  async function loadMonth(target: string, preferredDate?: string) {
     const requestId = ++requestSequence.current;
     setLoading(true);
     setError("");
@@ -459,9 +575,9 @@ export default function MealsCalendarClient({
 
       setData(next);
       setMonth(target);
-      const preferred = target === nowMonth
+      const preferred = preferredDate || (target === nowMonth
         ? todayString()
-        : next.days.filter((day) => day.confirmed.length).at(-1)?.date;
+        : next.days.filter((day) => day.confirmed.length).at(-1)?.date);
       setSelected(preferred || `${target}-01`);
     } catch (loadError) {
       if (requestId !== requestSequence.current) return;
@@ -484,6 +600,37 @@ export default function MealsCalendarClient({
       setLoading(false);
     }
     setMutating(busy);
+  }
+
+  function selectRecordDate(target: string) {
+    if (!target || target > todayString()) return;
+    const targetMonth = target.slice(0, 7);
+    if (targetMonth === month) {
+      setSelected(target);
+      return;
+    }
+    void loadMonth(targetMonth, target);
+  }
+
+  async function resolveMeal(entry: FoodJournalEntry, meal: MealKind) {
+    if (!selectedDay || mutating || loading) return;
+    updateMutationState(true);
+    setError("");
+    try {
+      const result = await proxyJson<{ day: FoodCalendarDay; calendar: FoodCalendarResponse }>(
+        `food-calendar/${selectedDay.date}`,
+        {
+          method: "POST",
+          body: JSON.stringify({ meal, text: entry.value, time: entry.time || null }),
+        },
+      );
+      assertFoodCalendar(result.calendar);
+      updateCalendar(result.calendar);
+    } catch (resolveError) {
+      setError(`끼니를 저장하지 못했어요: ${(resolveError as Error).message}`);
+    } finally {
+      updateMutationState(false);
+    }
   }
 
   if (!data) {
@@ -544,11 +691,12 @@ export default function MealsCalendarClient({
               <p className="text-[10px] font-medium text-muted">기록에서 읽은 흐름</p>
               <p className="text-[10px]" style={{ color: "var(--text-muted-new)" }}>{reflection.notice}</p>
             </div>
-            <div className="grid grid-cols-2 gap-x-5 gap-y-3 sm:grid-cols-4">
+            <div className="grid grid-cols-2 gap-x-5 gap-y-3 sm:grid-cols-5">
               <WeekMetric label="단백질" value={group.protein} total={total} tone="var(--accent)" />
               <WeekMetric label="채소" value={group.vegetable} total={total} tone="#91A47B" />
               <WeekMetric label="과일" value={group.fruit} total={total} tone="var(--secondary)" />
               <WeekMetric label="면·빵·가공/매운 음식" value={group.processed} total={total} tone="var(--danger)" />
+              <WeekMetric label="21시 이후 야식" value={lateNightDays} total={total} tone="#A85A35" />
             </div>
           </div>
         </section>
@@ -614,9 +762,11 @@ export default function MealsCalendarClient({
 
               {Array.from({ length: calendar.daysInMonth }, (_, index) => {
                 const date = `${month}-${String(index + 1).padStart(2, "0")}`;
-                const day = data.days.find((item) => item.date === date);
-                const count = day?.confirmed.length || 0;
+                const day = preparedDays.find((item) => item.date === date);
+                const calendarEntries = day?.confirmed.filter((entry) => entry.source !== "routine") || [];
+                const count = calendarEntries.length;
                 const uncertainCount = day?.uncertain.length || 0;
+                const lateNightCount = day?.late_night_count || 0;
                 const sourceReadable = sourceWasRead(day?.source_status);
                 const isToday = date === todayString();
                 const active = date === selected;
@@ -627,7 +777,7 @@ export default function MealsCalendarClient({
                     key={date}
                     onClick={() => setSelected(date)}
                     disabled={mutating}
-                    aria-label={`${date}, ${count}개 기록${uncertainCount ? `, 확인 필요 ${uncertainCount}개` : ""}${!sourceReadable ? ", 원장 확인 실패" : ""}`}
+                    aria-label={`${date}, ${count}개 기록${uncertainCount ? `, 확인 필요 ${uncertainCount}개` : ""}${lateNightCount ? `, 21시 이후 야식 ${lateNightCount}개` : ""}${!sourceReadable ? ", 원장 확인 실패" : ""}`}
                     aria-pressed={active}
                     className="relative min-h-[72px] border-b border-r p-1.5 text-left align-top transition-colors disabled:cursor-wait sm:min-h-[112px] sm:p-2"
                     style={{
@@ -652,7 +802,7 @@ export default function MealsCalendarClient({
                     </div>
 
                     <div className="mt-1.5 hidden space-y-1.5 sm:block">
-                      {day?.confirmed.slice(0, 3).map((entry, entryIndex) => (
+                      {calendarEntries.slice(0, 3).map((entry, entryIndex) => (
                         <CalendarMeal
                           key={`${entry.source}-${entry.meal}-${entryIndex}`}
                           entry={entry}
@@ -671,7 +821,7 @@ export default function MealsCalendarClient({
 
                     {count > 0 && (
                       <div className="mt-2 flex flex-wrap gap-1 sm:hidden">
-                        {day?.confirmed.slice(0, 4).map((entry, entryIndex) => (
+                        {calendarEntries.slice(0, 4).map((entry, entryIndex) => (
                           <span
                             key={`dot-${entry.source}-${entryIndex}`}
                             className="h-1.5 w-1.5 rounded-full"
@@ -688,6 +838,15 @@ export default function MealsCalendarClient({
                         style={{ background: "var(--danger-soft)", color: "var(--danger-text)" }}
                       >
                         확인
+                      </span>
+                    )}
+                    {lateNightCount > 0 && (
+                      <span
+                        aria-hidden="true"
+                        className="absolute bottom-1.5 left-1.5 rounded px-1 py-0.5 text-[8px] font-medium"
+                        style={{ background: "var(--danger-soft)", color: "var(--danger-text)" }}
+                      >
+                        야식
                       </span>
                     )}
                   </button>
@@ -748,20 +907,17 @@ export default function MealsCalendarClient({
                 {selectedDay.uncertain.length > 0 && (
                   <div className="mt-3 border-t pt-3" style={{ borderColor: "var(--border)" }}>
                     <p className="text-[10px] font-medium" style={{ color: "var(--danger-text)" }}>
-                      확인이 필요한 기록
+                      정확히 기록하려면 이것만 알려줘
                     </p>
                     {selectedDay.uncertain.map((entry, index) => (
-                      <p key={index} className="mt-1 text-[10px] leading-relaxed text-muted">
-                        {entry.label} · {entry.value}
-                      </p>
+                      <MealQuestion
+                        key={`${entry.source}-${entry.value}-${index}`}
+                        date={selectedDay.date}
+                        entry={entry}
+                        disabled={loading || mutating}
+                        onResolve={resolveMeal}
+                      />
                     ))}
-                    <a
-                      href={`/dashboard/day?date=${encodeURIComponent(selectedDay.date)}`}
-                      className="mt-2 inline-block text-[10px] font-medium underline underline-offset-2"
-                      style={{ color: "var(--danger-text)" }}
-                    >
-                      하루 기록에서 답하기 →
-                    </a>
                   </div>
                 )}
               </section>
@@ -771,6 +927,7 @@ export default function MealsCalendarClient({
                 key={selectedDay.date}
                 date={selectedDay.date}
                 disabled={loading || mutating}
+                onDateChange={selectRecordDate}
                 onBusyChange={updateMutationState}
                 onSaved={updateCalendar}
               />

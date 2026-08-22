@@ -15,6 +15,7 @@ export interface FoodJournalEntry extends Omit<FoodCalendarEntry, "source"> {
   calorie_basis: string;
   late_night: boolean;
   question?: string;
+  question_kind?: "meal" | "consumption";
 }
 
 export interface FoodJournalDay extends Omit<FoodCalendarDay, "confirmed" | "uncertain"> {
@@ -98,7 +99,7 @@ export function estimateFoodCalories(
   if (/올리브유/.test(normalized) && /레몬즙/.test(normalized)) {
     return { min: 105, max: 135, basis: "올리브유 1큰술 기준" };
   }
-  if (/믹스커피/.test(normalized)) {
+  if (/(?:믹스커피|맥심\s*커피)/.test(normalized)) {
     return { min: 45, max: 70, basis: "믹스커피 1잔 기준" };
   }
 
@@ -173,6 +174,7 @@ function decorateEntry(
     calorie_basis: calories?.basis ?? "",
     late_night: isLateNight(entry.time),
     question: resolved.question,
+    question_kind: resolved.question ? "meal" : undefined,
   };
 }
 
@@ -191,7 +193,8 @@ export function prepareFoodDay(day: FoodCalendarDay, today: string): FoodJournal
     if (!entry) continue;
     uncertain.push({
       ...entry,
-      question: entry.question || `${entry.value}은 실제로 먹은 게 맞아? 맞다면 언제 먹었어?`,
+      question: `${entry.value}은 실제로 먹은 게 맞아?`,
+      question_kind: "consumption",
     });
   }
 
@@ -207,7 +210,7 @@ export function prepareFoodDay(day: FoodCalendarDay, today: string): FoodJournal
     (day.source_status === "ok" || day.confirmed.length > 0 || day.uncertain.length > 0);
   if (hasDayEvidence) {
     const hasOilRoutine = confirmed.some((entry) => /올리브유/.test(entry.value) && /레몬즙/.test(entry.value));
-    const hasMixCoffee = confirmed.some((entry) => /믹스커피/.test(entry.value));
+    const hasMixCoffee = confirmed.some((entry) => /(?:믹스커피|맥심\s*커피)/.test(entry.value));
     const missingRoutine: FoodJournalEntry[] = [];
     for (const routine of ROUTINE_ENTRIES) {
       if ((routine.value.startsWith("올리브유") && hasOilRoutine) ||
