@@ -62,6 +62,15 @@ function Num({ v, suffix = "", digits = 0 }: { v: number | null | undefined; suf
   return <>{digits ? v.toFixed(digits) : Math.round(v).toLocaleString("ko-KR")}{suffix}</>;
 }
 
+// 소수 시간은 오해를 부른다 — 6.6h를 "6시간 60분"으로 읽는다 (한나 지적 2026-08-23).
+function Hours({ v }: { v: number | null | undefined }) {
+  if (v === null || v === undefined) return <Dash />;
+  const total = Math.round(v * 60);
+  const h = Math.floor(total / 60);
+  const m = total % 60;
+  return <>{m ? `${h}시간 ${m}분` : `${h}시간`}</>;
+}
+
 function WeatherChip({ w }: { w: WeatherDay | null }) {
   if (!w) return null;
   const feel = w.app_tmax ?? w.tmax;
@@ -133,7 +142,7 @@ function DayCard({ day, defaultOpen }: { day: DayRow; defaultOpen: boolean }) {
         )}
         <Row label="워치">
           <span className="tabular-nums flex flex-wrap gap-x-3 gap-y-0.5">
-            <span>밤잠 <Num v={watch?.sleep} suffix="h" digits={1} /></span>
+            <span>밤잠 <Hours v={watch?.sleep} /></span>
             <span>심박 <Num v={watch?.rhr} /></span>
             <span>HRV <Num v={watch?.hrv} /></span>
             <span>걸음 <Num v={watch?.steps} /></span>
