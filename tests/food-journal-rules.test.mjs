@@ -3,6 +3,7 @@ import test from "node:test";
 
 import {
   estimateFoodCalories,
+  parseQuickFoodEntry,
   prepareFoodDay,
   sanitizeFoodValue,
 } from "../lib/food-journal-rules.ts";
@@ -15,6 +16,25 @@ const emptyNutrition = {
   advice: "",
   basis: [],
 };
+
+test("a one-line manual entry extracts an explicit meal without losing the food", () => {
+  assert.deepEqual(parseQuickFoodEntry("점심 김치볶음밥", "저녁"), {
+    meal: "점심",
+    food: "김치볶음밥",
+  });
+  assert.deepEqual(parseQuickFoodEntry("간식: 복숭아 1개", "저녁"), {
+    meal: "간식",
+    food: "복숭아 1개",
+  });
+  assert.deepEqual(parseQuickFoodEntry("김치볶음밥", "점심"), {
+    meal: "점심",
+    food: "김치볶음밥",
+  });
+  assert.deepEqual(parseQuickFoodEntry("점심", "저녁"), {
+    meal: "점심",
+    food: "",
+  });
+});
 
 test("water and breath mints are removed without deleting real dishes", () => {
   assert.equal(sanitizeFoodValue("물 섭취 발언 · 이클립스 · 복숭아 1개"), "복숭아 1개");

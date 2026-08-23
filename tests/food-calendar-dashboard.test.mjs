@@ -56,6 +56,9 @@ test("food calendar applies Hanna's journal rules and supports corrections", () 
   assert.ok(client.includes("언제 먹었어?"));
   assert.ok(client.includes("끼니 확정"));
   assert.ok(client.includes('type="date"'));
+  assert.ok(client.includes("한 줄로 직접 기록"));
+  assert.ok(client.includes('placeholder="점심 김치볶음밥"'));
+  assert.ok(client.indexOf("한 줄로 직접 기록") < client.indexOf("정확히 기록하려면 이것만 알려줘"));
 });
 
 test("legacy short-form URLs leave no embedded room behind", () => {
