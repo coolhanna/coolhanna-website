@@ -6,6 +6,7 @@ import type {
   FoodCalendarResponse,
 } from "@/lib/dashboard-api";
 import {
+  parseQuickFoodEntry,
   prepareFoodDay,
 } from "@/lib/food-journal-rules";
 import type {
@@ -346,7 +347,8 @@ function FoodEntryForm({
 
   async function submit(event: React.FormEvent) {
     event.preventDefault();
-    if (!food.trim() || busy || disabled) return;
+    const parsed = parseQuickFoodEntry(food, meal);
+    if (!parsed.food || busy || disabled) return;
 
     setBusy(true);
     onBusyChange(true);
@@ -357,14 +359,15 @@ function FoodEntryForm({
         `food-calendar/${date}`,
         {
           method: "POST",
-          body: JSON.stringify({ meal, text: food.trim(), time: time || null }),
+          body: JSON.stringify({ meal: parsed.meal, text: parsed.food, time: time || null }),
         },
       );
       assertFoodCalendar(result.calendar);
       onSaved(result.calendar);
       setFood("");
       setTime("");
-      setMessage("원장과 달력에 바로 반영했어요.");
+      setMeal(parsed.meal);
+      setMessage(`${parsed.meal}에 ${parsed.food} 기록 완료.`);
     } catch (error) {
       setMessage(`저장하지 못했어요: ${(error as Error).message}`);
     } finally {
@@ -376,13 +379,18 @@ function FoodEntryForm({
   return (
     <form
       onSubmit={submit}
-      className="rounded-2xl border p-4"
-      style={{ borderColor: "var(--border)", background: "var(--bg-card)" }}
+      className="mt-4 rounded-xl border p-3 sm:p-4"
+      style={{ borderColor: "var(--accent)", background: "var(--accent-soft)" }}
     >
       <div className="flex items-baseline justify-between gap-2">
         <div>
-          <h3 className="text-[12px] font-semibold">빠진 음식 추가</h3>
-          <p className="mt-0.5 text-[10px] text-muted">지난 날짜도 선택해서 기록할 수 있어요.</p>
+          <h3 className="text-[12px] font-semibold">한 줄로 직접 기록</h3>
+          <p className="mt-0.5 text-[10px] text-muted">
+            점심 김치볶음밥처럼 쓰면 끼니와 음식을 자동으로 나눠요.
+          </p>
+          <p className="mt-0.5 text-[9px]" style={{ color: "var(--text-muted-new)" }}>
+            지난 날짜도 선택해서 기록할 수 있어요.
+          </p>
         </div>
         <label className="sr-only" htmlFor={`record-date-${date}`}>기록 날짜</label>
         <input
@@ -393,44 +401,58 @@ function FoodEntryForm({
           disabled={disabled || busy}
           onChange={(event) => onDateChange(event.target.value)}
           className="rounded-lg border px-2 py-1.5 text-[10px] tabular-nums outline-none disabled:opacity-50"
-          style={{ borderColor: "var(--border)", background: "var(--bg-card)" }}
+          style={{ borderColor: "var(--border)", background: "rgba(255,255,255,.72)" }}
         />
       </div>
 
-      <fieldset className="mt-3">
-        <legend className="sr-only">끼니</legend>
-        <div className="grid grid-cols-4 overflow-hidden rounded-lg border" style={{ borderColor: "var(--border)" }}>
-          {MEAL_KINDS.map((item) => (
-            <button
-              key={item}
-              type="button"
-              disabled={disabled || busy}
-              aria-pressed={meal === item}
-              onClick={() => setMeal(item)}
-              className="border-r px-1 py-2 text-[10px] font-medium last:border-r-0 disabled:opacity-40"
-              style={{
-                borderColor: "var(--border)",
-                background: meal === item ? "var(--accent-soft)" : "transparent",
-                color: meal === item ? "var(--accent-text)" : "var(--text-secondary)",
-              }}
-            >
-              {item}
-            </button>
-          ))}
-        </div>
-      </fieldset>
-
-      <div className="mt-2 grid grid-cols-[1fr_108px] gap-2">
+      <div className="mt-3 grid grid-cols-[minmax(0,1fr)_auto] gap-2">
         <label className="sr-only" htmlFor={`food-${date}`}>먹은 음식</label>
         <input
           id={`food-${date}`}
           disabled={disabled || busy}
           value={food}
-          onChange={(event) => setFood(event.target.value)}
-          placeholder="예: 삶은 달걀 1개"
-          className="min-w-0 rounded-lg border px-3 py-2 text-[11px] outline-none disabled:opacity-50"
-          style={{ borderColor: "var(--border)", background: "var(--bg-card)" }}
+          onChange={(event) => {
+            const next = event.target.value;
+            setFood(next);
+            setMeal(parseQuickFoodEntry(next, meal).meal);
+          }}
+          placeholder="점심 김치볶음밥"
+          autoComplete="off"
+          className="min-w-0 rounded-lg border px-3 py-2.5 text-[12px] outline-none disabled:opacity-50"
+          style={{ borderColor: "var(--border)", background: "rgba(255,255,255,.86)" }}
         />
+        <button
+          disabled={disabled || busy || !parseQuickFoodEntry(food, meal).food}
+          className="shrink-0 rounded-lg px-4 py-2.5 text-[11px] font-medium text-white disabled:opacity-40"
+          style={{ background: "var(--accent-dark)" }}
+        >
+          {busy ? "기록 중…" : "기록"}
+        </button>
+      </div>
+
+      <div className="mt-2 grid gap-2 sm:grid-cols-[minmax(0,1fr)_108px]">
+        <fieldset>
+          <legend className="sr-only">끼니</legend>
+          <div className="grid grid-cols-4 overflow-hidden rounded-lg border" style={{ borderColor: "var(--border)" }}>
+            {MEAL_KINDS.map((item) => (
+              <button
+                key={item}
+                type="button"
+                disabled={disabled || busy}
+                aria-pressed={meal === item}
+                onClick={() => setMeal(item)}
+                className="border-r px-1 py-2 text-[10px] font-medium last:border-r-0 disabled:opacity-40"
+                style={{
+                  borderColor: "var(--border)",
+                  background: meal === item ? "rgba(255,255,255,.86)" : "transparent",
+                  color: meal === item ? "var(--accent-text)" : "var(--text-secondary)",
+                }}
+              >
+                {item}
+              </button>
+            ))}
+          </div>
+        </fieldset>
         <label className="sr-only" htmlFor={`time-${date}`}>먹은 시간</label>
         <input
           id={`time-${date}`}
@@ -439,26 +461,17 @@ function FoodEntryForm({
           value={time}
           onChange={(event) => setTime(event.target.value)}
           className="rounded-lg border px-2 py-2 text-[11px] outline-none disabled:opacity-50"
-          style={{ borderColor: "var(--border)", background: "var(--bg-card)" }}
+          style={{ borderColor: "var(--border)", background: "rgba(255,255,255,.72)" }}
         />
       </div>
 
-      <div className="mt-2 flex items-center justify-between gap-3">
-        <p
-          aria-live="polite"
-          className="min-h-4 text-[10px] leading-relaxed"
-          style={{ color: message.startsWith("저장하지") ? "var(--danger)" : "var(--success)" }}
-        >
-          {message}
-        </p>
-        <button
-          disabled={disabled || busy || !food.trim()}
-          className="shrink-0 rounded-lg px-3.5 py-2 text-[11px] font-medium text-white disabled:opacity-40"
-          style={{ background: "var(--accent-dark)" }}
-        >
-          {busy ? "반영 중…" : "추가"}
-        </button>
-      </div>
+      <p
+        aria-live="polite"
+        className="mt-2 min-h-4 text-[10px] leading-relaxed"
+        style={{ color: message.startsWith("저장하지") ? "var(--danger)" : "var(--success)" }}
+      >
+        {message || "날짜·끼니·시간은 필요하면 아래에서 바꿀 수 있어요."}
+      </p>
     </form>
   );
 }
@@ -904,6 +917,15 @@ export default function MealsCalendarClient({
                   )}
                 </div>
 
+                <FoodEntryForm
+                  key={selectedDay.date}
+                  date={selectedDay.date}
+                  disabled={loading || mutating}
+                  onDateChange={selectRecordDate}
+                  onBusyChange={updateMutationState}
+                  onSaved={updateCalendar}
+                />
+
                 {selectedDay.uncertain.length > 0 && (
                   <div className="mt-3 border-t pt-3" style={{ borderColor: "var(--border)" }}>
                     <p className="text-[10px] font-medium" style={{ color: "var(--danger-text)" }}>
@@ -923,14 +945,6 @@ export default function MealsCalendarClient({
               </section>
 
               <DayNutrition day={selectedDay} />
-              <FoodEntryForm
-                key={selectedDay.date}
-                date={selectedDay.date}
-                disabled={loading || mutating}
-                onDateChange={selectRecordDate}
-                onBusyChange={updateMutationState}
-                onSaved={updateCalendar}
-              />
             </aside>
           )}
         </div>

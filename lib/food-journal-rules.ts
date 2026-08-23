@@ -29,6 +29,21 @@ export interface FoodJournalDay extends Omit<FoodCalendarDay, "confirmed" | "unc
   late_night_count: number;
 }
 
+export type QuickMealKind = "아침" | "점심" | "저녁" | "간식";
+
+export function parseQuickFoodEntry(
+  value: string,
+  fallbackMeal: QuickMealKind,
+): { meal: QuickMealKind; food: string } {
+  const clean = value.replace(/\s+/g, " ").trim();
+  const explicit = clean.match(/^(아침|점심|저녁|간식)(?:\s*[:：-]\s*|\s+|$)(.*)$/);
+  if (!explicit) return { meal: fallbackMeal, food: clean };
+  return {
+    meal: explicit[1] as QuickMealKind,
+    food: explicit[2].trim(),
+  };
+}
+
 const MEAL_LABEL_RE = /(아침|점심|저녁|간식|야식)/;
 const TIME_RE = /^(?:[01]\d|2[0-3]):[0-5]\d$/;
 const KOREAN_COUNTS: Record<string, number> = {
