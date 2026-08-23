@@ -370,8 +370,12 @@ export function prepareFoodDay(day: FoodCalendarDay, today: string): FoodJournal
   const unresolved = uncertain.filter((entry) => !manualValues.has(entryKey(entry)));
 
   if (day.date <= today) {
-    const hasOilRoutine = confirmed.some(isCompactRoutineOil);
-    const hasMixCoffee = confirmed.some(isCompactRoutineCoffee);
+    const hasOilRoutine = confirmed.some(
+      (entry) => entry.meal === "아침" && isOilRoutine(entry.value),
+    );
+    const hasMixCoffee = confirmed.some(
+      (entry) => entry.meal === "아침" && isMixCoffee(entry.value),
+    );
     const missingRoutine: FoodJournalEntry[] = [];
     for (const routine of ROUTINE_ENTRIES) {
       if ((routine.value.startsWith("올리브유") && hasOilRoutine) ||
