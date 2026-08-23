@@ -115,6 +115,7 @@ function foodCalendarError(value: unknown): string {
     const entries = [...day.confirmed, ...day.uncertain, ...day.excluded];
     if (entries.some((entry) =>
       !entry ||
+      (entry.id != null && typeof entry.id !== "string") ||
       typeof entry.label !== "string" ||
       typeof entry.value !== "string" ||
       typeof entry.meal !== "string" ||
@@ -208,11 +209,40 @@ function CalendarMeal({ entry }: { entry: FoodJournalEntry }) {
   );
 }
 
-function MealRow({ entry }: { entry: FoodJournalEntry }) {
+function MealRow({
+  entry,
+  disabled,
+  onEdit,
+  onDelete,
+}: {
+  entry: FoodJournalEntry;
+  disabled: boolean;
+  onEdit: (entry: FoodJournalEntry, meal: MealKind, text: string, time: string) => Promise<boolean>;
+  onDelete: (entry: FoodJournalEntry) => Promise<void>;
+}) {
   const tone = MEAL_COLORS[entry.meal] || MEAL_COLORS.기타;
+  const [editing, setEditing] = useState(false);
+  const [draftMeal, setDraftMeal] = useState<MealKind>(
+    entry.meal === "기타" ? "간식" : entry.meal,
+  );
+  const [draftText, setDraftText] = useState(entry.value);
+  const [draftTime, setDraftTime] = useState(entry.time || "");
+
+  async function saveEdit(event: React.FormEvent) {
+    event.preventDefault();
+    const clean = draftText.trim();
+    if (!clean || disabled) return;
+    if (await onEdit(entry, draftMeal, clean, draftTime)) setEditing(false);
+  }
+
+  async function remove() {
+    if (disabled || !window.confirm(`“${entry.value}” 기록을 삭제할까요?`)) return;
+    await onDelete(entry);
+  }
+
   return (
     <div
-      className="grid grid-cols-[50px_1fr] gap-3 border-t py-3 first:border-t-0"
+      className="grid grid-cols-[92px_minmax(0,1fr)] gap-3 border-t py-3 first:border-t-0"
       style={{ borderColor: "var(--border)" }}
     >
       <div>
@@ -221,14 +251,14 @@ function MealRow({ entry }: { entry: FoodJournalEntry }) {
           <span className="text-[10px] font-medium text-muted">{entry.meal}</span>
         </div>
         {entry.time && (
-          <p className="mt-1 pl-3 text-[10px] tabular-nums" style={{ color: "var(--text-muted-new)" }}>
+          <p className="mt-1 whitespace-nowrap pl-3 text-[10px] tabular-nums" style={{ color: "var(--text-muted-new)" }}>
             {entry.time}
           </p>
         )}
       </div>
       <div>
-        <div className="flex items-start justify-between gap-2">
-          <p className="text-[12px] leading-relaxed">{entry.value}</p>
+        <div className="flex items-start justify-between gap-3">
+          <p className="min-w-0 text-[12px] leading-relaxed">{entry.value}</p>
           {entry.source === "routine" && (
             <span
               className="shrink-0 rounded px-1.5 py-0.5 text-[9px] font-medium"
@@ -237,17 +267,102 @@ function MealRow({ entry }: { entry: FoodJournalEntry }) {
               아침 고정
             </span>
           )}
+          {entry.source !== "routine" && entry.id && !editing && (
+            <div className="flex shrink-0 items-center gap-2 text-[9px]">
+              <button
+                type="button"
+                disabled={disabled}
+                onClick={() => setEditing(true)}
+                className="underline-offset-2 hover:underline disabled:opacity-40"
+                style={{ color: "var(--text-muted-new)" }}
+              >
+                수정
+              </button>
+              <button
+                type="button"
+                disabled={disabled}
+                onClick={remove}
+                className="underline-offset-2 hover:underline disabled:opacity-40"
+                style={{ color: "var(--danger)" }}
+              >
+                삭제
+              </button>
+            </div>
+          )}
         </div>
         {entry.estimated_calorie_min != null && entry.estimated_calorie_max != null && (
           <p className="mt-1 text-[10px] tabular-nums" style={{ color: "var(--text-muted-new)" }}>
             약 {entry.estimated_calorie_min.toLocaleString()}–{entry.estimated_calorie_max.toLocaleString()} kcal
-            {entry.calorie_basis ? ` · ${entry.calorie_basis}` : ""}
           </p>
         )}
         {entry.late_night && (
           <p className="mt-1 text-[10px] font-medium" style={{ color: "var(--danger)" }}>
             21시 이후 야식
           </p>
+        )}
+        {editing && (
+          <form
+            onSubmit={saveEdit}
+            className="mt-3 space-y-2 rounded-lg border p-2.5"
+            style={{ borderColor: "var(--border)", background: "var(--accent-soft)" }}
+          >
+            <label className="sr-only" htmlFor={`edit-food-${entry.id}`}>음식 수정</label>
+            <input
+              id={`edit-food-${entry.id}`}
+              value={draftText}
+              disabled={disabled}
+              onChange={(event) => setDraftText(event.target.value)}
+              className="w-full rounded-md border px-2.5 py-2 text-[11px] outline-none"
+              style={{ borderColor: "var(--border)", background: "rgba(255,255,255,.86)" }}
+            />
+            <div className="grid gap-2 sm:grid-cols-[minmax(0,1fr)_100px_auto]">
+              <div className="grid grid-cols-4 overflow-hidden rounded-md border" style={{ borderColor: "var(--border)" }}>
+                {MEAL_KINDS.map((meal) => (
+                  <button
+                    key={meal}
+                    type="button"
+                    disabled={disabled}
+                    aria-pressed={draftMeal === meal}
+                    onClick={() => setDraftMeal(meal)}
+                    className="border-r px-1 py-1.5 text-[9px] last:border-r-0"
+                    style={{
+                      borderColor: "var(--border)",
+                      background: draftMeal === meal ? "rgba(255,255,255,.9)" : "transparent",
+                    }}
+                  >
+                    {meal}
+                  </button>
+                ))}
+              </div>
+              <label className="sr-only" htmlFor={`edit-time-${entry.id}`}>시간 수정</label>
+              <input
+                id={`edit-time-${entry.id}`}
+                type="time"
+                value={draftTime}
+                disabled={disabled}
+                onChange={(event) => setDraftTime(event.target.value)}
+                className="rounded-md border px-2 py-1.5 text-[10px] outline-none"
+                style={{ borderColor: "var(--border)", background: "rgba(255,255,255,.86)" }}
+              />
+              <div className="flex justify-end gap-1.5">
+                <button
+                  type="button"
+                  onClick={() => setEditing(false)}
+                  className="rounded-md border px-2.5 py-1.5 text-[9px]"
+                  style={{ borderColor: "var(--border)" }}
+                >
+                  취소
+                </button>
+                <button
+                  disabled={disabled || !draftText.trim()}
+                  className="rounded-md px-2.5 py-1.5 text-[9px] text-white disabled:opacity-40"
+                  style={{ background: "var(--accent-dark)" }}
+                >
+                  저장
+                </button>
+              </div>
+            </div>
+          </form>
         )}
       </div>
     </div>
@@ -647,6 +762,52 @@ export default function MealsCalendarClient({
     }
   }
 
+  async function editFoodEntry(
+    entry: FoodJournalEntry,
+    meal: MealKind,
+    text: string,
+    time: string,
+  ): Promise<boolean> {
+    if (!selectedDay || !entry.id || mutating || loading) return false;
+    updateMutationState(true);
+    setError("");
+    try {
+      const result = await proxyJson<{ day: FoodCalendarDay; calendar: FoodCalendarResponse }>(
+        `food-calendar/${selectedDay.date}/${encodeURIComponent(entry.id)}`,
+        {
+          method: "PATCH",
+          body: JSON.stringify({ meal, text, time: time || null }),
+        },
+      );
+      assertFoodCalendar(result.calendar);
+      updateCalendar(result.calendar);
+      return true;
+    } catch (editError) {
+      setError(`기록을 수정하지 못했어요: ${(editError as Error).message}`);
+      return false;
+    } finally {
+      updateMutationState(false);
+    }
+  }
+
+  async function deleteFoodEntry(entry: FoodJournalEntry): Promise<void> {
+    if (!selectedDay || !entry.id || mutating || loading) return;
+    updateMutationState(true);
+    setError("");
+    try {
+      const result = await proxyJson<{ day: FoodCalendarDay; calendar: FoodCalendarResponse }>(
+        `food-calendar/${selectedDay.date}/${encodeURIComponent(entry.id)}`,
+        { method: "DELETE" },
+      );
+      assertFoodCalendar(result.calendar);
+      updateCalendar(result.calendar);
+    } catch (deleteError) {
+      setError(`기록을 삭제하지 못했어요: ${(deleteError as Error).message}`);
+    } finally {
+      updateMutationState(false);
+    }
+  }
+
   if (!data) {
     return (
       <main className="dashboard-root min-h-screen bg-paper text-ink">
@@ -899,7 +1060,13 @@ export default function MealsCalendarClient({
                 <div className="mt-3">
                   {selectedDay.confirmed.length ? (
                     selectedDay.confirmed.map((entry, index) => (
-                      <MealRow key={`${entry.source}-${index}`} entry={entry} />
+                      <MealRow
+                        key={entry.id || `${entry.source}-${index}`}
+                        entry={entry}
+                        disabled={mutating || loading}
+                        onEdit={editFoodEntry}
+                        onDelete={deleteFoodEntry}
+                      />
                     ))
                   ) : sourceWasRead(selectedDay.source_status) ? (
                     <p

@@ -370,6 +370,27 @@ export function prepareFoodDay(day: FoodCalendarDay, today: string): FoodJournal
       if (entry) missingRoutine.push(entry);
     }
     confirmed.unshift(...missingRoutine);
+
+    const hasCompleteRoutine = confirmed.some((entry) => isOilRoutine(entry.value)) &&
+      confirmed.some((entry) => isMixCoffee(entry.value));
+    if (hasCompleteRoutine) {
+      const combinedRoutine = decorateEntry({
+        label: "아침 고정 루틴",
+        value: "올리브유 1큰술 + 레몬즙 · 믹스커피 1잔",
+        meal: "아침" as const,
+        source: "routine" as const,
+        time: "",
+      });
+      const withoutRoutineParts = confirmed.filter(
+        (entry) => !isOilRoutine(entry.value) && !isMixCoffee(entry.value),
+      );
+      confirmed.splice(
+        0,
+        confirmed.length,
+        ...(combinedRoutine ? [combinedRoutine] : []),
+        ...withoutRoutineParts,
+      );
+    }
   }
 
   const knownCalories = confirmed.filter(
