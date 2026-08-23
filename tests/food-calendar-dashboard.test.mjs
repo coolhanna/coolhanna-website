@@ -49,6 +49,7 @@ test("food calendar follows the restrained dashboard visual system", () => {
 
 test("food calendar applies Hanna's journal rules and supports corrections", () => {
   const client = read("app/dashboard/meals/MealsCalendarClient.tsx");
+  const api = read("lib/dashboard-api.ts");
 
   assert.ok(client.includes('from "@/lib/food-journal-rules"'));
   assert.ok(client.includes("지난 날짜도 선택해서 기록할 수 있어요"));
@@ -60,6 +61,19 @@ test("food calendar applies Hanna's journal rules and supports corrections", () 
   assert.ok(client.includes('placeholder="점심 김치볶음밥"'));
   assert.ok(client.indexOf("한 줄로 직접 기록") < client.indexOf("정확히 기록하려면 이것만 알려줘"));
   assert.ok(!/<FoodEntryForm\s+key=/.test(client), "date change must preserve the entry draft");
+  assert.ok(client.includes('method: "PATCH"'), "confirmed food must be editable in place");
+  assert.ok(client.includes('method: "DELETE"'), "confirmed food must be removable in place");
+  assert.ok(client.includes("수정"));
+  assert.ok(client.includes("삭제"));
+  assert.ok(api.includes("id?: string"), "backend entry identity must cross the frontend contract");
+});
+
+test("meal rows keep time and calories separate and omit noisy calorie basis copy", () => {
+  const client = read("app/dashboard/meals/MealsCalendarClient.tsx");
+
+  assert.ok(client.includes("grid-cols-[92px_minmax(0,1fr)]"));
+  assert.ok(client.includes("whitespace-nowrap"));
+  assert.ok(!client.includes('entry.calorie_basis ? ` · ${entry.calorie_basis}` : ""'));
 });
 
 test("legacy short-form URLs leave no embedded room behind", () => {

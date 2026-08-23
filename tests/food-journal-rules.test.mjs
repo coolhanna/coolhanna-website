@@ -177,7 +177,7 @@ test("daily view adds the morning routine, flags late food, and asks unknown mea
 
   assert.deepEqual(
     day.confirmed.filter((entry) => entry.source === "routine").map((entry) => entry.value),
-    ["올리브유 1큰술 + 레몬즙", "믹스커피 1잔"],
+    ["올리브유 1큰술 + 레몬즙 · 믹스커피 1잔"],
   );
   assert.ok(!day.confirmed.some((entry) => /물|이클립스/.test(entry.value)));
   assert.equal(day.late_night_count, 1);
@@ -233,7 +233,7 @@ test("a time-less recorded morning routine is confirmed once without a duplicate
   }, "2026-08-22");
 
   assert.equal(day.confirmed.filter((entry) => /(?:믹스커피|맥심 커피)/.test(entry.value)).length, 1);
-  assert.ok(day.confirmed.some((entry) => entry.value === "맥심 커피 1잔" && entry.meal === "아침"));
+  assert.ok(day.confirmed.some((entry) => entry.value === "올리브유 1큰술 + 레몬즙 · 믹스커피 1잔" && entry.meal === "아침"));
   assert.ok(!day.uncertain.some((entry) => /커피/.test(entry.value)));
 });
 
@@ -251,8 +251,7 @@ test("the declared morning routine appears through today even without an audio r
   const future = prepareFoodDay({ ...blankDay, date: "2026-08-23" }, "2026-08-22");
 
   assert.deepEqual(today.confirmed.map((entry) => entry.value), [
-    "올리브유 1큰술 + 레몬즙",
-    "믹스커피 1잔",
+    "올리브유 1큰술 + 레몬즙 · 믹스커피 1잔",
   ]);
   assert.equal(future.confirmed.length, 0);
 });
