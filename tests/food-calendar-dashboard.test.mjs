@@ -65,6 +65,10 @@ test("food calendar applies Hanna's journal rules and supports corrections", () 
   assert.ok(client.includes('method: "DELETE"'), "confirmed food must be removable in place");
   assert.ok(client.includes("수정"));
   assert.ok(client.includes("삭제"));
+  assert.ok(client.includes("cancelEdit"), "cancel must restore the persisted values");
+  assert.ok(client.includes('role="alert"'), "mutation failures must be announced accessibly");
+  assert.ok(client.includes("min-h-8"), "edit and delete controls need usable touch targets");
+  assert.ok(!client.includes("sm:grid-cols-[minmax(0,1fr)_100px_auto]"));
   assert.ok(api.includes("id?: string"), "backend entry identity must cross the frontend contract");
 });
 

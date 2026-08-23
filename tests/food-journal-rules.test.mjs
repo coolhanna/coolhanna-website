@@ -256,6 +256,34 @@ test("the declared morning routine appears through today even without an audio r
   assert.equal(future.confirmed.length, 0);
 });
 
+test("routine compaction never swallows extra food, larger quantities, or late records", () => {
+  const compound = prepareFoodDay({
+    date: "2026-08-22",
+    source_status: "ok",
+    confirmed: [
+      { id: "compound", label: "아침", value: "믹스커피 1잔 · 빵 1개", meal: "아침", source: "life_audio", time: "09:00" },
+    ],
+    uncertain: [],
+    excluded: [],
+    nutrition: emptyNutrition,
+  }, "2026-08-22");
+  assert.ok(compound.confirmed.some((entry) => entry.value.includes("빵 1개")));
+
+  const larger = prepareFoodDay({
+    date: "2026-08-22",
+    source_status: "ok",
+    confirmed: [
+      { id: "larger", label: "아침", value: "맥심 커피 2잔", meal: "아침", source: "life_audio", time: "09:30" },
+      { id: "late", label: "야식", value: "올리브유 1큰술 + 레몬즙", meal: "간식", source: "life_audio", time: "21:30" },
+    ],
+    uncertain: [],
+    excluded: [],
+    nutrition: emptyNutrition,
+  }, "2026-08-22");
+  assert.ok(larger.confirmed.some((entry) => entry.id === "larger" && entry.value === "맥심 커피 2잔"));
+  assert.equal(larger.confirmed.find((entry) => entry.id === "late")?.late_night, true);
+});
+
 test("the same food at a different time remains a separate question", () => {
   const day = prepareFoodDay({
     date: "2026-08-20",
