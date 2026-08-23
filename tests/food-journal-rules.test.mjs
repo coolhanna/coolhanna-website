@@ -2,6 +2,7 @@ import assert from "node:assert/strict";
 import test from "node:test";
 
 import {
+  buildQuickFoodEntry,
   estimateFoodCalories,
   parseQuickFoodEntry,
   prepareFoodDay,
@@ -33,6 +34,10 @@ test("a one-line manual entry extracts an explicit meal without losing the food"
   assert.deepEqual(parseQuickFoodEntry("점심", "저녁"), {
     meal: "점심",
     food: "",
+  });
+  assert.deepEqual(buildQuickFoodEntry("점심 김치볶음밥", "저녁"), {
+    meal: "저녁",
+    food: "김치볶음밥",
   });
 });
 
