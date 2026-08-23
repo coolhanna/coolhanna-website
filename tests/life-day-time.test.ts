@@ -7,16 +7,16 @@ test("formats a single recorder timestamp", () => {
   assert.equal(formatTimelineTime("10:51"), "오전 10:51");
 });
 
-test("formats a same-period recorder time range without losing its end", () => {
-  assert.equal(formatTimelineTime("10:51~11:25"), "오전 10:51~11:25");
+test("shows only the start of a recorder time range", () => {
+  assert.equal(formatTimelineTime("10:51~11:25"), "오전 10:51");
 });
 
-test("labels both sides when a range crosses noon", () => {
-  assert.equal(formatTimelineTime("11:29~12:19"), "오전 11:29~오후 12:19");
+test("keeps only the start even when a range crosses noon", () => {
+  assert.equal(formatTimelineTime("11:29~12:19"), "오전 11:29");
 });
 
-test("marks the end as next day when a range crosses midnight", () => {
-  assert.equal(formatTimelineTime("23:30~00:20"), "오후 11:30~다음날 오전 12:20");
+test("keeps only the start when a range crosses midnight", () => {
+  assert.equal(formatTimelineTime("23:30~00:20"), "오후 11:30");
 });
 
 test("uses the range start when sorting timeline entries", () => {
