@@ -44,6 +44,16 @@ export function parseQuickFoodEntry(
   };
 }
 
+export function buildQuickFoodEntry(
+  value: string,
+  selectedMeal: QuickMealKind,
+): { meal: QuickMealKind; food: string } {
+  return {
+    meal: selectedMeal,
+    food: parseQuickFoodEntry(value, selectedMeal).food,
+  };
+}
+
 const MEAL_LABEL_RE = /(아침|점심|저녁|간식|야식)/;
 const TIME_RE = /^(?:[01]\d|2[0-3]):[0-5]\d$/;
 const KOREAN_COUNTS: Record<string, number> = {

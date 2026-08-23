@@ -6,6 +6,7 @@ import type {
   FoodCalendarResponse,
 } from "@/lib/dashboard-api";
 import {
+  buildQuickFoodEntry,
   parseQuickFoodEntry,
   prepareFoodDay,
 } from "@/lib/food-journal-rules";
@@ -347,7 +348,7 @@ function FoodEntryForm({
 
   async function submit(event: React.FormEvent) {
     event.preventDefault();
-    const parsed = parseQuickFoodEntry(food, meal);
+    const parsed = buildQuickFoodEntry(food, meal);
     if (!parsed.food || busy || disabled) return;
 
     setBusy(true);
@@ -918,7 +919,6 @@ export default function MealsCalendarClient({
                 </div>
 
                 <FoodEntryForm
-                  key={selectedDay.date}
                   date={selectedDay.date}
                   disabled={loading || mutating}
                   onDateChange={selectRecordDate}
