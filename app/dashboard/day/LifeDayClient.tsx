@@ -42,7 +42,7 @@ function TimelineColumn({ label, items }: { label: string; items: LifeDayRespons
     <div className="rounded-xl p-3" style={{ background: "var(--bg-card-soft)", border: "1px solid var(--border)" }}>
       <h3 className="text-[10px] font-semibold mb-2.5" style={{ color: "var(--accent-text)" }}>{label}</h3>
       {safeItems.map((item, index) => (
-        <div key={`${item.time}-${item.title}`} className="grid grid-cols-[104px_12px_1fr] gap-2 min-h-[52px]">
+        <div key={`${item.time}-${item.title}`} className="grid grid-cols-[66px_12px_1fr] gap-2 min-h-[52px]">
           <span className="text-[10px] text-muted pt-px whitespace-nowrap">{formatTimelineTime(item.time)}</span>
           <span className="relative flex justify-center">
             <span className="z-10 w-2 h-2 rounded-full mt-0.5" style={{ background: "var(--accent)" }} />

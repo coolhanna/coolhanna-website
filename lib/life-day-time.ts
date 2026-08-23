@@ -48,16 +48,7 @@ function formatPoint(point: TimePoint) {
 export function formatTimelineTime(value: string) {
   const parsed = parseTimelineTime(value);
   if (!parsed) return value.trim() || "시간 미상";
-  if (!parsed.end) return formatPoint(parsed.start);
-
-  const crossesMidnight = parsed.end.hour * 60 + parsed.end.minuteNumber
-    < parsed.start.hour * 60 + parsed.start.minuteNumber;
-  const endLabel = crossesMidnight
-    ? `다음날 ${formatPoint(parsed.end)}`
-    : period(parsed.start) === period(parsed.end)
-      ? clock(parsed.end)
-      : formatPoint(parsed.end);
-  return `${formatPoint(parsed.start)}~${endLabel}`;
+  return formatPoint(parsed.start);
 }
 
 export function formatTimelineBoundary(value: string, boundary: "start" | "end") {
