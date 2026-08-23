@@ -268,6 +268,7 @@ test("routine compaction never swallows extra food, larger quantities, or late r
     nutrition: emptyNutrition,
   }, "2026-08-22");
   assert.ok(compound.confirmed.some((entry) => entry.value.includes("빵 1개")));
+  assert.equal(compound.confirmed.filter((entry) => /(?:믹스커피|맥심 커피)/.test(entry.value)).length, 1);
 
   const larger = prepareFoodDay({
     date: "2026-08-22",
@@ -281,6 +282,7 @@ test("routine compaction never swallows extra food, larger quantities, or late r
     nutrition: emptyNutrition,
   }, "2026-08-22");
   assert.ok(larger.confirmed.some((entry) => entry.id === "larger" && entry.value === "맥심 커피 2잔"));
+  assert.equal(larger.confirmed.filter((entry) => /(?:믹스커피|맥심 커피)/.test(entry.value)).length, 1);
   assert.equal(larger.confirmed.find((entry) => entry.id === "late")?.late_night, true);
 });
 
