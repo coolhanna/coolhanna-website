@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 import Link from "next/link";
 import type { LifeDayResponse } from "@/lib/dashboard-api";
+import { formatTimelineBoundary, formatTimelineTime, timelineStartMinutes } from "@/lib/life-day-time";
 
 function Section({ title, children }: { title: string; children: React.ReactNode }) {
   return (
@@ -13,29 +14,8 @@ function Section({ title, children }: { title: string; children: React.ReactNode
   );
 }
 
-function parseTime(time: string) {
-  const match = /^(\d{2}):(\d{2})$/.exec(time);
-  if (!match) return null;
-  const [, hourText, minute] = match;
-  const hour = Number(hourText);
-  const minuteNumber = Number(minute);
-  if (hour < 0 || hour > 23 || minuteNumber < 0 || minuteNumber > 59) return null;
-  return { hour, minute, minuteNumber };
-}
-
-function koreanTime(time: string) {
-  const parsed = parseTime(time);
-  if (!parsed) return "시간 미상";
-  const { hour, minute } = parsed;
-  const period = hour < 12 ? "오전" : "오후";
-  const displayHour = hour % 12 || 12;
-  return `${period} ${displayHour}:${minute}`;
-}
-
 function timeValue(time: string) {
-  const parsed = parseTime(time);
-  if (!parsed) return Number.MAX_SAFE_INTEGER;
-  return parsed.hour * 60 + parsed.minuteNumber;
+  return timelineStartMinutes(time);
 }
 
 function relativeTimeValue(time: string, dayStartTime: string) {
@@ -49,8 +29,10 @@ function timelineRangeLabel(items: LifeDayResponse["timeline"], fallback: string
   if (!items?.length) return fallback;
   const first = items[0];
   const last = items[items.length - 1];
-  const firstLabel = relativeTimeValue(first.time, dayStartTime) >= 24 * 60 ? `다음날 ${koreanTime(first.time)}` : koreanTime(first.time);
-  const lastLabel = relativeTimeValue(last.time, dayStartTime) >= 24 * 60 ? `다음날 ${koreanTime(last.time)}` : koreanTime(last.time);
+  const firstTime = formatTimelineBoundary(first.time, "start");
+  const lastTime = formatTimelineBoundary(last.time, "end");
+  const firstLabel = relativeTimeValue(first.time, dayStartTime) >= 24 * 60 ? `다음날 ${firstTime}` : firstTime;
+  const lastLabel = relativeTimeValue(last.time, dayStartTime) >= 24 * 60 ? `다음날 ${lastTime}` : lastTime;
   return `${firstLabel}~${lastLabel}`;
 }
 
@@ -60,8 +42,8 @@ function TimelineColumn({ label, items }: { label: string; items: LifeDayRespons
     <div className="rounded-xl p-3" style={{ background: "var(--bg-card-soft)", border: "1px solid var(--border)" }}>
       <h3 className="text-[10px] font-semibold mb-2.5" style={{ color: "var(--accent-text)" }}>{label}</h3>
       {safeItems.map((item, index) => (
-        <div key={`${item.time}-${item.title}`} className="grid grid-cols-[66px_12px_1fr] gap-2 min-h-[52px]">
-          <span className="text-[10px] text-muted pt-px whitespace-nowrap">{koreanTime(item.time)}</span>
+        <div key={`${item.time}-${item.title}`} className="grid grid-cols-[104px_12px_1fr] gap-2 min-h-[52px]">
+          <span className="text-[10px] text-muted pt-px whitespace-nowrap">{formatTimelineTime(item.time)}</span>
           <span className="relative flex justify-center">
             <span className="z-10 w-2 h-2 rounded-full mt-0.5" style={{ background: "var(--accent)" }} />
             {index < safeItems.length - 1 && <span className="absolute top-2.5 -bottom-0.5 w-px" style={{ background: "var(--border)" }} />}
@@ -282,7 +264,7 @@ export default function LifeDayClient({ data, days }: { data: LifeDayResponse | 
                   <div className="flex items-center justify-between gap-2 pb-1.5"><h3 className="text-xs font-semibold">{speaker}</h3><span className="text-[10px] text-muted">{items?.length || 0}문장</span></div>
                   {(items || []).sort((left, right) => relativeTimeValue(left.time, timelineStartTime) - relativeTimeValue(right.time, timelineStartTime)).map((item, index) => (
                     <article key={`${item.time}-${index}`} className="grid grid-cols-[64px_1fr] gap-2.5 py-2" style={{ borderTop: "1px solid var(--border)" }}>
-                      <p className="text-[10px] text-muted">{koreanTime(item.time)}</p>
+                      <p className="text-[10px] text-muted">{formatTimelineTime(item.time)}</p>
                       <blockquote className="text-xs font-medium leading-relaxed">“{item.quote}”</blockquote>
                     </article>
                   ))}
