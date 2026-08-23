@@ -284,6 +284,16 @@ function isMixCoffee(value: string): boolean {
   return /(?:믹스커피|맥심\s*커피)/.test(value);
 }
 
+function isCompactRoutineOil(entry: FoodJournalEntry): boolean {
+  return entry.meal === "아침" && !entry.late_night &&
+    /^올리브유\s*(?:1|한)\s*큰술\s*(?:\+|·|과|와)\s*레몬즙$/.test(entry.value.trim());
+}
+
+function isCompactRoutineCoffee(entry: FoodJournalEntry): boolean {
+  return entry.meal === "아침" && !entry.late_night &&
+    /^(?:믹스커피|맥심\s*커피)\s*(?:1|한)\s*잔$/.test(entry.value.trim());
+}
+
 function isBreakfastRoutine(value: string): boolean {
   return isOilRoutine(value) || isMixCoffee(value);
 }
@@ -360,8 +370,8 @@ export function prepareFoodDay(day: FoodCalendarDay, today: string): FoodJournal
   const unresolved = uncertain.filter((entry) => !manualValues.has(entryKey(entry)));
 
   if (day.date <= today) {
-    const hasOilRoutine = confirmed.some((entry) => isOilRoutine(entry.value));
-    const hasMixCoffee = confirmed.some((entry) => isMixCoffee(entry.value));
+    const hasOilRoutine = confirmed.some(isCompactRoutineOil);
+    const hasMixCoffee = confirmed.some(isCompactRoutineCoffee);
     const missingRoutine: FoodJournalEntry[] = [];
     for (const routine of ROUTINE_ENTRIES) {
       if ((routine.value.startsWith("올리브유") && hasOilRoutine) ||
@@ -371,8 +381,8 @@ export function prepareFoodDay(day: FoodCalendarDay, today: string): FoodJournal
     }
     confirmed.unshift(...missingRoutine);
 
-    const hasCompleteRoutine = confirmed.some((entry) => isOilRoutine(entry.value)) &&
-      confirmed.some((entry) => isMixCoffee(entry.value));
+    const hasCompleteRoutine = confirmed.some(isCompactRoutineOil) &&
+      confirmed.some(isCompactRoutineCoffee);
     if (hasCompleteRoutine) {
       const combinedRoutine = decorateEntry({
         label: "아침 고정 루틴",
@@ -382,7 +392,7 @@ export function prepareFoodDay(day: FoodCalendarDay, today: string): FoodJournal
         time: "",
       });
       const withoutRoutineParts = confirmed.filter(
-        (entry) => !isOilRoutine(entry.value) && !isMixCoffee(entry.value),
+        (entry) => !isCompactRoutineOil(entry) && !isCompactRoutineCoffee(entry),
       );
       confirmed.splice(
         0,

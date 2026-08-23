@@ -228,6 +228,22 @@ function MealRow({
   const [draftText, setDraftText] = useState(entry.value);
   const [draftTime, setDraftTime] = useState(entry.time || "");
 
+  function resetDraft() {
+    setDraftMeal(entry.meal === "기타" ? "간식" : entry.meal);
+    setDraftText(entry.value);
+    setDraftTime(entry.time || "");
+  }
+
+  function startEdit() {
+    resetDraft();
+    setEditing(true);
+  }
+
+  function cancelEdit() {
+    resetDraft();
+    setEditing(false);
+  }
+
   async function saveEdit(event: React.FormEvent) {
     event.preventDefault();
     const clean = draftText.trim();
@@ -268,12 +284,12 @@ function MealRow({
             </span>
           )}
           {entry.source !== "routine" && entry.id && !editing && (
-            <div className="flex shrink-0 items-center gap-2 text-[9px]">
+            <div className="flex shrink-0 items-center gap-1 text-[10px]">
               <button
                 type="button"
                 disabled={disabled}
-                onClick={() => setEditing(true)}
-                className="underline-offset-2 hover:underline disabled:opacity-40"
+                onClick={startEdit}
+                className="min-h-8 rounded px-2 py-1.5 underline-offset-2 hover:underline disabled:opacity-40"
                 style={{ color: "var(--text-muted-new)" }}
               >
                 수정
@@ -282,7 +298,7 @@ function MealRow({
                 type="button"
                 disabled={disabled}
                 onClick={remove}
-                className="underline-offset-2 hover:underline disabled:opacity-40"
+                className="min-h-8 rounded px-2 py-1.5 underline-offset-2 hover:underline disabled:opacity-40"
                 style={{ color: "var(--danger)" }}
               >
                 삭제
@@ -315,7 +331,8 @@ function MealRow({
               className="w-full rounded-md border px-2.5 py-2 text-[11px] outline-none"
               style={{ borderColor: "var(--border)", background: "rgba(255,255,255,.86)" }}
             />
-            <div className="grid gap-2 sm:grid-cols-[minmax(0,1fr)_100px_auto]">
+            <fieldset>
+              <legend className="sr-only">수정할 끼니</legend>
               <div className="grid grid-cols-4 overflow-hidden rounded-md border" style={{ borderColor: "var(--border)" }}>
                 {MEAL_KINDS.map((meal) => (
                   <button
@@ -334,33 +351,33 @@ function MealRow({
                   </button>
                 ))}
               </div>
-              <label className="sr-only" htmlFor={`edit-time-${entry.id}`}>시간 수정</label>
-              <input
-                id={`edit-time-${entry.id}`}
-                type="time"
-                value={draftTime}
-                disabled={disabled}
-                onChange={(event) => setDraftTime(event.target.value)}
-                className="rounded-md border px-2 py-1.5 text-[10px] outline-none"
-                style={{ borderColor: "var(--border)", background: "rgba(255,255,255,.86)" }}
-              />
-              <div className="flex justify-end gap-1.5">
-                <button
-                  type="button"
-                  onClick={() => setEditing(false)}
-                  className="rounded-md border px-2.5 py-1.5 text-[9px]"
-                  style={{ borderColor: "var(--border)" }}
-                >
-                  취소
-                </button>
-                <button
-                  disabled={disabled || !draftText.trim()}
-                  className="rounded-md px-2.5 py-1.5 text-[9px] text-white disabled:opacity-40"
-                  style={{ background: "var(--accent-dark)" }}
-                >
-                  저장
-                </button>
-              </div>
+            </fieldset>
+            <label className="sr-only" htmlFor={`edit-time-${entry.id}`}>시간 수정</label>
+            <input
+              id={`edit-time-${entry.id}`}
+              type="time"
+              value={draftTime}
+              disabled={disabled}
+              onChange={(event) => setDraftTime(event.target.value)}
+              className="w-full rounded-md border px-2 py-2 text-[10px] outline-none"
+              style={{ borderColor: "var(--border)", background: "rgba(255,255,255,.86)" }}
+            />
+            <div className="flex justify-end gap-1.5">
+              <button
+                type="button"
+                onClick={cancelEdit}
+                className="min-h-8 rounded-md border px-3 py-1.5 text-[10px]"
+                style={{ borderColor: "var(--border)" }}
+              >
+                취소
+              </button>
+              <button
+                disabled={disabled || !draftText.trim()}
+                className="min-h-8 rounded-md px-3 py-1.5 text-[10px] text-white disabled:opacity-40"
+                style={{ background: "var(--accent-dark)" }}
+              >
+                저장
+              </button>
             </div>
           </form>
         )}
@@ -910,7 +927,7 @@ export default function MealsCalendarClient({
               </button>
             )}
           </div>
-          {error && <p className="text-[10px]" style={{ color: "var(--danger)" }}>{error}</p>}
+          {error && <p role="alert" className="text-[10px]" style={{ color: "var(--danger)" }}>{error}</p>}
         </div>
 
         <div className="grid items-start gap-4 lg:grid-cols-[minmax(0,1fr)_328px]">
