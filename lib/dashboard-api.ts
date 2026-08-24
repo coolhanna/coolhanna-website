@@ -181,6 +181,7 @@ export type FoodEntryStatus = "confirmed" | "uncertain" | "excluded";
 
 export interface FoodCalendarEntry {
   id?: string;
+  optimistic?: boolean;
   label: string;
   value: string;
   meal: "아침" | "점심" | "저녁" | "간식" | "기타";

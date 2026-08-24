@@ -89,6 +89,7 @@ function applyOptimisticFoodEdit(
       ...day,
       confirmed: day.confirmed.map((entry) => entry.id !== entryId ? entry : {
         ...entry,
+        optimistic: true,
         label: meal,
         meal,
         value,

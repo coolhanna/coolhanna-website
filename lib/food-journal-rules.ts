@@ -286,12 +286,12 @@ function isMixCoffee(value: string): boolean {
 }
 
 function isCompactRoutineOil(entry: FoodJournalEntry): boolean {
-  return entry.meal === "아침" && !entry.late_night &&
+  return !entry.optimistic && entry.meal === "아침" && !entry.late_night &&
     /^올리브유\s*(?:1|한)\s*큰술\s*(?:\+|·|과|와)\s*레몬즙$/.test(entry.value.trim());
 }
 
 function isCompactRoutineCoffee(entry: FoodJournalEntry): boolean {
-  return entry.meal === "아침" && !entry.late_night &&
+  return !entry.optimistic && entry.meal === "아침" && !entry.late_night &&
     /^(?:믹스커피|맥심\s*커피)\s*(?:1|한)\s*잔$/.test(entry.value.trim());
 }
 
@@ -322,7 +322,8 @@ function inferAudioMeal(entry: FoodCalendarEntry): {
 function decorateEntry(
   entry: FoodCalendarEntry | (typeof ROUTINE_ENTRIES)[number],
 ): FoodJournalEntry | null {
-  const value = sanitizeFoodValue(entry.value);
+  const optimistic = "optimistic" in entry && entry.optimistic;
+  const value = optimistic ? entry.value.trim() : sanitizeFoodValue(entry.value);
   if (!value) return null;
   const resolved = entry.source === "routine"
     ? { meal: "아침" as const }
