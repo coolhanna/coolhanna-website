@@ -355,7 +355,11 @@ function MealRow({
             <label className="sr-only" htmlFor={`edit-time-${entry.id}`}>시간 수정</label>
             <input
               id={`edit-time-${entry.id}`}
-              type="time"
+              type="text"
+              inputMode="numeric"
+              placeholder="예: 19:42 또는 19:42~20:13"
+              pattern="(?:[01]\\d|2[0-3]):[0-5]\\d(?:~(?:[01]\\d|2[0-3]):[0-5]\\d)?"
+              title="19:42 또는 19:42~20:13처럼 입력해 주세요."
               value={draftTime}
               disabled={disabled}
               onChange={(event) => setDraftTime(event.target.value)}
@@ -927,7 +931,18 @@ export default function MealsCalendarClient({
               </button>
             )}
           </div>
-          {error && <p role="alert" className="text-[10px]" style={{ color: "var(--danger)" }}>{error}</p>}
+          <div className="flex flex-wrap items-center justify-end gap-2">
+            <p className="text-[10px] text-muted">
+              <span
+                className="mr-1 rounded px-1.5 py-0.5 text-[9px] font-medium"
+                style={{ background: "var(--danger-soft)", color: "var(--danger-text)" }}
+              >
+                질문
+              </span>
+              질문 표시는 한나의 답이 필요한 기록이에요.
+            </p>
+            {error && <p role="alert" className="text-[10px]" style={{ color: "var(--danger)" }}>{error}</p>}
+          </div>
         </div>
 
         <div className="grid items-start gap-4 lg:grid-cols-[minmax(0,1fr)_328px]">
@@ -969,7 +984,7 @@ export default function MealsCalendarClient({
                     key={date}
                     onClick={() => setSelected(date)}
                     disabled={mutating}
-                    aria-label={`${date}, ${count}개 기록${uncertainCount ? `, 확인 필요 ${uncertainCount}개` : ""}${lateNightCount ? `, 21시 이후 야식 ${lateNightCount}개` : ""}${!sourceReadable ? ", 원장 확인 실패" : ""}`}
+                    aria-label={`${date}, ${count}개 기록${uncertainCount ? `, 답이 필요한 질문 ${uncertainCount}개` : ""}${lateNightCount ? `, 21시 이후 야식 ${lateNightCount}개` : ""}${!sourceReadable ? ", 원장 확인 실패" : ""}`}
                     aria-pressed={active}
                     className="relative min-h-[72px] border-b border-r p-1.5 text-left align-top transition-colors disabled:cursor-wait sm:min-h-[112px] sm:p-2"
                     style={{
@@ -1029,7 +1044,7 @@ export default function MealsCalendarClient({
                         className="absolute bottom-1.5 right-1.5 rounded px-1 py-0.5 text-[8px] font-medium"
                         style={{ background: "var(--danger-soft)", color: "var(--danger-text)" }}
                       >
-                        확인
+                        질문 {uncertainCount}
                       </span>
                     )}
                     {lateNightCount > 0 && (

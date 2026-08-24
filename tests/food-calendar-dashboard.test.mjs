@@ -40,7 +40,7 @@ test("food calendar follows the restrained dashboard visual system", () => {
   assert.ok(client.includes("var(--border)"));
   assert.ok(client.includes("기록에서 읽은 흐름"));
   assert.ok(client.includes("원장 확인 실패"));
-  assert.ok(client.includes("확인 필요"));
+  assert.ok(client.includes("질문 표시는 한나의 답이 필요한 기록이에요."));
   assert.ok(client.includes("sourceWasRead"));
   assert.ok(!client.includes("font-black"));
   assert.ok(!client.includes("rounded-[28px]"));

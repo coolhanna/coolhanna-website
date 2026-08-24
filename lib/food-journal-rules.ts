@@ -407,6 +407,21 @@ export function prepareFoodDay(day: FoodCalendarDay, today: string): FoodJournal
     }
   }
 
+  const mealOrder: Record<FoodJournalEntry["meal"], number> = {
+    아침: 0,
+    점심: 1,
+    저녁: 2,
+    간식: 3,
+    기타: 4,
+  };
+  confirmed.sort((left, right) => {
+    const mealDifference = mealOrder[left.meal] - mealOrder[right.meal];
+    if (mealDifference) return mealDifference;
+    if (left.source === "routine" && right.source !== "routine") return -1;
+    if (left.source !== "routine" && right.source === "routine") return 1;
+    return (left.time || "99:99").localeCompare(right.time || "99:99");
+  });
+
   const knownCalories = confirmed.filter(
     (entry) => entry.estimated_calorie_min != null && entry.estimated_calorie_max != null,
   );
