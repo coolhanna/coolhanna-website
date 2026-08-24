@@ -75,6 +75,29 @@ function sourceWasRead(status?: FoodCalendarDay["source_status"]): boolean {
   return !status || ["ok", "missing"].includes(status);
 }
 
+function applyOptimisticFoodEdit(
+  calendar: FoodCalendarResponse,
+  date: string,
+  entryId: string,
+  meal: MealKind,
+  value: string,
+  time: string,
+): FoodCalendarResponse {
+  return {
+    ...calendar,
+    days: calendar.days.map((day) => day.date !== date ? day : {
+      ...day,
+      confirmed: day.confirmed.map((entry) => entry.id !== entryId ? entry : {
+        ...entry,
+        label: meal,
+        meal,
+        value,
+        time,
+      }),
+    }),
+  };
+}
+
 function foodCalendarError(value: unknown): string {
   if (!isObject(value)) return "달력 응답 형식이 올바르지 않아요.";
   const data = value as Partial<FoodCalendarResponse>;
@@ -249,7 +272,8 @@ function MealRow({
     event.preventDefault();
     const clean = draftText.trim();
     if (!clean || disabled) return;
-    if (await onEdit(entry, draftMeal, clean, draftTime)) setEditing(false);
+    setEditing(false);
+    if (!(await onEdit(entry, draftMeal, clean, draftTime))) setEditing(true);
   }
 
   async function remove() {
@@ -790,9 +814,18 @@ export default function MealsCalendarClient({
     text: string,
     time: string,
   ): Promise<boolean> {
-    if (!selectedDay || !entry.id || mutating || loading) return false;
+    if (!data || !selectedDay || !entry.id || mutating || loading) return false;
+    const previousCalendar = data;
     updateMutationState(true);
     setError("");
+    setData(applyOptimisticFoodEdit(
+      previousCalendar,
+      selectedDay.date,
+      entry.id,
+      meal,
+      text,
+      time,
+    ));
     try {
       const result = await proxyJson<{ day: FoodCalendarDay; calendar: FoodCalendarResponse }>(
         `food-calendar/${selectedDay.date}/${encodeURIComponent(entry.id)}`,
@@ -805,6 +838,7 @@ export default function MealsCalendarClient({
       updateCalendar(result.calendar);
       return true;
     } catch (editError) {
+      setData(previousCalendar);
       setError(`기록을 수정하지 못했어요: ${(editError as Error).message}`);
       return false;
     } finally {
