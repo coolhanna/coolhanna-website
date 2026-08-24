@@ -220,6 +220,23 @@ test("confirmed meals are shown in breakfast, lunch, dinner, snack order", () =>
   assert.deepEqual(day.confirmed.map((entry) => entry.meal), ["아침", "점심", "저녁"]);
 });
 
+test("a ranged meal beginning after 21:00 remains a late-night meal", () => {
+  const day = prepareFoodDay({
+    date: "2026-08-23",
+    source_status: "ok",
+    confirmed: [
+      { label: "간식", value: "야식", meal: "간식", source: "manual", time: "21:10~21:45" },
+    ],
+    uncertain: [],
+    excluded: [],
+    nutrition: emptyNutrition,
+  }, "2026-08-23");
+
+  const lateMeal = day.confirmed.find((entry) => entry.value === "야식");
+  assert.equal(lateMeal?.late_night, true);
+  assert.equal(day.late_night_count, 1);
+});
+
 test("an uncertain consumption is not presented as a meal-only correction", () => {
   const day = prepareFoodDay({
     date: "2026-08-20",

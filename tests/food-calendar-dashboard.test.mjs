@@ -81,6 +81,7 @@ test("meal rows keep time and calories separate and omit noisy calorie basis cop
   assert.ok(client.includes('placeholder="예: 19:42 또는 19:42~20:13"'));
   assert.ok(client.includes("질문 {uncertainCount}"));
   assert.ok(client.includes("질문 표시는 한나의 답이 필요한 기록이에요."));
+  assert.ok(client.includes('(entry.time != null && typeof entry.time !== "string")'));
 });
 
 test("legacy short-form URLs leave no embedded room behind", () => {
