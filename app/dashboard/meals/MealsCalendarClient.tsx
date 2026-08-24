@@ -116,6 +116,7 @@ function foodCalendarError(value: unknown): string {
     if (entries.some((entry) =>
       !entry ||
       (entry.id != null && typeof entry.id !== "string") ||
+      (entry.time != null && typeof entry.time !== "string") ||
       typeof entry.label !== "string" ||
       typeof entry.value !== "string" ||
       typeof entry.meal !== "string" ||

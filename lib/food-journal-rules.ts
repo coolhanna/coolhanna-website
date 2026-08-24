@@ -55,7 +55,7 @@ export function buildQuickFoodEntry(
 }
 
 const MEAL_LABEL_RE = /(아침|점심|저녁|간식|야식)/;
-const TIME_RE = /^(?:[01]\d|2[0-3]):[0-5]\d$/;
+const TIME_RE = /^((?:[01]\d|2[0-3]):[0-5]\d)(?:~(?:[01]\d|2[0-3]):[0-5]\d)?$/;
 const KOREAN_COUNTS: Record<string, number> = {
   한: 1,
   두: 2,
@@ -273,7 +273,8 @@ export function estimateFoodCalories(
 }
 
 function isLateNight(time?: string): boolean {
-  return Boolean(time && TIME_RE.test(time) && time >= "21:00");
+  const start = time?.match(TIME_RE)?.[1];
+  return Boolean(start && start >= "21:00");
 }
 
 function isOilRoutine(value: string): boolean {
@@ -306,9 +307,10 @@ function inferAudioMeal(entry: FoodCalendarEntry): {
     return { meal: entry.meal };
   }
   if (isBreakfastRoutine(entry.value)) return { meal: "아침" };
-  if (entry.time && TIME_RE.test(entry.time)) {
-    if (entry.time < "10:30") return { meal: "아침" };
-    if (entry.time < "15:00") return { meal: "점심" };
+  const timeStart = entry.time?.match(TIME_RE)?.[1];
+  if (timeStart) {
+    if (timeStart < "10:30") return { meal: "아침" };
+    if (timeStart < "15:00") return { meal: "점심" };
     return { meal: "저녁" };
   }
   return {
