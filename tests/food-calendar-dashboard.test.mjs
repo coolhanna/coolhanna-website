@@ -70,6 +70,14 @@ test("food calendar applies Hanna's journal rules and supports corrections", () 
   assert.ok(client.includes("min-h-8"), "edit and delete controls need usable touch targets");
   assert.ok(!client.includes("sm:grid-cols-[minmax(0,1fr)_100px_auto]"));
   assert.ok(api.includes("id?: string"), "backend entry identity must cross the frontend contract");
+  assert.ok(
+    client.includes("applyOptimisticFoodEdit"),
+    "edited food must appear before the network round trip finishes",
+  );
+  assert.ok(
+    client.includes("setEditing(false);\n    if (!(await onEdit"),
+    "the edit panel must close as soon as save is pressed and reopen only on failure",
+  );
 });
 
 test("meal rows keep time and calories separate and omit noisy calorie basis copy", () => {
