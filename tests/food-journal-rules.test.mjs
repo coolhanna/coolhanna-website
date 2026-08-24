@@ -204,6 +204,22 @@ test("a manual meal answer resolves the matching uncertain audio entry", () => {
   assert.ok(!day.uncertain.some((entry) => entry.value === "복숭아 1개"));
 });
 
+test("confirmed meals are shown in breakfast, lunch, dinner, snack order", () => {
+  const day = prepareFoodDay({
+    date: "2026-08-23",
+    source_status: "ok",
+    confirmed: [
+      { label: "저녁", value: "김치찌개", meal: "저녁", source: "manual", time: "19:30" },
+      { label: "점심", value: "김밥", meal: "점심", source: "manual", time: "12:10" },
+    ],
+    uncertain: [],
+    excluded: [],
+    nutrition: emptyNutrition,
+  }, "2026-08-23");
+
+  assert.deepEqual(day.confirmed.map((entry) => entry.meal), ["아침", "점심", "저녁"]);
+});
+
 test("an uncertain consumption is not presented as a meal-only correction", () => {
   const day = prepareFoodDay({
     date: "2026-08-20",
