@@ -237,6 +237,29 @@ test("a ranged meal beginning after 21:00 remains a late-night meal", () => {
   assert.equal(day.late_night_count, 1);
 });
 
+test("an optimistic edit keeps its row identity until the server answers", () => {
+  for (const value of ["물", "믹스커피 1잔"]) {
+    const day = prepareFoodDay({
+      date: "2026-08-23",
+      source_status: "ok",
+      confirmed: [{
+        id: "food_pending_edit",
+        label: "아침",
+        value,
+        meal: "아침",
+        source: "manual",
+        time: "08:00",
+        optimistic: true,
+      }],
+      uncertain: [],
+      excluded: [],
+      nutrition: emptyNutrition,
+    }, "2026-08-23");
+
+    assert.ok(day.confirmed.some((entry) => entry.id === "food_pending_edit"), value);
+  }
+});
+
 test("an uncertain consumption is not presented as a meal-only correction", () => {
   const day = prepareFoodDay({
     date: "2026-08-20",
