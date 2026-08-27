@@ -38,6 +38,10 @@ export const dash = {
   ideasRecent: () => api<any>("/api/dashboard/ideas-recent?limit=3"),
   ideasAll: (limit = 50) =>
     api<any>(`/api/dashboard/ideas-recent?limit=${limit}`),
+  planningCandidate: () =>
+    api<PlanningCandidateResponse>("/api/dashboard/planning-candidate"),
+  planningDecisions: () =>
+    api<PlanningDecisionsResponse>("/api/dashboard/planning-decisions"),
   // v6 — 일별 카드 통합 (오늘 + 내일)
   scheduleV2: () => api<any>("/api/dashboard/schedule-v2"),
   // v6.2 — 이번 주(월~일) 일별 카드 todos
@@ -83,6 +87,24 @@ export const dash = {
       `/api/dashboard/food-calendar${month ? `?month=${encodeURIComponent(month)}` : ""}`,
     ),
 };
+
+export interface PlanningCandidateResponse {
+  candidate: Record<string, any> | null;
+  status: "ok" | "missing";
+  error?: string;
+}
+
+export interface PlanningDecision {
+  candidate_id: string;
+  decision: "발전" | "형식 변경" | "스토리 먼저" | "보류" | "버림";
+  feedback: string;
+  decided_at: string;
+}
+
+export interface PlanningDecisionsResponse {
+  decisions: PlanningDecision[];
+  error?: string;
+}
 
 export interface LifeDayTimelineItem {
   time: string;
