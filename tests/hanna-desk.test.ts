@@ -108,6 +108,23 @@ test("상대를 기다리는 일을 따로 보여준다", () => {
   assert.equal(view.summary.waiting, 1);
 });
 
+test("기다리는 일은 지금 판단함에 중복해서 올리지 않는다", () => {
+  const view = buildHannaDesk(
+    {
+      ...baseInput,
+      stuck: {
+        items: [
+          { title: "여행 광고", type: "광고", deadline: null, modified_days_ago: 12 },
+        ],
+      },
+    },
+    "2026-08-27",
+  );
+
+  assert.ok(view.waiting.some((item) => item.title === "여행 광고"));
+  assert.ok(!view.decisions.some((item) => item.title === "여행 광고"));
+});
+
 test("연결이 실패한 소식통은 0건이 아니라 부분 확인으로 표시한다", () => {
   const view = buildHannaDesk(
     {
