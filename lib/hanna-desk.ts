@@ -102,7 +102,12 @@ export function buildHannaDesk(input: HannaDeskInput, todayIso: string): HannaDe
   if (hasError(input.paymentFollowups)) unavailableSources.push("기다리는 일");
   if (hasError(input.quickTasks)) unavailableSources.push("빠른 처리");
 
-  const overdue = asItems(input.incomplete).map((item, index): DeskItem => {
+  const waitingSourceItems = asItems(input.paymentFollowups);
+  const waitingKeys = new Set(waitingSourceItems.map((item) => titleKey(item.title)));
+
+  const overdue = asItems(input.incomplete)
+    .filter((item) => !waitingKeys.has(titleKey(item.title)))
+    .map((item, index): DeskItem => {
     const title = cleanText(item.title, "제목 없는 할 일");
     return {
       id: makeId("overdue", title, index),
@@ -115,7 +120,10 @@ export function buildHannaDesk(input: HannaDeskInput, todayIso: string): HannaDe
 
   const overdueKeys = new Set(overdue.map((item) => titleKey(item.title)));
   const stuck = asItems(input.stuck)
-    .filter((item) => !overdueKeys.has(titleKey(item.title)))
+    .filter(
+      (item) =>
+        !overdueKeys.has(titleKey(item.title)) && !waitingKeys.has(titleKey(item.title)),
+    )
     .map((item, index): DeskItem => {
       const title = cleanText(item.title, "제목 없는 진행 중 일");
       return {
@@ -219,7 +227,7 @@ export function buildHannaDesk(input: HannaDeskInput, todayIso: string): HannaDe
       addMustNotMiss(item.text, "짧게 닫을 일이에요", "빠른 처리", index),
     );
 
-  const waiting = asItems(input.paymentFollowups).map((item, index): DeskItem => {
+  const waiting = waitingSourceItems.map((item, index): DeskItem => {
     const title = cleanText(item.title, "확인 필요");
     const isOverdue = Number(item.days_until_payment) < 0;
     return {
