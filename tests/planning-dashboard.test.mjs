@@ -103,6 +103,19 @@ test("planning has a separate daily product radar with order and filming evidenc
   assert.ok(styles.includes("overflow-x: auto"));
 });
 
+test("the product radar matches the calmer dashboard type hierarchy", () => {
+  const styles = read("app/dashboard/planning/planning.module.css");
+
+  assert.match(styles, /\.productRadar summary b\s*\{[^}]*font-size:\s*12px[^}]*font-weight:\s*600/s);
+  assert.match(styles, /\.productRadar summary em\s*\{[^}]*font-size:\s*10px/s);
+  assert.match(styles, /\.productCards\s*\{[^}]*background:\s*var\(--bg-card\)/s);
+  assert.match(styles, /\.productCard h2\s*\{[^}]*font-size:\s*12px[^}]*font-weight:\s*600/s);
+  assert.match(styles, /\.productCard h2 small\s*\{[^}]*font-size:\s*9px[^}]*font-weight:\s*500/s);
+  assert.match(styles, /\.productCard p\s*\{[^}]*font-size:\s*10px[^}]*line-height:\s*1\.45/s);
+  assert.match(styles, /\.productCard p b\s*\{[^}]*font-weight:\s*600/s);
+  assert.match(styles, /\.productCard footer\s*\{[^}]*font-size:\s*9px/s);
+});
+
 test("planning decisions use the authenticated dashboard API", () => {
   const api = read("lib/dashboard-api.ts");
   const board = read("app/dashboard/planning/PlanningBoard.tsx");
