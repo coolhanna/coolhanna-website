@@ -45,7 +45,7 @@ export default function PlanningBoard({ initialFeed, initialDecisions }: { initi
   const [saving, setSaving] = useState(false);
   const [loadingDay, setLoadingDay] = useState(false);
   const [notice, setNotice] = useState("");
-  const [researchOpen, setResearchOpen] = useState(true);
+  const [researchOpen, setResearchOpen] = useState(false);
   const [requestType, setRequestType] = useState<RequestType>("deeper");
   const [requestText, setRequestText] = useState("");
   const [requesting, setRequesting] = useState(false);
