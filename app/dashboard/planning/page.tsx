@@ -10,10 +10,10 @@ export const metadata: Metadata = {
 };
 
 export default async function PlanningPage() {
-  const [candidate, decisions] = await Promise.all([
-    dash.planningCandidate(),
+  const [feed, decisions] = await Promise.all([
+    dash.planningFeed(),
     dash.planningDecisions(),
   ]);
 
-  return <PlanningBoard initialCandidate={candidate} initialDecisions={decisions} />;
+  return <PlanningBoard initialFeed={feed} initialDecisions={decisions} />;
 }

@@ -22,6 +22,19 @@ export interface PlanningIdea {
   ab: Array<[string, string]>;
   references: Array<[string, string]>;
   risk: string;
+  variant?: "A형" | "B형";
+}
+
+const dailyFallbackIds = ["phone-check", "photo-consent", "hyerin-writer", "hyerin-book", "solo-meal", "mango"];
+
+export function planningIdeasForDay(raw: Array<Record<string, any>> | undefined): PlanningIdea[] {
+  const input: Array<Record<string, any>> = raw?.length ? raw : dailyFallbackIds.map((id, index) => ({ id, variant: index % 2 ? "B형" : "A형" }));
+  return input.flatMap((item) => {
+    const seed = seedIdeas.find((idea) => idea.id === item.id);
+    if (seed) return [{ ...seed, ...item } as PlanningIdea];
+    if (!item.title || !item.account || !item.score) return [];
+    return [item as PlanningIdea];
+  }).sort((a, b) => b.score - a.score);
 }
 
 export const seedIdeas: PlanningIdea[] = [

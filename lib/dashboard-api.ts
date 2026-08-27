@@ -40,6 +40,8 @@ export const dash = {
     api<any>(`/api/dashboard/ideas-recent?limit=${limit}`),
   planningCandidate: () =>
     api<PlanningCandidateResponse>("/api/dashboard/planning-candidate"),
+  planningFeed: (date = "") =>
+    api<PlanningFeedResponse>(`/api/dashboard/planning-feed${date ? `?date=${encodeURIComponent(date)}` : ""}`),
   planningDecisions: () =>
     api<PlanningDecisionsResponse>("/api/dashboard/planning-decisions"),
   // v6 — 일별 카드 통합 (오늘 + 내일)
@@ -103,6 +105,29 @@ export interface PlanningDecision {
 
 export interface PlanningDecisionsResponse {
   decisions: PlanningDecision[];
+  error?: string;
+}
+
+export interface PlanningResearch {
+  searched: string[];
+  learned: string[];
+  sources: Array<{ label: string; note: string; url?: string }>;
+}
+
+export interface PlanningDay {
+  date: string;
+  generated_at: string;
+  next_run_at?: string;
+  status: string;
+  research: PlanningResearch;
+  candidates: Array<Record<string, any>>;
+}
+
+export interface PlanningFeedResponse {
+  current: PlanningDay | null;
+  dates: Array<{ date: string; generated_at: string; status: string; candidate_count: number }>;
+  requests: Array<{ id: string; status: string; request_type: string; candidate_id: string }>;
+  status: "ok" | "missing";
   error?: string;
 }
 
