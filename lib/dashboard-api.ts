@@ -114,12 +114,30 @@ export interface PlanningResearch {
   sources: Array<{ label: string; note: string; url?: string }>;
 }
 
+export interface PlanningProduct {
+  id: string;
+  brand: string;
+  name: string;
+  category: string;
+  signal: "trend" | "evergreen" | "discovery";
+  score: number;
+  why_now: string;
+  why_fit: string;
+  ingredient_check: string;
+  test_format: string;
+  test_plan: string;
+  caution?: string;
+  evidence?: Array<{ label: string; note: string; url?: string }>;
+  buy_links?: Array<{ label: string; url: string; checked_at?: string }>;
+}
+
 export interface PlanningDay {
   date: string;
   generated_at: string;
   next_run_at?: string;
   status: string;
   research: PlanningResearch;
+  product_radar?: PlanningProduct[];
   candidates: Array<Record<string, any>>;
 }
 

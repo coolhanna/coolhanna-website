@@ -1,7 +1,7 @@
 "use client";
 
 import { useMemo, useState } from "react";
-import type { PlanningDecision, PlanningFeedResponse, PlanningResearch } from "@/lib/dashboard-api";
+import type { PlanningDecision, PlanningFeedResponse, PlanningProduct, PlanningResearch } from "@/lib/dashboard-api";
 import { planningIdeasForDay, type Account, type Format, type PlanningIdea, type Source } from "./planning-data";
 import styles from "./planning.module.css";
 
@@ -14,6 +14,7 @@ const formatFilters: Array<[FilterState["format"], string]> = [["all", "모두"]
 const loopSteps = ["밤 조사", "아침 후보", "한나 판단", "선택 후보 발전", "성과 확인", "다음 밤 반영"];
 const accountClass: Record<Account, string> = { main: styles.mainAccount, hyerin: styles.hyerinAccount, food: styles.foodAccount };
 const sourceClass: Record<Source, string> = { value: styles.valueSource, concern: styles.concernSource, trend: styles.trendSource, season: styles.seasonSource };
+const productSignal: Record<PlanningProduct["signal"], string> = { trend: "요즘 유행", evergreen: "꾸준히 추천", discovery: "직접 발굴" };
 
 function displayDay(value = "") {
   if (!value) return "날짜 없음";
@@ -123,6 +124,7 @@ export default function PlanningBoard({ initialFeed, initialDecisions }: { initi
       <div className={styles.nextRun}><b>다음 조사</b>{displayTime(feed.current?.next_run_at)} · 지난 후보는 보존</div>
     </section>
     <ResearchStrip research={feed.current?.research} open={researchOpen} onToggle={() => setResearchOpen((value) => !value)} />
+    <ProductRadar products={feed.current?.product_radar || []} />
 
     <section className={styles.quickFilters} aria-label="후보 빠른 필터">
       <div className={styles.accountTabs}>{accountFilters.map(([value, label]) => {
@@ -155,6 +157,25 @@ export default function PlanningBoard({ initialFeed, initialDecisions }: { initi
       </section>
     </div>
   </main>;
+}
+
+function ProductRadar({ products }: { products: PlanningProduct[] }) {
+  return <details className={styles.productRadar} open>
+    <summary><span><b>오늘 주문·검증 후보</b><em>{products.length ? `${products.length}개 · 콘텐츠 30개와 별도` : "오늘 밤부터 매일 수집"}</em></span><span className={styles.radarLegend}><i>요즘 유행</i><i>꾸준히 추천</i><i>직접 발굴</i></span></summary>
+    <div className={styles.productCards}>
+      {products.length ? products.map((product) => {
+        const buy = product.buy_links?.[0];
+        return <article key={product.id} className={styles.productCard}>
+          <div className={styles.productTop}><span className={`${styles.signal} ${styles[product.signal]}`}>{productSignal[product.signal]}</span><strong>{product.score}</strong></div>
+          <h2><small>{product.brand} · {product.category}</small>{product.name}</h2>
+          <p><b>왜 우리 핏</b>{product.why_fit}</p>
+          <p><b>원재료·영양표</b>{product.ingredient_check}</p>
+          <p><b>먹어볼 방법</b>{product.test_format} · {product.test_plan}</p>
+          <footer>{product.caution && <span>{product.caution}</span>}{buy ? <a href={buy.url} target="_blank" rel="noreferrer">구매처 확인</a> : <span>구매처 확인 필요</span>}</footer>
+        </article>;
+      }) : <p className={styles.productEmpty}>오늘 밤에는 유튜브·릴스 유행 제품, 꾸준히 재추천되는 제품, 직접 찾은 제품을 나눠서 수집해. 제품명만 주지 않고 원재료·영양표 확인과 촬영 포맷까지 붙여둘게.</p>}
+    </div>
+  </details>;
 }
 
 function ResearchStrip({ research, open, onToggle }: { research?: PlanningResearch; open: boolean; onToggle: () => void }) {
