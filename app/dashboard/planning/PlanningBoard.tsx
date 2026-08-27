@@ -118,7 +118,7 @@ export default function PlanningBoard({ initialFeed, initialDecisions }: { initi
     </header>
 
     <section className={styles.cycleStatus} aria-label={loopSteps.join(" → ")}>
-      <div className={styles.todayTask}><small>오늘 할 일</small><b>한나 판단 중</b><span>6개 중 최대 2개만 발전</span></div>
+      <div className={styles.todayTask}><small>오늘 할 일</small><b>한나 판단 중</b><span>{ideas.length}개 중 최대 2개만 발전</span></div>
       <div className={styles.cycleTrail}><span>밤 조사 완료</span><strong>한나 판단 중</strong><span>선택 후 발전</span></div>
       <div className={styles.nextRun}><b>다음 조사</b>{displayTime(feed.current?.next_run_at)} · 지난 후보는 보존</div>
     </section>

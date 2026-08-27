@@ -25,7 +25,7 @@ export interface PlanningIdea {
   variant?: "A형" | "B형";
 }
 
-const dailyFallbackIds = ["phone-check", "photo-consent", "hyerin-writer", "hyerin-book", "solo-meal", "mango"];
+const dailyFallbackIds = ["phone-check", "photo-consent", "hyerin-retro-playlist", "hyerin-lp-no-skip", "pizza-crust-truce", "first-bite-retrial"];
 
 export function planningIdeasForDay(raw: Array<Record<string, any>> | undefined): PlanningIdea[] {
   const input: Array<Record<string, any>> = raw?.length ? raw : dailyFallbackIds.map((id, index) => ({ id, variant: index % 2 ? "B형" : "A형" }));
@@ -47,12 +47,12 @@ export const seedIdeas: PlanningIdea[] = [
     risk: "부모는 절대 보면 안 된다는 단순 결론으로 만들지 않는다.",
   },
   {
-    id: "mango", score: 89, account: "food", accountLabel: "먹거리", sources: ["season"], sourceLabel: "제품·계절", formats: ["review"], formatLabel: "비교·리뷰", role: "유입+신뢰",
-    title: "망고 네 개가 10만 원. 진짜 돈값을 할까?", verdict: "노랑망고와 제주 애플망고를 같은 기준으로 판정한다.", series: "맛·원재료·돈값",
-    primary: ["비교 릴스", "단면·가격·동시 시식이 모두 화면 증거가 된다."], post: ["게시물", "품종·가격·보관법 정리"], story: ["스토리", "어느 망고를 살지 투표"],
-    why: ["화면", "자르기·단면·시식·재구매 판정까지 흐름이 분명하다."], ab: [["A", "10만 원 가격 훅"], ["B", "완전히 다른 단면 훅"]],
-    references: [["실제 제품", "필리핀 프리미엄 망고·제주 애플망고"], ["내부 기획", "기존 망고 비교 영상 흐름"], ["외부 자료", "품종 정보와 맛 표현 자료"]],
-    risk: "긴 산지 설명과 눈가리기 포맷으로 되돌아가지 않는다.",
+    id: "pizza-crust-truce", score: 89, account: "food", accountLabel: "먹거리", sources: ["concern", "value"], sourceLabel: "실제 사건", formats: ["skit", "vlog"], formatLabel: "생활사건", role: "유입+호감",
+    title: "피자 끝만 남긴 딸. 끝만 좋아하지만 남이 남긴 건 싫은 엄마.", verdict: "피자 한 조각에서 둘의 취향과 위생 기준이 동시에 충돌한다.", series: "같은 음식, 다른 기준",
+    primary: ["사건 릴스", "남은 피자 끝과 두 사람의 실랑이가 설명 없이도 보인다."], post: ["게시물", "가족끼리도 서로 다른 음식 경계를 존중하는 법"], story: ["스토리", "가족이 남긴 음식, 먹을 수 있어?"],
+    why: ["고유 장면", "레시피도 제품 순위도 아닌 실제 모녀의 음식 행동이 캐릭터를 만든다."], ab: [["A", "피자 끝 하나를 가운데 놓고 둘 다 거절"], ["B", "혜린이 남기는 순간 한나가 좋아한다고 반기다가 멈춤"]],
+    references: [["주제 제안 로그", "피자 끝을 남기는 혜린과 끝을 좋아하지만 남긴 것은 싫다는 한나의 실제 말싸움"], ["3계정 운영 정본", "먹거리는 취향·판단·실수·생생한 반응이 중심"], ["화면 증거", "남은 피자 끝과 두 사람의 표정"]],
+    risk: "교훈을 길게 붙이지 말고 실제 대화와 선택으로 끝낸다.",
   },
   {
     id: "photo-consent", score: 88, account: "main", accountLabel: "본계정", sources: ["value"], sourceLabel: "가치관", formats: ["thought"], formatLabel: "생각 설명", role: "신뢰",
@@ -71,20 +71,20 @@ export const seedIdeas: PlanningIdea[] = [
     risk: "AI 찬반 강의로 흐르지 않고 실제 과제 한 장면으로 시작한다.",
   },
   {
-    id: "hyerin-writer", score: 85, account: "hyerin", accountLabel: "혜린", sources: ["value"], sourceLabel: "가치관", formats: ["vlog", "thought"], formatLabel: "브이로그+생각", role: "호감",
-    title: "작가라고 매일 쓰고 싶은 건 아니야.", verdict: "쓰기 싫은 날에도 작가인 사람의 실제 하루.", series: "혜린의 생활",
-    primary: ["브이로그", "혜린은 설명보다 실제 생활 장면이 먼저 캐릭터를 만든다."], post: ["게시물", "혜린이 직접 쓴 짧은 글"], story: ["스토리", "오늘 쓴 한 문장"],
-    why: ["형식", "책상·학교 후·빈 문서·한 줄 쓰는 장면이 있다."], ab: [["A", "말없는 브이로그+짧은 자막"], ["B", "혜린 1인칭 내레이션"]],
-    references: [["혜린 내부", "실제 글과 자주 쓰는 표현"], ["계정 기준", "혜린이 직접 고친 문장"], ["화면", "쓰기 전 미루는 실제 행동"]],
-    risk: "한나가 작가로 키운 비결을 설명하지 않는다.",
+    id: "hyerin-retro-playlist", score: 86, account: "hyerin", accountLabel: "혜린", sources: ["value", "trend"], sourceLabel: "취향 증거", formats: ["vlog", "review"], formatLabel: "취향 몽타주", role: "유입+호감",
+    title: "엄마가 듣던 2000년대 노래가 내 플레이리스트를 점령했어.", verdict: "13살의 나이와 어긋나는 취향을 실제 재생목록과 몸 반응으로 증명한다.", series: "13살인데 왜 이걸 좋아해?",
+    primary: ["취향 릴스", "혜린의 얼굴·이어폰·재생목록·따라 부르는 장면이 정체성을 만든다."], post: ["게시물", "혜린이 고른 엄마 세대 노래와 한 줄 판정"], story: ["스토리", "엄마 노래 중 지금도 듣는 곡 제보"],
+    why: ["캐릭터", "책 잘 읽는 아이가 아니라 세대가 섞인 취향을 가진 혜린으로 기억된다."], ab: [["A", "13살 휴대폰에서 2000년대 재생목록을 먼저 공개"], ["B", "엄마가 세 곡을 틀고 혜린이 살릴 한 곡을 고름"]],
+    references: [["혜린 성과", "13살 초딩 요즘 빠진 것들 11만대 · 취향 몽타주와 세대 반전"], ["혜린 비주얼 분석", "꽃보다 남자·2000년대 음악·미니언즈가 취향 증거로 작동"], ["계정 정본", "혜린의 엉뚱함·취향·실제 선택을 주인공으로 둔다"]],
+    risk: "유행하는 음원을 억지로 넣지 말고 혜린의 실제 재생목록을 먼저 확인한다.",
   },
   {
-    id: "solo-meal", score: 84, account: "food", accountLabel: "먹거리", sources: ["concern", "value"], sourceLabel: "실제 고민", formats: ["experiment", "vlog"], formatLabel: "생활실험", role: "호감+신뢰",
-    title: "“알아서 먹어.” 그런데 그걸 먹으면 안 돼?", verdict: "자립은 엄마가 원하는 답을 혼자 해내는 게 아니다.", series: "십대의 먹고사는 연습",
-    primary: ["생활실험", "혜린의 실제 선택과 한나의 개입이 사건이 된다."], post: ["게시물", "혼자 먹는 날의 최소 한 끼 기준"], story: ["스토리", "십대가 혼자 먹는 실제 메뉴"],
-    why: ["현실", "간편식 하나를 끼워 넣는 실제 가족 식사 문제다."], ab: [["A", "알아서 먹어 이중구속"], ["B", "냉장고 안에서 혜린이 고르는 장면"]],
-    references: [["한나 내부", "10대 가족의 실제 식사 갈등"], ["신신나 성과", "배달 대신 집마라탕"], ["도서관", "청소년 영양과 자립 자료"]],
-    risk: "모녀 관찰 예능만 남거나 영양 강의로 끝내지 않는다.",
+    id: "first-bite-retrial", score: 85, account: "food", accountLabel: "먹거리", sources: ["value", "concern"], sourceLabel: "실제 반응", formats: ["experiment", "review"], formatLabel: "재시식 실험", role: "호감+신뢰",
+    title: "“맛있어.” 3초 뒤 “아닌가?” 그래서 첫입 평가는 버리기로 했어.", verdict: "첫 반응 대신 세 번의 판정 변화를 보여줘 추천의 신뢰를 만든다.", series: "혜린 입맛 재판",
+    primary: ["실험 릴스", "같은 음식에 대한 즉흥 반응과 최종 재구매 판정이 모두 사건이 된다."], post: ["게시물", "첫입·한 접시 뒤·다음날 판정표"], story: ["스토리", "첫입과 끝맛이 달랐던 음식 제보"],
+    why: ["검증 방식", "제품 설명이 아니라 혜린의 오락가락하는 실제 반응을 검증 장치로 바꾼다."], ab: [["A", "맛있어→안 맛있어→괜찮아 세 표정을 2초에 압축"], ["B", "첫입 판정 카드를 찢고 두 번째 시식부터 시작"]],
+    references: [["신신나 성과", "쿠팡 복숭아 29.8만 · 혜린의 판정이 맛있다→안 맛있다→괜찮다로 변화"], ["3계정 운영 정본", "객관 증거와 모녀의 다른 선택이 함께 있어야 함"], ["운영 원칙", "맛·원재료·돈값 중 실제 구매 실패를 줄이는 판정"]],
+    risk: "반응을 연기시키지 말고 제품명보다 시식 시점과 최종 재구매 여부를 명확히 남긴다.",
   },
   {
     id: "tteokgalbi", score: 83, account: "food", accountLabel: "먹거리", sources: ["trend", "season"], sourceLabel: "제품·계절", formats: ["review"], formatLabel: "비교·리뷰", role: "신뢰",
@@ -103,12 +103,12 @@ export const seedIdeas: PlanningIdea[] = [
     risk: "십대 조회에만 머물지 않도록 엄마가 해줄 한 문장을 넣는다.",
   },
   {
-    id: "hyerin-book", score: 79, account: "hyerin", accountLabel: "혜린", sources: ["trend", "value"], sourceLabel: "유행·시의성", formats: ["thought", "review"], formatLabel: "짧은 리뷰", role: "유입+호감",
-    title: "다들 인생책이라는데, 나는 50쪽에서 덮었어.", verdict: "유명한 책과 내 취향은 별개라는 혜린의 판정.", series: "십대 취향 판정",
-    primary: ["생각 설명", "혜린의 취향과 판정이 영상의 결론이다."], post: ["게시물", "덮은 이유와 좋았던 한 문장"], story: ["스토리", "완독 강박이 있는지 투표"],
-    why: ["지금성", "현재 화제 도서를 혜린의 실제 선택으로 다시 본다."], ab: [["A", "책을 덮는 장면부터"], ["B", "나만 재미없어 질문부터"]],
-    references: [["혜린 내부", "실제 독서 취향과 표현"], ["외부 신호", "현재 화제 도서는 제작 전 재확인"], ["형식 참고", "또래 1인칭 짧은 리뷰"]],
-    risk: "어른식 작품 해설과 교훈을 혜린의 입에 넣지 않는다.",
+    id: "hyerin-lp-no-skip", score: 82, account: "hyerin", accountLabel: "혜린", sources: ["value"], sourceLabel: "실제 경험", formats: ["experiment", "vlog"], formatLabel: "경험 실험", role: "호감",
+    title: "스킵이 안 되는 LP, 13살은 한 면을 끝까지 버틸까?", verdict: "편리함을 설명하지 않고 기다려야만 하는 음악 경험에 혜린을 넣어본다.", series: "처음 해보는 불편함",
+    primary: ["경험 브이로그", "LP를 고르고 올리고 기다리고 뒤집는 행동 자체가 화면 서사다."], post: ["게시물", "스킵하지 못해서 발견한 한 곡과 혜린의 한 문장"], story: ["스토리", "노래를 끝까지 듣는 편인지 투표"],
+    why: ["실제성", "강릉 LP 카페라는 이미 겪은 장소와 디지털 세대 혜린의 반응이 만난다."], ab: [["A", "다음 곡 버튼을 찾는 손부터 시작"], ["B", "한 면 20분 타이머와 끝까지 남은 표정"]],
+    references: [["2026-08-12 하루기록", "혜린과 안목해변 LP 카페 방문 · 비 오는 날 LP 경험"], ["한나 관점", "편해진 세상에서 일부러 불편함을 설계한다"], ["혜린 정본", "일상·여행의 실제 사건과 반응을 우선한다"]],
+    risk: "끝까지 들었다거나 감동했다는 결론은 먼저 쓰지 말고 당시 혜린의 실제 반응을 확인한다.",
   },
 ];
 
@@ -121,7 +121,7 @@ export function mergeCurrentCandidate(raw: Record<string, any> | null): Planning
     ...(raw.external_evidence || []).slice(0, 1).map((item: any) => [String(item.label), String(item.fact)] as [string, string]),
   ];
   const current: PlanningIdea = {
-    ...seedIdeas.find((idea) => idea.id === "solo-meal")!,
+    ...seedIdeas.find((idea) => idea.id === "first-bite-retrial")!,
     id: String(raw.id),
     score: maximum ? Math.round((total / maximum) * 100) : 84,
     title: String(raw.title || "현재 후보"),
@@ -135,6 +135,6 @@ export function mergeCurrentCandidate(raw: Record<string, any> | null): Planning
     references: references.length ? references : [["현재 후보", String(raw.why_now || "근거 확인 필요")]],
     risk: String((raw.guardrails || [])[0] || "실제 경험을 확인한 뒤 대본으로 발전한다."),
   };
-  return [current, ...seedIdeas.filter((idea) => idea.id !== "solo-meal" && idea.id !== current.id)]
+  return [current, ...seedIdeas.filter((idea) => idea.id !== "first-bite-retrial" && idea.id !== current.id)]
     .sort((a, b) => b.score - a.score);
 }
