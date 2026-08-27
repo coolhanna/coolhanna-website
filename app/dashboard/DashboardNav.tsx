@@ -7,6 +7,7 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 
 const TABS = [
+  { label: "한나 데스크", href: "/dashboard/desk" },
   { label: "운영", href: "/dashboard" },
   { label: "브리핑", href: "/dashboard/briefing" },
   { label: "하루", href: "/dashboard/day" },
