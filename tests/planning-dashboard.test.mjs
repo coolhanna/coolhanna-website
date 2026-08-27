@@ -46,6 +46,19 @@ test("planning makes the nightly research loop, history, and follow-up actions v
   }
 });
 
+test("planning keeps the candidate list and selected detail visible together on the PC dashboard", () => {
+  const board = read("app/dashboard/planning/PlanningBoard.tsx");
+  const styles = read("app/dashboard/planning/planning.module.css");
+
+  assert.ok(board.includes("오늘 할 일"));
+  assert.ok(board.includes("한나 판단 중"));
+  assert.ok(board.includes(`className={styles.quickFilters}`));
+  assert.ok(board.includes(`className={styles.detailActions}`));
+  assert.ok(!board.includes(`<aside className={styles.filters}>`));
+  assert.ok(styles.includes("grid-template-columns: minmax(250px, 300px) minmax(330px, 1fr)"));
+  assert.ok(styles.includes("@media (max-width: 620px)"));
+});
+
 test("planning decisions use the authenticated dashboard API", () => {
   const api = read("lib/dashboard-api.ts");
   const board = read("app/dashboard/planning/PlanningBoard.tsx");
