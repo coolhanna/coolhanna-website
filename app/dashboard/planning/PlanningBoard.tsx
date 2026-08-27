@@ -117,22 +117,27 @@ export default function PlanningBoard({ initialFeed, initialDecisions }: { initi
       </div>
     </header>
 
-    <section className={styles.loopRail} aria-label="매일 기획 루프">
-      <div className={styles.loopSteps}>{loopSteps.map((step, index) => <span key={step} className={index < 2 ? styles.loopDone : index === 2 ? styles.loopActive : ""}><b>{index + 1}</b>{step}</span>)}</div>
-      <div className={styles.nextRun}><b>다음 조사</b>{displayTime(feed.current?.next_run_at)} · 새 후보가 올라오고 지난 후보는 그대로 보존</div>
+    <section className={styles.cycleStatus} aria-label={loopSteps.join(" → ")}>
+      <div className={styles.todayTask}><small>오늘 할 일</small><b>한나 판단 중</b><span>6개 중 최대 2개만 발전</span></div>
+      <div className={styles.cycleTrail}><span>밤 조사 완료</span><strong>한나 판단 중</strong><span>선택 후 발전</span></div>
+      <div className={styles.nextRun}><b>다음 조사</b>{displayTime(feed.current?.next_run_at)} · 지난 후보는 보존</div>
     </section>
     <ResearchStrip research={feed.current?.research} open={researchOpen} onToggle={() => setResearchOpen((value) => !value)} />
 
-    <div className={styles.workspace}>
-      <aside className={styles.filters}>
-        <FilterGroup title="계정" items={accountFilters} value={filters.account} onChange={(value) => setFilter("account", value as FilterState["account"])} counts={Object.fromEntries(accountFilters.map(([value]) => [value, value === "all" ? ideas.length : ideas.filter((idea) => idea.account === value).length]))} />
-        <FilterGroup title="재료" items={sourceFilters} value={filters.source} onChange={(value) => setFilter("source", value as FilterState["source"])} />
-        <FilterGroup title="형식" items={formatFilters} value={filters.format} onChange={(value) => setFilter("format", value as FilterState["format"])} />
-        <button type="button" className={styles.reset} onClick={resetFilters}>초기화</button>
-        <button type="button" className={styles.moreTopics} onClick={() => setRequestType("new")}>+ 새 주제 더 받기</button>
-        {pendingCount > 0 && <span className={styles.pending}>밤 조사 대기 {pendingCount}</span>}
-      </aside>
+    <section className={styles.quickFilters} aria-label="후보 빠른 필터">
+      <div className={styles.accountTabs}>{accountFilters.map(([value, label]) => {
+        const count = value === "all" ? ideas.length : ideas.filter((idea) => idea.account === value).length;
+        return <button key={value} type="button" className={filters.account === value ? styles.activeTab : ""} onClick={() => setFilter("account", value)}>{label}<span>{count}</span></button>;
+      })}</div>
+      <label>재료<select value={filters.source} onChange={(event) => setFilter("source", event.target.value as FilterState["source"])}>{sourceFilters.map(([value, label]) => <option key={value} value={value}>{label}</option>)}</select></label>
+      <label>형식<select value={filters.format} onChange={(event) => setFilter("format", event.target.value as FilterState["format"])}>{formatFilters.map(([value, label]) => <option key={value} value={value}>{label}</option>)}</select></label>
+      <button type="button" className={progressOnly ? styles.activeProgress : ""} onClick={() => setProgressOnly((value) => !value)}>발전 중 {progressCount}</button>
+      <button type="button" className={styles.moreTopics} onClick={() => setRequestType("new")}>+ 새 주제</button>
+      {(filters.account !== "all" || filters.source !== "all" || filters.format !== "all" || progressOnly) && <button type="button" className={styles.reset} onClick={resetFilters}>초기화</button>}
+      {pendingCount > 0 && <span className={styles.pending}>조사 대기 {pendingCount}</span>}
+    </section>
 
+    <div className={styles.workspace}>
       <section className={styles.listPane} aria-label="기획 후보">
         <div className={styles.listHeader}><strong>오늘 A/B 후보</strong><span>{visible.length}개 · 적합도 높은 순</span></div>
         <div className={styles.ideaList}>{visible.map((idea, index) => {
@@ -162,19 +167,15 @@ function ResearchStrip({ research, open, onToggle }: { research?: PlanningResear
   </section>;
 }
 
-function FilterGroup({ title, items, value, onChange, counts }: { title: string; items: Array<[string, string]>; value: string; onChange: (value: string) => void; counts?: Record<string, number> }) {
-  return <section className={styles.filterGroup}><h2>{title}</h2>{items.map(([itemValue, label]) => <button key={itemValue} type="button" className={itemValue === value ? styles.activeFilter : ""} onClick={() => onChange(itemValue)}>{label}{counts && <span>{counts[itemValue]}</span>}</button>)}</section>;
-}
-
 function IdeaDetail({ idea, feedback, decision, saving, notice, requestType, requestText, requesting, onFeedback, onDecision, onRequestType, onRequestText, onRequest, onOpenGpt }: { idea: PlanningIdea; feedback: string; decision?: PlanningDecision["decision"]; saving: boolean; notice: string; requestType: RequestType; requestText: string; requesting: boolean; onFeedback: (value: string) => void; onDecision: (decision: PlanningDecision["decision"]) => void; onRequestType: (value: RequestType) => void; onRequestText: (value: string) => void; onRequest: () => void; onOpenGpt: () => void }) {
   return <div className={styles.detailInner}>
     <div className={styles.detailTop}><span className={styles.pills}><Pill className={accountClass[idea.account]}>{idea.accountLabel}</Pill>{idea.sources.map((source) => <Pill key={source} className={sourceClass[source]}>{sourceFilters.find(([value]) => value === source)?.[1]}</Pill>)}<Pill>{idea.formatLabel}</Pill><Pill>{idea.role}</Pill></span><span>AI 적합도 {idea.score}/100</span></div>
     <h1>{idea.title}</h1><p className={styles.verdict}>{idea.verdict}</p>
+    <div className={styles.detailActions}><button type="button" className={styles.develop} disabled={saving} onClick={() => onDecision("발전")}>이 후보 발전</button><button type="button" disabled={saving} onClick={() => onDecision("형식 변경")}>형식 변경</button><button type="button" disabled={saving} onClick={() => onDecision("스토리 먼저")}>스토리 먼저</button><button type="button" disabled={saving} onClick={() => onDecision("보류")}>보류</button><button type="button" disabled={saving} onClick={() => onDecision("버림")}>버림</button></div>
     <div className={styles.routes}><Route label="우선 형식" value={idea.primary} primary /><Route label="깊이 확장" value={idea.post} /><Route label="반응 수집" value={idea.story} /></div>
     <div className={styles.detailGrid}><section><h2>왜 이 형식인가</h2><p><b>{idea.why[0]}</b>{idea.why[1]}</p><p><b>시리즈</b>{idea.series}</p><p><b>역할</b>{idea.role}</p></section><section><h2>A/B 구조</h2>{idea.ab.map(([label, text]) => <p key={label}><b>{label}</b>{text}</p>)}<p className={styles.risk}><b>주의</b>{idea.risk}</p></section><section className={styles.references}><h2>참고한 자료</h2>{idea.references.map(([label, text]) => <div key={`${label}-${text}`}><b>{label}</b><span>{text}</span></div>)}</section></div>
     <div className={styles.feedbackBox}>
       <label htmlFor="planning-feedback">한나 의견</label><textarea id="planning-feedback" value={feedback} onChange={(event) => onFeedback(event.target.value)} placeholder="예: 주제는 맞는데 상황극보다 내 생각을 말하는 게 맞아." />
-      <div className={styles.decisionBar}><button type="button" className={styles.develop} disabled={saving} onClick={() => onDecision("발전")}>발전</button><button type="button" disabled={saving} onClick={() => onDecision("형식 변경")}>형식 변경</button><button type="button" disabled={saving} onClick={() => onDecision("스토리 먼저")}>스토리 먼저</button><span /><button type="button" disabled={saving} onClick={() => onDecision("보류")}>보류</button><button type="button" disabled={saving} onClick={() => onDecision("버림")}>버림</button></div>
       <div className={styles.followUp}><div className={styles.followButtons}><button type="button" className={requestType === "deeper" ? styles.activeRequest : ""} onClick={() => onRequestType("deeper")}>이 주제 더 깊게</button><button type="button" className={requestType === "similar" ? styles.activeRequest : ""} onClick={() => onRequestType("similar")}>유사 주제 찾기</button><button type="button" className={requestType === "new" ? styles.activeRequest : ""} onClick={() => onRequestType("new")}>새 주제 더 받기</button></div><div className={styles.requestRow}><input value={requestText} onChange={(event) => onRequestText(event.target.value)} placeholder="더 찾을 방향이 있으면 한 줄만 적어줘" /><button type="button" disabled={requesting} onClick={onRequest}>AI 조사에 넣기</button><button type="button" onClick={onOpenGpt}>복사하고 GPT 열기</button></div></div>
       <div className={styles.saveState}>{saving || requesting ? "저장 중…" : notice || (decision ? `${decision} 저장됨` : "")}</div>
     </div>
