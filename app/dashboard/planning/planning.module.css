@@ -159,8 +159,9 @@
   .detailInner { padding: 15px; }
   .detailGrid { grid-template-columns: 1fr; }
   .detailGrid .references { grid-column: auto; }
+  .loopRail { flex-wrap: wrap; padding-top: 7px; }
   .loopSteps span { padding-right: 10px; }
-  .nextRun { display: none; }
+  .nextRun { width: 100%; padding: 6px 10px; border-top: 1px solid var(--border); border-left: 0; }
 }
 
 @media (max-width: 820px) {
