@@ -84,6 +84,25 @@ test("the default Hyerin and food ideas are specific character incidents, not ge
   }
 });
 
+test("planning has a separate daily product radar with order and filming evidence", () => {
+  const api = read("lib/dashboard-api.ts");
+  const board = read("app/dashboard/planning/PlanningBoard.tsx");
+  const styles = read("app/dashboard/planning/planning.module.css");
+
+  assert.ok(api.includes("export interface PlanningProduct"));
+  assert.ok(api.includes("product_radar?: PlanningProduct[]"));
+  assert.ok(board.includes("feed.current?.product_radar"));
+  for (const copy of [
+    "오늘 주문·검증 후보", "요즘 유행", "꾸준히 추천", "직접 발굴",
+    "왜 우리 핏", "원재료·영양표", "먹어볼 방법", "구매처 확인",
+  ]) {
+    assert.ok(board.includes(copy), `missing product radar copy: ${copy}`);
+  }
+  assert.ok(styles.includes(".productRadar"));
+  assert.ok(styles.includes(".productCards"));
+  assert.ok(styles.includes("overflow-x: auto"));
+});
+
 test("planning decisions use the authenticated dashboard API", () => {
   const api = read("lib/dashboard-api.ts");
   const board = read("app/dashboard/planning/PlanningBoard.tsx");
