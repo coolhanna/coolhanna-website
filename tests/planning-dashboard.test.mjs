@@ -59,6 +59,31 @@ test("planning keeps the candidate list and selected detail visible together on 
   assert.ok(styles.includes("@media (max-width: 620px)"));
 });
 
+test("planning uses readable PC type, restrained gold, and the live candidate count", () => {
+  const board = read("app/dashboard/planning/PlanningBoard.tsx");
+  const styles = read("app/dashboard/planning/planning.module.css");
+
+  assert.ok(board.includes("{ideas.length}개 중 최대 2개만 발전"));
+  assert.ok(!board.includes("6개 중 최대 2개만 발전"));
+  assert.match(styles, /\.page\s*\{[^}]*font-size:\s*12px/s);
+  assert.match(styles, /\.rowBody\s*>\s*strong\s*\{[^}]*font-size:\s*13px[^}]*font-weight:\s*800/s);
+  assert.match(styles, /\.detailInner h1\s*\{[^}]*font-size:\s*clamp\(18px,[^)]+24px\)[^}]*font-weight:\s*800/s);
+  assert.match(styles, /\.selectedRow\s*\{[^}]*background:\s*var\(--bg-card-soft\)/s);
+  assert.match(styles, /\.score\s*\{[^}]*color:\s*var\(--text-main\)/s);
+  assert.ok(!styles.includes(".accountTabs .activeTab, .quickFilters > .activeProgress { background: var(--accent-soft)"));
+});
+
+test("the default Hyerin and food ideas are specific character incidents, not generic writer or product cards", () => {
+  const data = read("app/dashboard/planning/planning-data.ts");
+
+  for (const stale of ["hyerin-writer", "hyerin-book", "solo-meal", "mango"]) {
+    assert.ok(!data.includes(`id: "${stale}"`), `stale generic seed remains: ${stale}`);
+  }
+  for (const fresh of ["hyerin-retro-playlist", "hyerin-lp-no-skip", "pizza-crust-truce", "first-bite-retrial"]) {
+    assert.ok(data.includes(`id: "${fresh}"`), `missing specific seed: ${fresh}`);
+  }
+});
+
 test("planning decisions use the authenticated dashboard API", () => {
   const api = read("lib/dashboard-api.ts");
   const board = read("app/dashboard/planning/PlanningBoard.tsx");
