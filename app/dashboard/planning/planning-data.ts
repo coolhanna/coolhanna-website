@@ -14,6 +14,10 @@ export interface PlanningIdea {
   role: string;
   title: string;
   verdict: string;
+  situation: string;
+  conflict: string;
+  valueLine: string;
+  judgment: string;
   series: string;
   primary: [string, string];
   post: [string, string];
@@ -25,19 +29,32 @@ export interface PlanningIdea {
   variant?: "A형" | "B형";
 }
 
+type PlanningIdeaSeed = Omit<PlanningIdea, "situation" | "conflict" | "valueLine" | "judgment"> & Partial<Pick<PlanningIdea, "situation" | "conflict" | "valueLine" | "judgment">>;
+
+function normalizePlanningIdea(item: PlanningIdeaSeed | Record<string, any>): PlanningIdea {
+  const verdict = String(item.verdict || "한나 확인이 필요한 후보");
+  return {
+    ...item,
+    situation: String(item.situation || item.primary?.[1] || "첫 장면 확인 필요"),
+    conflict: String(item.conflict || "이 장면에서 맞부딪히는 두 기준을 확인해야 한다."),
+    valueLine: String(item.valueLine || verdict),
+    judgment: String(item.judgment || verdict),
+  } as PlanningIdea;
+}
+
 const dailyFallbackIds = ["phone-check", "photo-consent", "hyerin-retro-playlist", "hyerin-lp-no-skip", "pizza-crust-truce", "first-bite-retrial"];
 
 export function planningIdeasForDay(raw: Array<Record<string, any>> | undefined): PlanningIdea[] {
   const input: Array<Record<string, any>> = raw?.length ? raw : dailyFallbackIds.map((id, index) => ({ id, variant: index % 2 ? "B형" : "A형" }));
   return input.flatMap((item) => {
     const seed = seedIdeas.find((idea) => idea.id === item.id);
-    if (seed) return [{ ...seed, ...item } as PlanningIdea];
+    if (seed) return [normalizePlanningIdea({ ...seed, ...item })];
     if (!item.title || !item.account || !item.score) return [];
-    return [item as PlanningIdea];
+    return [normalizePlanningIdea(item)];
   }).sort((a, b) => b.score - a.score);
 }
 
-export const seedIdeas: PlanningIdea[] = [
+export const seedIdeas: PlanningIdeaSeed[] = [
   {
     id: "phone-check", score: 91, account: "main", accountLabel: "본계정", sources: ["value", "concern"], sourceLabel: "가치관", formats: ["skit"], formatLabel: "상황극", role: "유입",
     title: "“폰 줘봐. 볼 거 없으면 보여줄 수 있잖아.”", verdict: "부모의 책임과 부모의 불안은 다르다.", series: "우리 집, 어디까지?",
@@ -113,7 +130,7 @@ export const seedIdeas: PlanningIdea[] = [
 ];
 
 export function mergeCurrentCandidate(raw: Record<string, any> | null): PlanningIdea[] {
-  if (!raw?.id) return seedIdeas;
+  if (!raw?.id) return seedIdeas.map(normalizePlanningIdea);
   const total = (raw.scores || []).reduce((sum: number, item: any) => sum + Number(item.score || 0), 0);
   const maximum = (raw.scores || []).reduce((sum: number, item: any) => sum + Number(item.max || 0), 0);
   const references: Array<[string, string]> = [
@@ -121,11 +138,15 @@ export function mergeCurrentCandidate(raw: Record<string, any> | null): Planning
     ...(raw.external_evidence || []).slice(0, 1).map((item: any) => [String(item.label), String(item.fact)] as [string, string]),
   ];
   const current: PlanningIdea = {
-    ...seedIdeas.find((idea) => idea.id === "first-bite-retrial")!,
+    ...normalizePlanningIdea(seedIdeas.find((idea) => idea.id === "first-bite-retrial")!),
     id: String(raw.id),
     score: maximum ? Math.round((total / maximum) * 100) : 84,
     title: String(raw.title || "현재 후보"),
     verdict: String(raw.core_line || "한나 확인이 필요한 현재 후보"),
+    situation: String(raw.situation || (raw.scene_plan || [])[0] || "첫 장면 확인 필요"),
+    conflict: String(raw.conflict || "이 장면에서 맞부딪히는 두 기준을 확인해야 한다."),
+    valueLine: String(raw.valueLine || raw.core_line || "이 계정이 지킬 가치를 한나와 확인한다."),
+    judgment: String(raw.judgment || raw.core_line || "마지막 판정은 한나 확인 뒤 확정한다."),
     primary: ["릴스", String(raw.account_reason || "실제 선택과 반응을 장면으로 보여준다.")],
     why: ["실제 근거", String(raw.why_hanna || raw.why_now || "한나의 실제 생활에서 출발했다.")],
     ab: [
@@ -135,6 +156,6 @@ export function mergeCurrentCandidate(raw: Record<string, any> | null): Planning
     references: references.length ? references : [["현재 후보", String(raw.why_now || "근거 확인 필요")]],
     risk: String((raw.guardrails || [])[0] || "실제 경험을 확인한 뒤 대본으로 발전한다."),
   };
-  return [current, ...seedIdeas.filter((idea) => idea.id !== "first-bite-retrial" && idea.id !== current.id)]
+  return [current, ...seedIdeas.filter((idea) => idea.id !== "first-bite-retrial" && idea.id !== current.id).map(normalizePlanningIdea)]
     .sort((a, b) => b.score - a.score);
 }

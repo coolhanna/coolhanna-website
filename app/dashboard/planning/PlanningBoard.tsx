@@ -114,7 +114,7 @@ export default function PlanningBoard({ initialFeed, initialDecisions }: { initi
 
   async function openGpt() {
     const prompt = selected
-      ? `다음 콘텐츠 후보를 한나의 세 계정 운영 기준으로 더 발전시켜줘.\n계정: ${selected.accountLabel}\n역할: ${selected.role}\n주제: ${selected.title}\n핵심 판정: ${selected.verdict}\n한나 의견: ${drafts[selected.id] || requestText || "아직 없음"}\n먼저 더 확인할 실제 경험·근거·촬영 장면을 최대 3개만 질문해줘.`
+      ? `다음 콘텐츠 후보를 한나의 세 계정 운영 기준으로 더 발전시켜줘.\n계정: ${selected.accountLabel}\n역할: ${selected.role}\n주제: ${selected.title}\n첫 장면: ${selected.situation}\n충돌: ${selected.conflict}\n지키는 가치: ${selected.valueLine}\n마지막 판정: ${selected.judgment}\n한나 의견: ${drafts[selected.id] || requestText || "아직 없음"}\n먼저 더 확인할 실제 경험·근거·촬영 장면을 최대 3개만 질문해줘.`
       : `한나의 세 계정 운영 기준으로 새 콘텐츠 후보를 찾아줘. 완성 대본보다 계정과 유입·호감·신뢰 역할을 먼저 붙여줘. 추가 요청: ${requestText || "새로운 문제와 욕구를 찾아줘."}`;
     window.open("https://chatgpt.com/", "_blank", "noopener,noreferrer");
     try { await navigator.clipboard.writeText(prompt); setNotice("후보 맥락을 복사했어 · 열린 GPT 창에 붙여넣으면 돼"); }
@@ -158,7 +158,7 @@ export default function PlanningBoard({ initialFeed, initialDecisions }: { initi
           const decision = decisions.get(idea.id)?.decision;
           return <button key={idea.id} type="button" className={`${styles.ideaRow} ${accountRowClass[idea.account]} ${idea.id === effectiveSelectedId ? styles.selectedRow : ""} ${decision ? styles.decidedRow : ""}`} onClick={() => setSelectedId(idea.id)}>
             <span className={styles.rank}><small>순서</small>{String(currentPage * pageSize + index + 1).padStart(2, "0")}</span>
-            <span className={styles.rowBody}><span className={styles.pills}>{idea.variant && <Pill>{idea.variant}</Pill>}<Pill className={accountClass[idea.account]}>{idea.accountLabel}</Pill><Pill className={sourceClass[idea.sources[0]]}>{idea.sourceLabel}</Pill><Pill>{idea.formatLabel}</Pill></span><strong>{idea.title}</strong><span className={styles.rowMeta}>{idea.series} · {idea.role}{decision ? ` · ${decision}` : ""}</span></span>
+            <span className={styles.rowBody}><span className={styles.pills}>{idea.variant && <Pill>{idea.variant}</Pill>}<Pill className={accountClass[idea.account]}>{idea.accountLabel}</Pill><Pill className={sourceClass[idea.sources[0]]}>{idea.sourceLabel}</Pill><Pill>{idea.formatLabel}</Pill></span><strong>{idea.title}</strong><span className={styles.rowMeta}>{idea.role} · {idea.situation}{decision ? ` · ${decision}` : ""}</span></span>
             <span className={styles.score}><small>적합</small>{idea.score}</span>
           </button>;
         })}{!visible.length && <p className={styles.empty}>조건에 맞는 후보가 없어.</p>}</div>
@@ -186,6 +186,12 @@ function IdeaDetail({ idea, feedback, decision, saving, notice, requestType, req
   return <div className={styles.detailInner}>
     <div className={styles.detailTop}><span className={styles.pills}><Pill className={accountClass[idea.account]}>{idea.accountLabel}</Pill>{idea.sources.map((source) => <Pill key={source} className={sourceClass[source]}>{sourceFilters.find(([value]) => value === source)?.[1]}</Pill>)}<Pill>{idea.formatLabel}</Pill><Pill>{idea.role}</Pill></span><span>AI 적합도 {idea.score}/100</span></div>
     <h1>{idea.title}</h1><p className={styles.verdict}>{idea.verdict}</p>
+    <div className={styles.storyAxes}>
+      <StoryAxis label="첫 장면" value={idea.situation} />
+      <StoryAxis label="충돌" value={idea.conflict} />
+      <StoryAxis label="지키는 가치" value={idea.valueLine} />
+      <StoryAxis label="마지막 판정" value={idea.judgment} judgment />
+    </div>
     <div className={styles.detailActions}><button type="button" className={styles.develop} disabled={saving} onClick={() => onDecision("발전")}>이 후보 발전</button><button type="button" disabled={saving} onClick={() => onDecision("형식 변경")}>형식 변경</button><button type="button" disabled={saving} onClick={() => onDecision("스토리 먼저")}>스토리 먼저</button><button type="button" disabled={saving} onClick={() => onDecision("보류")}>보류</button><button type="button" disabled={saving} onClick={() => onDecision("버림")}>버림</button></div>
     <div className={styles.routes}><Route label="우선 형식" value={idea.primary} primary /><Route label="깊이 확장" value={idea.post} /><Route label="반응 수집" value={idea.story} /></div>
     <div className={styles.detailGrid}><section><h2>왜 이 형식인가</h2><p><b>{idea.why[0]}</b>{idea.why[1]}</p><p><b>시리즈</b>{idea.series}</p><p><b>역할</b>{idea.role}</p></section><section><h2>A/B 구조</h2>{idea.ab.map(([label, text]) => <p key={label}><b>{label}</b>{text}</p>)}<p className={styles.risk}><b>주의</b>{idea.risk}</p></section><section className={styles.references}><h2>참고한 자료</h2>{idea.references.map(([label, text]) => <div key={`${label}-${text}`}><b>{label}</b><span>{text}</span></div>)}</section></div>
@@ -195,6 +201,10 @@ function IdeaDetail({ idea, feedback, decision, saving, notice, requestType, req
       <div className={styles.saveState}>{saving || requesting ? "저장 중…" : notice || (decision ? `${decision} 저장됨` : "")}</div>
     </div>
   </div>;
+}
+
+function StoryAxis({ label, value, judgment = false }: { label: string; value: string; judgment?: boolean }) {
+  return <div className={judgment ? styles.judgmentAxis : ""}><small>{label}</small><p>{value}</p></div>;
 }
 
 function Route({ label, value, primary = false }: { label: string; value: [string, string]; primary?: boolean }) {
