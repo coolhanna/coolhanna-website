@@ -47,6 +47,22 @@ test("planning makes the nightly research loop, history, and follow-up actions v
   }
 });
 
+test("planning exposes the situation, conflict, value, and final judgment before development", () => {
+  const board = read("app/dashboard/planning/PlanningBoard.tsx");
+  const data = read("app/dashboard/planning/planning-data.ts");
+
+  for (const field of ["situation", "conflict", "valueLine", "judgment"]) {
+    assert.ok(data.includes(`${field}: string`), `missing candidate field: ${field}`);
+  }
+  for (const copy of ["첫 장면", "충돌", "지키는 가치", "마지막 판정"]) {
+    assert.ok(board.includes(copy), `missing visible candidate axis: ${copy}`);
+  }
+  assert.ok(board.includes("idea.situation"));
+  assert.ok(board.includes("idea.conflict"));
+  assert.ok(board.includes("idea.valueLine"));
+  assert.ok(board.includes("idea.judgment"));
+});
+
 test("planning adapts the candidate list to the installed dashboard window", () => {
   const board = read("app/dashboard/planning/PlanningBoard.tsx");
   const styles = read("app/dashboard/planning/planning.module.css");
