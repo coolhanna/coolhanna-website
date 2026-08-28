@@ -12,7 +12,7 @@ function read(relativePath: string) {
 }
 
 const baseInput = {
-  liveToday: {
+  liveState: {
     date: "2026-08-28",
     checkedAt: "2026-08-28T10:53:00+09:00",
     currentWork: [
@@ -89,7 +89,7 @@ test("오늘 일정은 루틴과 미완료 항목만 보여준다", () => {
 
 test("어제 작업 상태는 오늘 화면에 섞지 않는다", () => {
   const view = buildHannaDesk(
-    { ...baseInput, liveToday: { ...baseInput.liveToday, date: "2026-08-27" } },
+    { ...baseInput, liveState: { ...baseInput.liveState, date: "2026-08-27" } },
     "2026-08-28",
   );
 
@@ -101,7 +101,7 @@ test("어제 작업 상태는 오늘 화면에 섞지 않는다", () => {
 
 test("일정 API가 실패하면 현재 작업은 유지하고 부분 확인으로 표시한다", () => {
   const view = buildHannaDesk(
-    { liveToday: baseInput.liveToday, scheduleV2: { error: "schedule unavailable" } },
+    { liveState: baseInput.liveState, scheduleV2: { error: "schedule unavailable" } },
     "2026-08-28",
   );
 
@@ -111,11 +111,12 @@ test("일정 API가 실패하면 현재 작업은 유지하고 부분 확인으�
   assert.equal(view.isPartial, true);
 });
 
-test("한나 데스크는 과거 생활기록과 업로드 집계를 제거하고 오늘 상태만 사용한다", () => {
+test("한나 데스크는 고정 JSON 대신 실시간 API 상태를 사용한다", () => {
   const page = read("app/dashboard/desk/page.tsx");
   const board = read("app/dashboard/desk/HannaDeskBoard.tsx");
 
-  assert.ok(page.includes('import liveToday from "@/data/hanna-desk-today.json"'));
+  assert.ok(!page.includes("hanna-desk-today.json"));
+  assert.ok(page.includes("dash.deskLive()"));
   assert.ok(page.includes("dash.scheduleV2()"));
   for (const removedSource of ["dash.lifeLatest()", "dash.uploads()"])
     assert.ok(!page.includes(removedSource), `removed source remains: ${removedSource}`);
