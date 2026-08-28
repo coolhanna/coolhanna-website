@@ -62,7 +62,7 @@ export default function HannaDeskBoard({ view }: { view: HannaDeskView }) {
   }, [router]);
 
   useEffect(() => {
-    const timer = window.setInterval(refresh, 60 * 60 * 1000);
+    const timer = window.setInterval(refresh, 60 * 1000);
     return () => window.clearInterval(timer);
   }, [refresh]);
 
@@ -173,7 +173,7 @@ export default function HannaDeskBoard({ view }: { view: HannaDeskView }) {
         </div>
 
         <footer className={styles.footer}>
-          <span>매시간 자동으로 변경을 확인합니다. 해결된 일은 자동으로 사라져요.</span>
+          <span>매분 자동으로 변경을 확인합니다. 해결된 일은 자동으로 사라져요.</span>
           <Link href="/dashboard/purchases">산 것 보기 <span aria-hidden="true">→</span></Link>
         </footer>
       </div>
