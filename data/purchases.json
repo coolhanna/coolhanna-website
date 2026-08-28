@@ -1,0 +1,27 @@
+{
+  "checkedAt": null,
+  "purchases": [],
+  "sources": [
+    {
+      "id": "coupang",
+      "name": "쿠팡",
+      "detail": "구매내역 읽기 연결이 필요해요.",
+      "state": "pending",
+      "stateLabel": "연결 전"
+    },
+    {
+      "id": "naver",
+      "name": "네이버",
+      "detail": "주문·배송내역 읽기 연결이 필요해요.",
+      "state": "pending",
+      "stateLabel": "연결 전"
+    },
+    {
+      "id": "kurly",
+      "name": "컬리",
+      "detail": "구매내역 읽기 연결이 필요해요.",
+      "state": "pending",
+      "stateLabel": "연결 전"
+    }
+  ]
+}

@@ -1,5 +1,6 @@
 "use client";
 
+import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useState, useTransition } from "react";
 import type { DeskWorkItem, HannaDeskView } from "@/lib/hanna-desk";
@@ -167,7 +168,8 @@ export default function HannaDeskBoard({ view }: { view: HannaDeskView }) {
         </div>
 
         <footer className={styles.footer}>
-          매시간 변경 확인은 다음 단계에서 연결합니다. 같은 상태는 다시 알리지 않아요.
+          <span>매시간 변경 확인은 다음 단계에서 연결합니다. 같은 상태는 다시 알리지 않아요.</span>
+          <Link href="/dashboard/purchases">산 것 보기 <span aria-hidden="true">→</span></Link>
         </footer>
       </div>
     </main>

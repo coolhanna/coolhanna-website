@@ -335,11 +335,22 @@
 }
 
 .footer {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 18px;
   margin-top: 22px;
   padding: 14px 0;
   border-top: 1px solid var(--border-strong);
   color: var(--text-secondary);
   font-size: 10px;
+}
+
+.footer a {
+  color: var(--accent-dark);
+  font-size: 11px;
+  font-weight: 750;
+  white-space: nowrap;
 }
 
 @media (max-width: 760px) {
@@ -384,4 +395,5 @@
   .workCard { padding: 16px; }
   .workCard h3 { font-size: 16px; }
   .lowerGrid { gap: 12px; }
+  .footer { align-items: flex-start; flex-direction: column; gap: 8px; }
 }
