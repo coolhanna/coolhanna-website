@@ -12,144 +12,106 @@ function read(relativePath: string) {
 }
 
 const baseInput = {
-  recommendation: {
-    recommendation: {
-      title: "지난 자료 전달",
-      deadline: "2026-08-26",
-      modified_days_ago: 2,
-    },
-    d_label: "D+1",
-    reason: "마감이 지났어요",
+  lifeLatest: {
+    available: true,
+    date: "2026-08-27",
+    headline: "콘텐츠 시스템 설계·망고 비교 촬영·편집",
+    summary: "망고 비교를 촬영하고 세 계정 콘텐츠 흐름을 점검했다.",
+    pending: [
+      "3계정 콘텐츠 루프 반복 검증",
+      "망고 영상 최종 게시 재확인",
+      "릴스 표지 자동화",
+      "자비스형 알림·일정 시스템",
+    ],
   },
   scheduleV2: {
     today: {
-      date: "2026-08-27",
-      calendar_events: [
-        { summary: "촬영 미팅", time: "14:00", all_day: false },
-        { summary: "패키지 받기", time: null, all_day: true },
-      ],
-      routines: [
-        { name: "비즈니스 PT", time: "09:30", location: "평내" },
-      ],
+      date: "2026-08-28",
+      routines: [{ name: "뉴스레터 작성", time: "19:00", location: "" }],
       todos: [
         { text: "대본 최종 확인", done: false },
-        { text: "완료한 일", done: true },
+        { text: "이미 완료", done: true },
       ],
-      ad_deadlines: [
-        { title: "샴푸 광고", audience: "한나", kind: "업로드" },
-      ],
-      gongu_milestones: [],
-      incomplete_yesterday: [{ text: "어제 익일 확인" }],
+      ad_deadlines: [{ title: "끝난 광고", audience: "한나", kind: "업로드" }],
+      gongu_milestones: [{ title: "끝난 공구", audience: "한나", kind: "마감" }],
     },
   },
-  incomplete: {
-    items: [
-      { title: "지난 자료 전달", deadline: "2026-08-26", modified_days_ago: 2 },
-    ],
-  },
-  stuck: {
-    items: [
-      { title: "오래된 제휴 답장", deadline: null, modified_days_ago: 6 },
-    ],
-  },
-  paymentFollowups: {
-    items: [
-      {
-        title: "여행 광고",
-        type: "광고",
-        audience: "한나",
-        wait_label: "입금 지연 3일",
-        days_until_payment: -3,
-      },
-    ],
-  },
-  quickTasks: {
-    items: [
-      { text: "배송지 확인", done: false },
-      { text: "이미 처리", done: true },
+  uploads: {
+    uploads: [
+      { date: "2026-08-27", platform: "릴스", source: "가족먹거리", title: "제주 애플망고 시식 비교", views: 15737, key: "ig-mango" },
+      { date: "2026-08-27", platform: "릴스", source: "한나", title: "아이 용돈 개입 기준", views: 159843, key: "ig-hanna" },
+      { date: "2026-08-27", platform: "릴스", source: "혜린", title: "질투 지우는 알약 이야기", views: 14534, key: "ig-hyerin" },
+      { date: "2026-08-27", platform: "유튜브", source: "YT숏", title: "망고 2종 먹어보기", views: 2600, key: "yt-mango" },
+      { date: "2026-08-25", platform: "릴스", source: "가족먹거리", title: "첫 미역국 도전", views: 27463, key: "ig-soup" },
+      { date: "2026-08-22", platform: "릴스", source: "혜린", title: "지난주 영상", views: 68490, key: "ig-old" },
     ],
   },
 };
 
-test("한나 데스크는 마감 누락을 중복 없는 판단 카드로 만든다", () => {
-  const view = buildHannaDesk(baseInput, "2026-08-27");
+test("생활기록의 이어질 일만 보여주고 실제 게시가 확인된 망고는 자동으로 닫는다", () => {
+  const view = buildHannaDesk(baseInput, "2026-08-28");
 
   assert.deepEqual(
-    view.decisions.map((item) => item.title),
-    ["지난 자료 전달", "오래된 제휴 답장"],
+    view.carryOver.map((item) => item.title),
+    ["3계정 콘텐츠 루프 반복 검증", "릴스 표지 자동화", "자비스형 알림·일정 시스템"],
   );
-  assert.equal(view.decisions[0]?.urgency, "urgent");
-  assert.equal(view.decisions[0]?.source, "할 일");
+  assert.deepEqual(view.resolvedByAccounts.map((item) => item.title), ["망고 영상 최종 게시 재확인"]);
+  assert.match(view.resolvedByAccounts[0]?.detail || "", /가족먹거리|YT숏/);
 });
 
-test("오늘 일정과 준비할 일을 한 흐름으로 정렬한다", () => {
-  const view = buildHannaDesk(baseInput, "2026-08-27");
+test("오늘은 캘린더 광고가 아니라 실제 루틴과 미완료 기록만 보여준다", () => {
+  const view = buildHannaDesk(baseInput, "2026-08-28");
 
   assert.deepEqual(
-    view.today.slice(0, 3).map((item) => [item.time, item.title]),
-    [
-      ["09:30", "비즈니스 PT"],
-      ["14:00", "촬영 미팅"],
-      [null, "패키지 받기"],
-    ],
+    view.today.map((item) => item.title),
+    ["뉴스레터 작성", "대본 최종 확인"],
   );
-  assert.ok(view.mustNotMiss.some((item) => item.title === "대본 최종 확인"));
-  assert.ok(view.mustNotMiss.some((item) => item.title === "샴푸 광고 · 업로드"));
-  assert.ok(view.mustNotMiss.some((item) => item.title === "배송지 확인"));
-  assert.ok(!view.mustNotMiss.some((item) => item.title === "완료한 일"));
+  assert.ok(!view.today.some((item) => item.title.includes("광고") || item.title.includes("공구")));
 });
 
-test("상대를 기다리는 일을 따로 보여준다", () => {
-  const view = buildHannaDesk(baseInput, "2026-08-27");
+test("실제 계정 업로드를 이번 주와 최근 게시 기준으로 집계한다", () => {
+  const view = buildHannaDesk(baseInput, "2026-08-28");
 
-  assert.equal(view.waiting.length, 1);
-  assert.equal(view.waiting[0]?.title, "여행 광고");
-  assert.equal(view.waiting[0]?.detail, "입금 지연 3일");
-  assert.equal(view.summary.waiting, 1);
+  assert.equal(view.uploadSummary.weekCount, 5);
+  assert.equal(view.uploadSummary.latestDate, "2026-08-27");
+  assert.equal(view.uploadSummary.latestCount, 4);
+  assert.deepEqual(view.recentUploads.slice(0, 2).map((item) => item.title), [
+    "제주 애플망고 시식 비교",
+    "아이 용돈 개입 기준",
+  ]);
 });
 
-test("기다리는 일은 지금 판단함에 중복해서 올리지 않는다", () => {
+test("실제 소식통이 실패하면 빈 화면이 아니라 부분 확인으로 표시한다", () => {
   const view = buildHannaDesk(
     {
-      ...baseInput,
-      stuck: {
-        items: [
-          { title: "여행 광고", type: "광고", deadline: null, modified_days_ago: 12 },
-        ],
-      },
+      lifeLatest: { error: "life unavailable" },
+      scheduleV2: { error: "routine unavailable" },
+      uploads: { error: "uploads unavailable" },
     },
-    "2026-08-27",
+    "2026-08-28",
   );
 
-  assert.ok(view.waiting.some((item) => item.title === "여행 광고"));
-  assert.ok(!view.decisions.some((item) => item.title === "여행 광고"));
-});
-
-test("연결이 실패한 소식통은 0건이 아니라 부분 확인으로 표시한다", () => {
-  const view = buildHannaDesk(
-    {
-      ...baseInput,
-      paymentFollowups: { error: "API 503" },
-      scheduleV2: { error: "calendar unavailable" },
-    },
-    "2026-08-27",
-  );
-
-  assert.deepEqual(view.unavailableSources, ["오늘 일정", "기다리는 일"]);
+  assert.deepEqual(view.unavailableSources, ["하루 기록", "오늘 루틴", "실제 업로드"]);
   assert.equal(view.isPartial, true);
 });
 
-test("한나 데스크는 독립 라우트와 대시보드 탭으로 노출된다", () => {
+test("한나 데스크는 생활기록·오늘 루틴·실제 업로드만 연결한다", () => {
   const nav = read("app/dashboard/DashboardNav.tsx");
   const page = read("app/dashboard/desk/page.tsx");
   const board = read("app/dashboard/desk/HannaDeskBoard.tsx");
 
   assert.ok(nav.includes('{ label: "한나 데스크", href: "/dashboard/desk" }'));
-  for (const source of ["recommendation", "scheduleV2", "incomplete", "stuck", "paymentFollowups", "quickTasks"]) {
+  for (const source of ["lifeLatest", "scheduleV2", "uploads"]) {
     assert.ok(page.includes(`dash.${source}()`), `missing source: ${source}`);
   }
-  for (const copy of ["지금 판단할 것", "놓치면 안 되는 것", "오늘", "기다리는 것"]) {
+  for (const legacy of ["recommendation", "incomplete", "stuck", "paymentFollowups", "quickTasks"]) {
+    assert.ok(!page.includes(`dash.${legacy}()`), `legacy source remains: ${legacy}`);
+  }
+  for (const copy of ["기록에서 이어볼 것", "오늘 루틴", "실제 업로드 확인", "계정 확인으로 닫힌 것"]) {
     assert.ok(board.includes(copy), `missing desk copy: ${copy}`);
+  }
+  for (const staleCopy of ["지금 판단할 것", "기다리는 것", "미디언스", "메타 캠페인"]) {
+    assert.ok(!board.includes(staleCopy), `stale desk copy remains: ${staleCopy}`);
   }
 });
 
