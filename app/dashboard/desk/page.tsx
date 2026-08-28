@@ -1,5 +1,6 @@
 import { dash } from "@/lib/dashboard-api";
 import { buildHannaDesk } from "@/lib/hanna-desk";
+import liveToday from "@/data/hanna-desk-today.json";
 import HannaDeskBoard from "./HannaDeskBoard";
 
 export const dynamic = "force-dynamic";
@@ -14,14 +15,10 @@ function todayInSeoul(): string {
 }
 
 export default async function HannaDeskPage() {
-  const [lifeLatest, scheduleV2, uploads] = await Promise.all([
-    dash.lifeLatest(),
-    dash.scheduleV2(),
-    dash.uploads(),
-  ]);
+  const scheduleV2 = await dash.scheduleV2();
 
   const view = buildHannaDesk(
-    { lifeLatest, scheduleV2, uploads },
+    { liveToday, scheduleV2 },
     todayInSeoul(),
   );
 

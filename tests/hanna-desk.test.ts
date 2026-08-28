@@ -12,16 +12,45 @@ function read(relativePath: string) {
 }
 
 const baseInput = {
-  lifeLatest: {
-    available: true,
-    date: "2026-08-27",
-    headline: "콘텐츠 시스템 설계·망고 비교 촬영·편집",
-    summary: "망고 비교를 촬영하고 세 계정 콘텐츠 흐름을 점검했다.",
-    pending: [
-      "3계정 콘텐츠 루프 반복 검증",
-      "망고 영상 최종 게시 재확인",
-      "릴스 표지 자동화",
-      "자비스형 알림·일정 시스템",
+  liveToday: {
+    date: "2026-08-28",
+    checkedAt: "2026-08-28T10:53:00+09:00",
+    currentWork: [
+      {
+        id: "tiktok",
+        title: "TikTok 업로드 자동화",
+        detail: "예약 승인 대기",
+        source: "TikTok 운영 작업",
+        state: "working",
+        stateLabel: "진행 중",
+      },
+      {
+        id: "reels-cover",
+        title: "릴스 표지 자동화",
+        detail: "진행률 연결 전",
+        source: "한나 확인",
+        state: "working",
+        stateLabel: "진행 중·연결 필요",
+      },
+    ],
+    needsAttention: [
+      {
+        id: "tiktok-approval",
+        title: "16시 강남 브이로그 최종 예약",
+        detail: "한나 승인 필요",
+        source: "TikTok",
+        state: "needs_decision",
+        stateLabel: "승인 필요",
+      },
+    ],
+    sources: [
+      {
+        id: "gmail",
+        title: "메일",
+        detail: "09시·18시 요약",
+        state: "scheduled",
+        stateLabel: "일 2회",
+      },
     ],
   },
   scheduleV2: {
@@ -36,83 +65,64 @@ const baseInput = {
       gongu_milestones: [{ title: "끝난 공구", audience: "한나", kind: "마감" }],
     },
   },
-  uploads: {
-    uploads: [
-      { date: "2026-08-27", platform: "릴스", source: "가족먹거리", title: "제주 애플망고 시식 비교", views: 15737, key: "ig-mango" },
-      { date: "2026-08-27", platform: "릴스", source: "한나", title: "아이 용돈 개입 기준", views: 159843, key: "ig-hanna" },
-      { date: "2026-08-27", platform: "릴스", source: "혜린", title: "질투 지우는 알약 이야기", views: 14534, key: "ig-hyerin" },
-      { date: "2026-08-27", platform: "유튜브", source: "YT숏", title: "망고 2종 먹어보기", views: 2600, key: "yt-mango" },
-      { date: "2026-08-25", platform: "릴스", source: "가족먹거리", title: "첫 미역국 도전", views: 27463, key: "ig-soup" },
-      { date: "2026-08-22", platform: "릴스", source: "혜린", title: "지난주 영상", views: 68490, key: "ig-old" },
-    ],
-  },
 };
 
-test("생활기록의 이어질 일만 보여주고 실제 게시가 확인된 망고는 자동으로 닫는다", () => {
+test("오늘 실제 진행 중인 작업과 한나 확인이 필요한 일을 분리한다", () => {
   const view = buildHannaDesk(baseInput, "2026-08-28");
 
-  assert.deepEqual(
-    view.carryOver.map((item) => item.title),
-    ["3계정 콘텐츠 루프 반복 검증", "릴스 표지 자동화", "자비스형 알림·일정 시스템"],
-  );
-  assert.deepEqual(view.resolvedByAccounts.map((item) => item.title), ["망고 영상 최종 게시 재확인"]);
-  assert.match(view.resolvedByAccounts[0]?.detail || "", /가족먹거리|YT숏/);
+  assert.deepEqual(view.currentWork.map((item) => item.title), [
+    "TikTok 업로드 자동화",
+    "릴스 표지 자동화",
+  ]);
+  assert.deepEqual(view.needsAttention.map((item) => item.title), [
+    "16시 강남 브이로그 최종 예약",
+  ]);
+  assert.equal(view.checkedAt, "2026-08-28T10:53:00+09:00");
 });
 
-test("오늘은 캘린더 광고가 아니라 실제 루틴과 미완료 기록만 보여준다", () => {
+test("오늘 일정은 루틴과 미완료 항목만 보여준다", () => {
   const view = buildHannaDesk(baseInput, "2026-08-28");
 
-  assert.deepEqual(
-    view.today.map((item) => item.title),
-    ["뉴스레터 작성", "대본 최종 확인"],
-  );
+  assert.deepEqual(view.today.map((item) => item.title), ["뉴스레터 작성", "대본 최종 확인"]);
   assert.ok(!view.today.some((item) => item.title.includes("광고") || item.title.includes("공구")));
 });
 
-test("실제 계정 업로드를 이번 주와 최근 게시 기준으로 집계한다", () => {
-  const view = buildHannaDesk(baseInput, "2026-08-28");
-
-  assert.equal(view.uploadSummary.weekCount, 5);
-  assert.equal(view.uploadSummary.latestDate, "2026-08-27");
-  assert.equal(view.uploadSummary.latestCount, 4);
-  assert.deepEqual(view.recentUploads.slice(0, 2).map((item) => item.title), [
-    "제주 애플망고 시식 비교",
-    "아이 용돈 개입 기준",
-  ]);
-});
-
-test("실제 소식통이 실패하면 빈 화면이 아니라 부분 확인으로 표시한다", () => {
+test("어제 작업 상태는 오늘 화면에 섞지 않는다", () => {
   const view = buildHannaDesk(
-    {
-      lifeLatest: { error: "life unavailable" },
-      scheduleV2: { error: "routine unavailable" },
-      uploads: { error: "uploads unavailable" },
-    },
+    { ...baseInput, liveToday: { ...baseInput.liveToday, date: "2026-08-27" } },
     "2026-08-28",
   );
 
-  assert.deepEqual(view.unavailableSources, ["하루 기록", "오늘 루틴", "실제 업로드"]);
+  assert.deepEqual(view.currentWork, []);
+  assert.deepEqual(view.needsAttention, []);
+  assert.deepEqual(view.sources, []);
+  assert.deepEqual(view.unavailableSources, ["오늘 작업 상태"]);
+});
+
+test("일정 API가 실패하면 현재 작업은 유지하고 부분 확인으로 표시한다", () => {
+  const view = buildHannaDesk(
+    { liveToday: baseInput.liveToday, scheduleV2: { error: "schedule unavailable" } },
+    "2026-08-28",
+  );
+
+  assert.equal(view.currentWork.length, 2);
+  assert.deepEqual(view.today, []);
+  assert.deepEqual(view.unavailableSources, ["오늘 일정"]);
   assert.equal(view.isPartial, true);
 });
 
-test("한나 데스크는 생활기록·오늘 루틴·실제 업로드만 연결한다", () => {
-  const nav = read("app/dashboard/DashboardNav.tsx");
+test("한나 데스크는 과거 생활기록과 업로드 집계를 제거하고 오늘 상태만 사용한다", () => {
   const page = read("app/dashboard/desk/page.tsx");
   const board = read("app/dashboard/desk/HannaDeskBoard.tsx");
 
-  assert.ok(nav.includes('{ label: "한나 데스크", href: "/dashboard/desk" }'));
-  for (const source of ["lifeLatest", "scheduleV2", "uploads"]) {
-    assert.ok(page.includes(`dash.${source}()`), `missing source: ${source}`);
-  }
-  for (const legacy of ["recommendation", "incomplete", "stuck", "paymentFollowups", "quickTasks"]) {
-    assert.ok(!page.includes(`dash.${legacy}()`), `legacy source remains: ${legacy}`);
-  }
-  for (const copy of ["기록에서 이어볼 것", "오늘 루틴", "실제 업로드 확인", "계정 확인으로 닫힌 것"]) {
+  assert.ok(page.includes('import liveToday from "@/data/hanna-desk-today.json"'));
+  assert.ok(page.includes("dash.scheduleV2()"));
+  for (const removedSource of ["dash.lifeLatest()", "dash.uploads()"])
+    assert.ok(!page.includes(removedSource), `removed source remains: ${removedSource}`);
+  for (const copy of ["지금 진행 중", "내 답이 필요한 것", "오늘 일정", "메시지 확인 상태"])
     assert.ok(board.includes(copy), `missing desk copy: ${copy}`);
-  }
-  for (const staleCopy of ["지금 판단할 것", "기다리는 것", "미디언스", "메타 캠페인"]) {
+  for (const staleCopy of ["한나가 안 적어도", "기록에서 이어볼 것", "실제 업로드 확인", "계정 확인으로 닫힌 것"])
     assert.ok(!board.includes(staleCopy), `stale desk copy remains: ${staleCopy}`);
-  }
 });
 
 test("더 이상 쓰지 않는 진행 카테고리는 대시보드 탭에 노출하지 않는다", () => {
