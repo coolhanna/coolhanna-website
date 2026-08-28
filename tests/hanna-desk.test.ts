@@ -124,6 +124,8 @@ test("한나 데스크는 고정 JSON 대신 실시간 API 상태를 사용한�
     assert.ok(board.includes(copy), `missing desk copy: ${copy}`);
   for (const staleCopy of ["한나가 안 적어도", "기록에서 이어볼 것", "실제 업로드 확인", "계정 확인으로 닫힌 것"])
     assert.ok(!board.includes(staleCopy), `stale desk copy remains: ${staleCopy}`);
+  assert.ok(board.includes("60 * 1000"), "한나 데스크는 1분마다 실시간 상태를 다시 읽어야 한다");
+  assert.ok(board.includes("매분 자동으로"));
 });
 
 test("더 이상 쓰지 않는 진행 카테고리는 대시보드 탭에 노출하지 않는다", () => {
