@@ -13,6 +13,7 @@ const TABS = [
   { label: "하루", href: "/dashboard/day" },
   { label: "큐레이션", href: "/dashboard/curation" },
   { label: "기획", href: "/dashboard/planning" },
+  { label: "제품", href: "/dashboard/products" },
   { label: "릴스", href: "/dashboard/reels" },
   { label: "벤치마크", href: "/dashboard/reels-benchmark" },
   { label: "유튜브", href: "/dashboard/youtube" },

@@ -1,7 +1,8 @@
 "use client";
 
 import { useMemo, useState } from "react";
-import type { PlanningDecision, PlanningFeedResponse, PlanningProduct, PlanningResearch } from "@/lib/dashboard-api";
+import Link from "next/link";
+import type { PlanningDecision, PlanningFeedResponse, PlanningResearch } from "@/lib/dashboard-api";
 import { planningIdeasForDay, type Account, type Format, type PlanningIdea, type Source } from "./planning-data";
 import styles from "./planning.module.css";
 
@@ -13,8 +14,9 @@ const sourceFilters: Array<[FilterState["source"], string]> = [["all", "모두"]
 const formatFilters: Array<[FilterState["format"], string]> = [["all", "모두"], ["skit", "상황극"], ["thought", "생각 설명"], ["vlog", "브이로그"], ["review", "비교·리뷰"], ["experiment", "생활실험"]];
 const loopSteps = ["밤 조사", "아침 후보", "한나 판단", "선택 후보 발전", "성과 확인", "다음 밤 반영"];
 const accountClass: Record<Account, string> = { main: styles.mainAccount, hyerin: styles.hyerinAccount, food: styles.foodAccount };
+const accountRowClass: Record<Account, string> = { main: styles.mainRow, hyerin: styles.hyerinRow, food: styles.foodRow };
 const sourceClass: Record<Source, string> = { value: styles.valueSource, concern: styles.concernSource, trend: styles.trendSource, season: styles.seasonSource };
-const productSignal: Record<PlanningProduct["signal"], string> = { trend: "요즘 유행", evergreen: "꾸준히 추천", discovery: "직접 발굴" };
+const pageSize = 10;
 
 function displayDay(value = "") {
   if (!value) return "날짜 없음";
@@ -40,6 +42,7 @@ export default function PlanningBoard({ initialFeed, initialDecisions }: { initi
   }, [initialDecisions]);
   const [filters, setFilters] = useState<FilterState>({ account: "all", source: "all", format: "all" });
   const [progressOnly, setProgressOnly] = useState(false);
+  const [candidatePage, setCandidatePage] = useState(0);
   const [selectedId, setSelectedId] = useState(ideas[0]?.id || "");
   const [decisions, setDecisions] = useState(initialDecisionMap);
   const [drafts, setDrafts] = useState<Record<string, string>>(() => Object.fromEntries([...initialDecisionMap].map(([id, item]) => [id, item.feedback || ""])));
@@ -58,13 +61,22 @@ export default function PlanningBoard({ initialFeed, initialDecisions }: { initi
     if (filters.format !== "all" && !idea.formats.includes(filters.format)) return false;
     return true;
   }), [decisions, filters, ideas, progressOnly]);
-  const effectiveSelectedId = visible.some((idea) => idea.id === selectedId) ? selectedId : visible[0]?.id || "";
+  const pageCount = Math.max(1, Math.ceil(visible.length / pageSize));
+  const currentPage = Math.min(candidatePage, pageCount - 1);
+  const pagedVisible = visible.slice(currentPage * pageSize, (currentPage + 1) * pageSize);
+  const effectiveSelectedId = pagedVisible.some((idea) => idea.id === selectedId) ? selectedId : pagedVisible[0]?.id || "";
   const selected = ideas.find((idea) => idea.id === effectiveSelectedId) || null;
   const progressCount = ideas.filter((idea) => decisions.get(idea.id)?.decision === "발전").length;
   const pendingCount = feed.requests.filter((item) => item.status === "pending").length;
 
-  function setFilter<K extends keyof FilterState>(key: K, value: FilterState[K]) { setFilters((current) => ({ ...current, [key]: value })); }
-  function resetFilters() { setFilters({ account: "all", source: "all", format: "all" }); setProgressOnly(false); }
+  function setFilter<K extends keyof FilterState>(key: K, value: FilterState[K]) { setFilters((current) => ({ ...current, [key]: value })); setCandidatePage(0); }
+  function resetFilters() { setFilters({ account: "all", source: "all", format: "all" }); setProgressOnly(false); setCandidatePage(0); }
+  function toggleProgress() { setProgressOnly((value) => !value); setCandidatePage(0); }
+  function changePage(nextPage: number) {
+    const safePage = Math.max(0, Math.min(nextPage, pageCount - 1));
+    setCandidatePage(safePage);
+    setSelectedId(visible[safePage * pageSize]?.id || "");
+  }
 
   async function loadDay(date: string) {
     setLoadingDay(true); setNotice("");
@@ -114,7 +126,7 @@ export default function PlanningBoard({ initialFeed, initialDecisions }: { initi
       <div><span className={styles.eyebrow}>콘텐츠 기획</span><strong>{displayDay(feed.current?.date)}</strong></div>
       <div className={styles.headerActions}>
         <label>지난 후보 <select value={feed.current?.date || ""} disabled={loadingDay} onChange={(event) => loadDay(event.target.value)}>{feed.dates.map((item) => <option key={item.date} value={item.date}>{item.date} · {item.candidate_count || 6}개</option>)}</select></label>
-        <span>후보 {ideas.length}</span><button type="button" className={progressOnly ? styles.activeProgress : ""} onClick={() => setProgressOnly((value) => !value)}>발전 중 {progressCount}</button>
+        <span>후보 {ideas.length}</span><button type="button" className={progressOnly ? styles.activeProgress : ""} onClick={toggleProgress}>발전 중 {progressCount}</button>
       </div>
     </header>
 
@@ -124,7 +136,7 @@ export default function PlanningBoard({ initialFeed, initialDecisions }: { initi
       <div className={styles.nextRun}><b>다음 조사</b>{displayTime(feed.current?.next_run_at)} · 지난 후보는 보존</div>
     </section>
     <ResearchStrip research={feed.current?.research} open={researchOpen} onToggle={() => setResearchOpen((value) => !value)} />
-    <ProductRadar products={feed.current?.product_radar || []} />
+    <Link className={styles.productShortcut} href="/dashboard/products"><span>제품 후보 {feed.current?.product_radar?.length || 0}</span><em>오늘 살 것과 먼저 볼 것은 제품 탭에서 분리해 보기</em><b>제품 보기 →</b></Link>
 
     <section className={styles.quickFilters} aria-label="후보 빠른 필터">
       <div className={styles.accountTabs}>{accountFilters.map(([value, label]) => {
@@ -133,7 +145,7 @@ export default function PlanningBoard({ initialFeed, initialDecisions }: { initi
       })}</div>
       <label>재료<select value={filters.source} onChange={(event) => setFilter("source", event.target.value as FilterState["source"])}>{sourceFilters.map(([value, label]) => <option key={value} value={value}>{label}</option>)}</select></label>
       <label>형식<select value={filters.format} onChange={(event) => setFilter("format", event.target.value as FilterState["format"])}>{formatFilters.map(([value, label]) => <option key={value} value={value}>{label}</option>)}</select></label>
-      <button type="button" className={progressOnly ? styles.activeProgress : ""} onClick={() => setProgressOnly((value) => !value)}>발전 중 {progressCount}</button>
+      <button type="button" className={progressOnly ? styles.activeProgress : ""} onClick={toggleProgress}>발전 중 {progressCount}</button>
       <button type="button" className={styles.moreTopics} onClick={() => setRequestType("new")}>+ 새 주제</button>
       {(filters.account !== "all" || filters.source !== "all" || filters.format !== "all" || progressOnly) && <button type="button" className={styles.reset} onClick={resetFilters}>초기화</button>}
       {pendingCount > 0 && <span className={styles.pending}>조사 대기 {pendingCount}</span>}
@@ -141,15 +153,16 @@ export default function PlanningBoard({ initialFeed, initialDecisions }: { initi
 
     <div className={styles.workspace}>
       <section className={styles.listPane} aria-label="기획 후보">
-        <div className={styles.listHeader}><strong>오늘 A/B 후보</strong><span>{visible.length}개 · 적합도 높은 순</span></div>
-        <div className={styles.ideaList}>{visible.map((idea, index) => {
+        <div className={styles.listHeader}><strong>오늘 A/B 후보</strong><span>{visible.length}개 · {currentPage + 1}/{pageCount}쪽</span></div>
+        <div className={styles.ideaList}>{pagedVisible.map((idea, index) => {
           const decision = decisions.get(idea.id)?.decision;
-          return <button key={idea.id} type="button" className={`${styles.ideaRow} ${idea.id === effectiveSelectedId ? styles.selectedRow : ""} ${decision ? styles.decidedRow : ""}`} onClick={() => setSelectedId(idea.id)}>
-            <span className={styles.rank}><small>순서</small>{String(index + 1).padStart(2, "0")}</span>
+          return <button key={idea.id} type="button" className={`${styles.ideaRow} ${accountRowClass[idea.account]} ${idea.id === effectiveSelectedId ? styles.selectedRow : ""} ${decision ? styles.decidedRow : ""}`} onClick={() => setSelectedId(idea.id)}>
+            <span className={styles.rank}><small>순서</small>{String(currentPage * pageSize + index + 1).padStart(2, "0")}</span>
             <span className={styles.rowBody}><span className={styles.pills}>{idea.variant && <Pill>{idea.variant}</Pill>}<Pill className={accountClass[idea.account]}>{idea.accountLabel}</Pill><Pill className={sourceClass[idea.sources[0]]}>{idea.sourceLabel}</Pill><Pill>{idea.formatLabel}</Pill></span><strong>{idea.title}</strong><span className={styles.rowMeta}>{idea.series} · {idea.role}{decision ? ` · ${decision}` : ""}</span></span>
             <span className={styles.score}><small>적합</small>{idea.score}</span>
           </button>;
         })}{!visible.length && <p className={styles.empty}>조건에 맞는 후보가 없어.</p>}</div>
+        {visible.length > pageSize && <nav className={styles.pagination} aria-label="후보 페이지"><button type="button" disabled={currentPage === 0} onClick={() => changePage(currentPage - 1)}>이전</button>{Array.from({ length: pageCount }, (_, index) => <button key={index} type="button" className={index === currentPage ? styles.currentPage : ""} onClick={() => changePage(index)}>{index + 1}</button>)}<button type="button" disabled={currentPage === pageCount - 1} onClick={() => changePage(currentPage + 1)}>다음</button></nav>}
       </section>
 
       <section className={styles.detailPane} aria-live="polite">
@@ -157,25 +170,6 @@ export default function PlanningBoard({ initialFeed, initialDecisions }: { initi
       </section>
     </div>
   </main>;
-}
-
-function ProductRadar({ products }: { products: PlanningProduct[] }) {
-  return <details className={styles.productRadar} open>
-    <summary><span><b>오늘 주문·검증 후보</b><em>{products.length ? `${products.length}개 · 콘텐츠 30개와 별도` : "오늘 밤부터 매일 수집"}</em></span><span className={styles.radarLegend}><i>요즘 유행</i><i>꾸준히 추천</i><i>직접 발굴</i></span></summary>
-    <div className={styles.productCards}>
-      {products.length ? products.map((product) => {
-        const buy = product.buy_links?.[0];
-        return <article key={product.id} className={styles.productCard}>
-          <div className={styles.productTop}><span className={`${styles.signal} ${styles[product.signal]}`}>{productSignal[product.signal]}</span><strong>{product.score}</strong></div>
-          <h2><small>{product.brand} · {product.category}</small>{product.name}</h2>
-          <p><b>왜 우리 핏</b>{product.why_fit}</p>
-          <p><b>원재료·영양표</b>{product.ingredient_check}</p>
-          <p><b>먹어볼 방법</b>{product.test_format} · {product.test_plan}</p>
-          <footer>{product.caution && <span>{product.caution}</span>}{buy ? <a href={buy.url} target="_blank" rel="noreferrer">구매처 확인</a> : <span>구매처 확인 필요</span>}</footer>
-        </article>;
-      }) : <p className={styles.productEmpty}>오늘 밤에는 유튜브·릴스 유행 제품, 꾸준히 재추천되는 제품, 직접 찾은 제품을 나눠서 수집해. 제품명만 주지 않고 원재료·영양표 확인과 촬영 포맷까지 붙여둘게.</p>}
-    </div>
-  </details>;
 }
 
 function ResearchStrip({ research, open, onToggle }: { research?: PlanningResearch; open: boolean; onToggle: () => void }) {

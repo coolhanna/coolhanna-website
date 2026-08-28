@@ -1,0 +1,53 @@
+.page {
+  min-height: calc(100vh - 48px);
+  padding: 14px 20px 32px;
+  background: var(--bg-page);
+  color: var(--text-main);
+  font-size: 12px;
+}
+
+.header { width: min(1180px, 100%); margin: 0 auto 10px; padding: 6px 2px 13px; display: flex; align-items: end; justify-content: space-between; gap: 18px; border-bottom: 1px solid var(--border-strong); }
+.header span { color: var(--accent-dark); font-size: 10px; letter-spacing: .08em; }
+.header h1 { margin: 3px 0 0; font-size: 21px; font-weight: 600; letter-spacing: -.02em; }
+.header p { margin: 0; color: var(--text-secondary); font-size: 10px; }
+
+.section { width: min(1180px, 100%); margin: 9px auto 0; border: 1px solid var(--border-strong); background: var(--bg-card); }
+.buySection { --section-accent: #A56550; }
+.reviewSection { --section-accent: #667A90; }
+.sectionTitle { min-height: 62px; padding: 10px 13px; display: grid; grid-template-columns: 150px minmax(0, 1fr) auto; align-items: center; gap: 14px; border-bottom: 1px solid var(--border); }
+.sectionTitle > div { border-left: 3px solid var(--section-accent); padding-left: 9px; }
+.sectionTitle span { color: var(--section-accent); font-size: 8px; letter-spacing: .12em; }
+.sectionTitle h2 { margin: 1px 0 0; color: var(--section-accent); font-size: 16px; font-weight: 600; }
+.sectionTitle p { margin: 0; color: var(--text-secondary); font-size: 10px; line-height: 1.45; }
+.sectionTitle em { color: var(--section-accent); font-size: 20px; font-style: normal; font-weight: 500; }
+
+.cardGrid { padding: 10px; display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 9px; }
+.card { --product-accent: #667A90; min-width: 0; padding: 12px 13px; border: 1px solid var(--border); border-left: 3px solid var(--product-accent); background: var(--bg-card); }
+.buyCard { --product-accent: #A56550; }
+.reviewCard { --product-accent: #667A90; }
+.cardTop { display: flex; align-items: center; justify-content: space-between; gap: 8px; }
+.signal { padding: 2px 5px; border: 1px solid currentColor; border-radius: 3px; font-size: 9px; font-weight: 500; }
+.trend { color: #9A604B; }
+.evergreen { color: #566F7F; }
+.discovery { color: #55734E; }
+.score { color: var(--product-accent); font-size: 14px; font-weight: 500; }
+.brand { margin: 8px 0 1px !important; color: var(--text-muted-new) !important; font-size: 9px !important; }
+.card h3 { margin: 0 0 8px; font-size: 14px; font-weight: 600; line-height: 1.35; }
+.card p { margin: 5px 0; display: grid; grid-template-columns: 86px minmax(0, 1fr); gap: 8px; color: var(--text-secondary); font-size: 10px; line-height: 1.48; }
+.card p b { color: var(--product-accent); font-weight: 500; }
+.card footer { margin-top: 9px; padding-top: 7px; display: flex; align-items: center; justify-content: space-between; gap: 10px; border-top: 1px solid var(--border); color: var(--text-muted-new); font-size: 9px; line-height: 1.4; }
+.card footer a { flex: 0 0 auto; color: var(--product-accent); font-weight: 500; text-underline-offset: 2px; }
+.card footer em { font-style: normal; }
+.empty { grid-column: 1 / -1; margin: 0; padding: 28px; color: var(--text-secondary); text-align: center; }
+
+@media (max-width: 900px) {
+  .page { padding: 12px 16px 28px; }
+  .cardGrid { grid-template-columns: 1fr; }
+}
+
+@media (max-width: 620px) {
+  .header { align-items: flex-start; flex-direction: column; }
+  .sectionTitle { grid-template-columns: 1fr auto; }
+  .sectionTitle p { grid-column: 1 / -1; }
+  .card p { grid-template-columns: 1fr; gap: 2px; }
+}
