@@ -20,3 +20,11 @@ test("실시간 시계 문구의 미세한 서버·브라우저 차이는 초기
   assert.match(source, /<h1[^>]*suppressHydrationWarning/);
   assert.match(source, /<span[^>]*suppressHydrationWarning[\s\S]*?\{fmtTimeKo\(now\)\}/);
 });
+
+test("할 일 날짜 선택은 서버의 현지 자정이 아니라 한국 오늘에서 시작한다", () => {
+  const root = path.resolve(import.meta.dirname, "..");
+  const source = fs.readFileSync(path.join(root, "app/dashboard/DashboardClient.tsx"), "utf8");
+
+  assert.match(source, /const base = new Date\(`\$\{todayIso\}T12:00:00\+09:00`\)/);
+  assert.doesNotMatch(source, /const base = new Date\(\);\s*base\.setHours\(0, 0, 0, 0\)/);
+});
