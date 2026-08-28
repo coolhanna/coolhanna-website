@@ -52,6 +52,7 @@ export default async function DashboardPage() {
 
   return (
     <DashboardClient
+      initialNow={new Date().toISOString()}
       initial={{
         today,
         recommendation,

@@ -23,6 +23,7 @@ import {
 } from "@dnd-kit/sortable";
 import { CSS } from "@dnd-kit/utilities";
 import { CONTACT_CHANNELS } from "@/lib/dashboard-client";
+import { formatKstDateKo, formatKstTimeKo, isoKst } from "@/lib/kst-date";
 import {
   cleanFields,
   Field as EditField,
@@ -52,19 +53,11 @@ function addDays(d: Date, n: number): Date {
 }
 
 function iso(d: Date): string {
-  const y = d.getFullYear();
-  const m = String(d.getMonth() + 1).padStart(2, "0");
-  const dd = String(d.getDate()).padStart(2, "0");
-  return `${y}-${m}-${dd}`;
+  return isoKst(d);
 }
 
 function fmtTimeKo(d: Date): string {
-  // "오후 1:34"
-  return d.toLocaleString("ko-KR", {
-    hour: "numeric",
-    minute: "2-digit",
-    hour12: true,
-  });
+  return formatKstTimeKo(d);
 }
 
 function fmtTimeFromIso(isoStr: string): string {
@@ -77,12 +70,7 @@ function fmtTimeFromIso(isoStr: string): string {
 }
 
 function fmtDateKo(d: Date): string {
-  return d.toLocaleDateString("ko-KR", {
-    year: "numeric",
-    month: "long",
-    day: "numeric",
-    weekday: "long",
-  });
+  return formatKstDateKo(d);
 }
 
 // "2026-05-19" → "5월 19일"
@@ -439,8 +427,14 @@ type Initial = {
   thinkingTracks: any;
 };
 
-export default function DashboardClient({ initial }: { initial: Initial }) {
-  const [now, setNow] = useState<Date>(new Date());
+export default function DashboardClient({
+  initial,
+  initialNow,
+}: {
+  initial: Initial;
+  initialNow: string;
+}) {
+  const [now, setNow] = useState<Date>(() => new Date(initialNow));
   useEffect(() => {
     const t = setInterval(() => setNow(new Date()), 30 * 1000);
     return () => clearInterval(t);
