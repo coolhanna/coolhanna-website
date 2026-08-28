@@ -12,6 +12,7 @@ function read(relativePath) {
 test("the shared dashboard navigation includes the planning desk", () => {
   const nav = read("app/dashboard/DashboardNav.tsx");
   assert.ok(nav.includes('{ label: "기획", href: "/dashboard/planning" }'));
+  assert.ok(nav.includes('{ label: "제품", href: "/dashboard/products" }'));
 });
 
 test("planning is a real dashboard route with the dense decision desk", () => {
@@ -46,7 +47,7 @@ test("planning makes the nightly research loop, history, and follow-up actions v
   }
 });
 
-test("planning keeps the candidate list and selected detail visible together on the PC dashboard", () => {
+test("planning adapts the candidate list to the installed dashboard window", () => {
   const board = read("app/dashboard/planning/PlanningBoard.tsx");
   const styles = read("app/dashboard/planning/planning.module.css");
 
@@ -55,21 +56,27 @@ test("planning keeps the candidate list and selected detail visible together on 
   assert.ok(board.includes(`className={styles.quickFilters}`));
   assert.ok(board.includes(`className={styles.detailActions}`));
   assert.ok(!board.includes(`<aside className={styles.filters}>`));
-  assert.ok(styles.includes("grid-template-columns: minmax(250px, 300px) minmax(330px, 1fr)"));
-  assert.ok(styles.includes("@media (max-width: 620px)"));
+  assert.ok(board.includes("const pageSize = 10"));
+  assert.ok(board.includes("pagedVisible.map"));
+  assert.ok(board.includes("이전"));
+  assert.ok(board.includes("다음"));
+  assert.ok(styles.includes("@media (max-width: 900px)"));
+  assert.match(styles, /@media \(max-width: 900px\)[\s\S]*?\.workspace\s*\{[^}]*height:\s*auto[^}]*grid-template-columns:\s*1fr[^}]*overflow:\s*visible/s);
+  assert.match(styles, /@media \(max-width: 900px\)[\s\S]*?\.ideaList\s*\{[^}]*overflow:\s*visible/s);
 });
 
-test("planning uses readable PC type, restrained gold, and the live candidate count", () => {
+test("planning uses color rather than heavy bold for candidate hierarchy", () => {
   const board = read("app/dashboard/planning/PlanningBoard.tsx");
   const styles = read("app/dashboard/planning/planning.module.css");
 
   assert.ok(board.includes("{ideas.length}개 중 최대 2개만 발전"));
   assert.ok(!board.includes("6개 중 최대 2개만 발전"));
   assert.match(styles, /\.page\s*\{[^}]*font-size:\s*12px/s);
-  assert.match(styles, /\.rowBody\s*>\s*strong\s*\{[^}]*font-size:\s*13px[^}]*font-weight:\s*800/s);
-  assert.match(styles, /\.detailInner h1\s*\{[^}]*font-size:\s*clamp\(18px,[^)]+24px\)[^}]*font-weight:\s*800/s);
-  assert.match(styles, /\.selectedRow\s*\{[^}]*background:\s*var\(--bg-card-soft\)/s);
-  assert.match(styles, /\.score\s*\{[^}]*color:\s*var\(--text-main\)/s);
+  assert.ok(board.includes("accountRowClass[idea.account]"));
+  assert.match(styles, /\.rowBody\s*>\s*strong\s*\{[^}]*font-size:\s*13px[^}]*font-weight:\s*600/s);
+  assert.match(styles, /\.detailInner h1\s*\{[^}]*font-size:\s*clamp\(18px,[^)]+24px\)[^}]*font-weight:\s*600/s);
+  assert.match(styles, /\.selectedRow\s*\{[^}]*box-shadow:\s*inset 3px 0 var\(--row-accent\)/s);
+  assert.match(styles, /\.score\s*\{[^}]*color:\s*var\(--row-accent\)[^}]*font-weight:\s*600/s);
   assert.ok(!styles.includes(".accountTabs .activeTab, .quickFilters > .activeProgress { background: var(--accent-soft)"));
 });
 
@@ -84,36 +91,38 @@ test("the default Hyerin and food ideas are specific character incidents, not ge
   }
 });
 
-test("planning has a separate daily product radar with order and filming evidence", () => {
+test("products move out of planning into a separate buy-versus-review desk", () => {
   const api = read("lib/dashboard-api.ts");
   const board = read("app/dashboard/planning/PlanningBoard.tsx");
-  const styles = read("app/dashboard/planning/planning.module.css");
+  const page = read("app/dashboard/products/page.tsx");
+  const products = read("app/dashboard/products/ProductBoard.tsx");
+  const styles = read("app/dashboard/products/products.module.css");
 
   assert.ok(api.includes("export interface PlanningProduct"));
   assert.ok(api.includes("product_radar?: PlanningProduct[]"));
-  assert.ok(board.includes("feed.current?.product_radar"));
+  assert.ok(page.includes("planningFeed"));
+  assert.ok(board.includes("제품 탭에서 분리해 보기"));
+  assert.ok(!board.includes("function ProductRadar"));
   for (const copy of [
-    "오늘 주문·검증 후보", "요즘 유행", "꾸준히 추천", "직접 발굴",
+    "오늘 살 것", "먼저 볼 것", "요즘 유행", "꾸준히 추천", "직접 발굴",
     "왜 우리 핏", "원재료·영양표", "먹어볼 방법", "구매처 확인",
   ]) {
-    assert.ok(board.includes(copy), `missing product radar copy: ${copy}`);
+    assert.ok(products.includes(copy), `missing product desk copy: ${copy}`);
   }
-  assert.ok(styles.includes(".productRadar"));
-  assert.ok(styles.includes(".productCards"));
-  assert.ok(styles.includes("overflow-x: auto"));
+  assert.ok(products.includes("readyToBuy"));
+  assert.ok(products.includes("reviewFirst"));
+  assert.ok(styles.includes(".buySection"));
+  assert.ok(styles.includes(".reviewSection"));
 });
 
-test("the product radar matches the calmer dashboard type hierarchy", () => {
-  const styles = read("app/dashboard/planning/planning.module.css");
+test("the product desk uses colored status hierarchy without heavy bold", () => {
+  const styles = read("app/dashboard/products/products.module.css");
 
-  assert.match(styles, /\.productRadar summary b\s*\{[^}]*font-size:\s*12px[^}]*font-weight:\s*600/s);
-  assert.match(styles, /\.productRadar summary em\s*\{[^}]*font-size:\s*10px/s);
-  assert.match(styles, /\.productCards\s*\{[^}]*background:\s*var\(--bg-card\)/s);
-  assert.match(styles, /\.productCard h2\s*\{[^}]*font-size:\s*12px[^}]*font-weight:\s*600/s);
-  assert.match(styles, /\.productCard h2 small\s*\{[^}]*font-size:\s*9px[^}]*font-weight:\s*500/s);
-  assert.match(styles, /\.productCard p\s*\{[^}]*font-size:\s*10px[^}]*line-height:\s*1\.45/s);
-  assert.match(styles, /\.productCard p b\s*\{[^}]*font-weight:\s*600/s);
-  assert.match(styles, /\.productCard footer\s*\{[^}]*font-size:\s*9px/s);
+  assert.match(styles, /\.sectionTitle h2\s*\{[^}]*font-weight:\s*600/s);
+  assert.match(styles, /\.card h3\s*\{[^}]*font-weight:\s*600/s);
+  assert.match(styles, /\.card p b\s*\{[^}]*color:\s*var\(--product-accent\)[^}]*font-weight:\s*500/s);
+  assert.match(styles, /\.buyCard\s*\{[^}]*--product-accent:\s*#[0-9A-Fa-f]{6}/s);
+  assert.match(styles, /\.reviewCard\s*\{[^}]*--product-accent:\s*#[0-9A-Fa-f]{6}/s);
 });
 
 test("planning decisions use the authenticated dashboard API", () => {
