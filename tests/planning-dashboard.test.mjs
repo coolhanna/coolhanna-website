@@ -152,3 +152,30 @@ test("planning decisions use the authenticated dashboard API", () => {
   assert.ok(board.includes('/api/dashboard/proxy/planning-request'));
   assert.ok(board.includes('method: "POST"'));
 });
+
+test("planning treats each two-day teen batch as a research-to-AI handoff desk", () => {
+  const api = read("lib/dashboard-api.ts");
+  const board = read("app/dashboard/planning/PlanningBoard.tsx");
+
+  for (const field of ["batch_label?: string", "cycle_days?: number", "target_account?: string"]) {
+    assert.ok(api.includes(field), `missing planning batch metadata: ${field}`);
+  }
+  for (const copy of [
+    "이틀마다 20개",
+    "어디서 온 문제",
+    "한나의 관점",
+    "릴스로 푸는 법",
+    "발전",
+    "보류",
+    "제외",
+    "AI 인계문 복사",
+    "완성 대본을 쓰지 말고",
+  ]) {
+    assert.ok(board.includes(copy), `missing teen batch handoff copy: ${copy}`);
+  }
+  assert.ok(board.includes("idea.references[0]"));
+  assert.ok(board.includes("idea.judgment"));
+  assert.ok(board.includes("idea.primary[1]"));
+  assert.ok(board.includes("research?.sources"));
+  assert.ok(board.includes("item.url"));
+});
