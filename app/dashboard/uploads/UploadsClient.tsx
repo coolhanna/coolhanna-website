@@ -12,14 +12,34 @@ const SOURCE_STYLE: Record<UploadSource, { bg: string; fg: string; border?: stri
   혜린: { bg: "#7c5cbf", fg: "#fff" },
   YT숏: { bg: "#cc0000", fg: "#fff" },
   YT롱: { bg: "transparent", fg: "#cc0000", border: "1.5px solid #cc0000" },
+  게시물: { bg: "#1f6f8b", fg: "#fff" },
 };
-const SOURCE_ORDER: UploadSource[] = ["한나", "가족먹거리", "혜린", "YT숏", "YT롱"];
+const SOURCE_ORDER: UploadSource[] = ["한나", "가족먹거리", "혜린", "YT숏", "YT롱", "게시물"];
 
 function fmtViews(n: number | null): string {
   if (typeof n !== "number") return "·";
   if (n >= 10000) return `${(n / 10000).toFixed(n >= 100000 ? 0 : 1)}만`;
   if (n >= 1000) return `${(n / 1000).toFixed(1)}천`;
   return String(n);
+}
+
+// 캐러셀 게시물은 조회수가 안 들어온다 — 좋아요를 대신 보여준다 (한나 결정 2026-08-28).
+function chipLabel(u: UploadEntry): string {
+  if (u.source === "게시물") {
+    return typeof u.likes === "number" ? `♥${fmtViews(u.likes)}` : "·";
+  }
+  return fmtViews(u.views);
+}
+
+function chipTitle(u: UploadEntry): string {
+  const head = `[${u.source}] ${u.title ?? ""}`;
+  if (u.source === "게시물") {
+    const l = typeof u.likes === "number" ? `좋아요 ${u.likes.toLocaleString("ko-KR")}` : "좋아요 집계 전";
+    const c = typeof u.comments === "number" ? ` · 댓글 ${u.comments.toLocaleString("ko-KR")}` : "";
+    return `${head} — ${l}${c}`;
+  }
+  const v = typeof u.views === "number" ? `${u.views.toLocaleString("ko-KR")}회` : "조회수 집계 전";
+  return `${head} — ${v}`;
 }
 
 function ym(d: Date): string {
@@ -201,11 +221,9 @@ export default function UploadsClient({
                       key={u.key}
                       className="text-[10px] leading-tight px-1 py-0.5 rounded tabular-nums truncate"
                       style={{ backgroundColor: st.bg, color: st.fg, border: st.border ?? "none" }}
-                      title={`[${u.source}] ${u.title ?? ""} — ${
-                        typeof u.views === "number" ? u.views.toLocaleString("ko-KR") + "회" : "조회수 집계 전"
-                      }`}
+                      title={chipTitle(u)}
                     >
-                      {fmtViews(u.views)}
+                      {chipLabel(u)}
                     </span>
                   );
                 })}

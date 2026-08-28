@@ -232,14 +232,17 @@ export interface LifeDaysResponse {
   days: Array<{ date: string; headline: string; duration: string }>;
 }
 
-export type UploadSource = "한나" | "가족먹거리" | "혜린" | "YT숏" | "YT롱";
+export type UploadSource = "한나" | "가족먹거리" | "혜린" | "YT숏" | "YT롱" | "게시물";
 
 export interface UploadEntry {
   date: string; // KST YYYY-MM-DD
-  platform: "릴스" | "유튜브";
+  platform: "릴스" | "유튜브" | "게시물";
   source: UploadSource;
   title: string | null;
   views: number | null;
+  // 캐러셀 게시물은 인스타 API가 조회수를 안 준다 — 좋아요로 대신 표시한다.
+  likes?: number | null;
+  comments?: number | null;
   key: string;
 }
 
