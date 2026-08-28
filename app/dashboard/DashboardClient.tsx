@@ -1418,8 +1418,8 @@ function WeeklyTodos({ initial, calendar }: { initial: any; calendar?: any }) {
   const dayOptions = (() => {
     if (weekOffset === 0) {
       const opts: { value: string; label: string }[] = [];
-      const base = new Date();
-      base.setHours(0, 0, 0, 0);
+      // 한국 자정 직후에도 UTC 서버와 브라우저가 같은 날짜 목록을 렌더링한다.
+      const base = new Date(`${todayIso}T12:00:00+09:00`);
       for (let i = 0; i < 7; i++) {
         const d = addDays(base, i);
         const wd = KO_WD_SHORT[(d.getDay() + 6) % 7];
