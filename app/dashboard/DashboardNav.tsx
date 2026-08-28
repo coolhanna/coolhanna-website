@@ -1,8 +1,6 @@
 "use client";
 
 // 대시보드 상단 공유 탭 — 여기가 유일한 탭 정의(단일 출처).
-// 진행(파이프라인)은 원래 별도 앱이라 탭이 따로 놀고 주소창까지 떴는데,
-// 2026-07-17에 /dashboard/pipeline 으로 합쳐서 여기 한 곳만 고치면 전부 반영된다.
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 
@@ -21,7 +19,6 @@ const TABS = [
   { label: "먹은 것", href: "/dashboard/meals" },
   { label: "생각", href: "/dashboard/thoughts" },
   { label: "건강", href: "/dashboard/health" },
-  { label: "진행", href: "/dashboard/pipeline" },
 ];
 
 export default function DashboardNav() {
