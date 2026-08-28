@@ -152,3 +152,9 @@ test("한나 데스크는 독립 라우트와 대시보드 탭으로 노출된�
     assert.ok(board.includes(copy), `missing desk copy: ${copy}`);
   }
 });
+
+test("더 이상 쓰지 않는 진행 카테고리는 대시보드 탭에 노출하지 않는다", () => {
+  const nav = read("app/dashboard/DashboardNav.tsx");
+
+  assert.ok(!nav.includes('{ label: "진행", href: "/dashboard/pipeline" }'));
+});
