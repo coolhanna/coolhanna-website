@@ -108,6 +108,38 @@
 .refresh:disabled { opacity: 0.55; cursor: wait; }
 .refresh span { font-size: 18px; line-height: 1; }
 
+.recordStrip {
+  display: grid;
+  grid-template-columns: 150px minmax(0, 1fr);
+  gap: 4px 18px;
+  margin-top: 18px;
+  padding: 15px 18px;
+  border: 1px solid var(--border);
+  background: rgba(255, 255, 255, 0.6);
+}
+
+.recordStrip > span {
+  grid-row: 1 / 3;
+  color: var(--accent-dark);
+  font-size: 11px;
+  font-weight: 750;
+}
+
+.recordStrip strong {
+  color: var(--text-main);
+  font-size: 14px;
+}
+
+.recordStrip p {
+  margin: 0;
+  overflow: hidden;
+  color: var(--text-secondary);
+  font-size: 11px;
+  line-height: 1.5;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
 .partial {
   display: flex;
   gap: 12px;
@@ -273,6 +305,13 @@
 .timelinePanel { background: rgba(236, 236, 228, 0.72); }
 .waitingPanel { margin-top: 18px; }
 
+.panelSummary {
+  margin: 14px 0 4px;
+  color: var(--accent-dark);
+  font-size: 11px;
+  font-weight: 700;
+}
+
 .panelHeading {
   padding-bottom: 14px;
   border-bottom: 1px solid var(--border);
@@ -352,6 +391,50 @@
   background: var(--bg-page);
 }
 
+.uploadList {
+  display: grid;
+}
+
+.uploadRow {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 12px;
+  align-items: center;
+  padding: 11px 0;
+  border-bottom: 1px dashed var(--border);
+}
+
+.uploadRow:last-child { border-bottom: 0; }
+
+.uploadRow div {
+  min-width: 0;
+}
+
+.uploadRow span {
+  display: block;
+  margin-bottom: 2px;
+  color: var(--text-secondary);
+  font-size: 9px;
+  font-weight: 700;
+}
+
+.uploadRow strong {
+  display: block;
+  overflow: hidden;
+  color: var(--text-main);
+  font-size: 12px;
+  line-height: 1.35;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.uploadRow p {
+  margin: 0;
+  color: var(--text-secondary);
+  font-size: 10px;
+  white-space: nowrap;
+}
+
 .waitingGrid {
   display: grid;
   grid-template-columns: repeat(4, minmax(0, 1fr));
@@ -360,17 +443,13 @@
   background: var(--border);
 }
 
-.waitingGrid article {
+.waitingGrid a {
   min-height: 130px;
   padding: 16px;
   background: var(--bg-card);
 }
 
-.waitingGrid article[data-urgency="urgent"] {
-  box-shadow: inset 0 3px 0 var(--danger);
-}
-
-.waitingGrid article > span {
+.waitingGrid a > span {
   font-size: 10px;
   font-weight: 750;
   color: var(--text-secondary);
@@ -426,6 +505,15 @@
   .heroCopy h1 { font-size: 29px; }
   .heroCopy p { font-size: 12px; line-height: 1.5; }
 
+  .recordStrip {
+    grid-template-columns: 1fr;
+    gap: 5px;
+    padding: 13px 14px;
+  }
+
+  .recordStrip > span { grid-row: auto; }
+  .recordStrip p { white-space: normal; }
+
   .refresh {
     grid-column: 2;
     justify-self: start;
@@ -446,7 +534,8 @@
   .paperPanel, .timelinePanel, .waitingPanel { padding: 16px 14px; }
   .waitingPanel { margin-top: 12px; }
   .waitingGrid { grid-template-columns: 1fr; }
-  .waitingGrid article { min-height: 0; }
+  .waitingGrid a { min-height: 0; }
+  .uploadRow { grid-template-columns: minmax(0, 1fr); gap: 4px; }
   .footer { gap: 12px; }
 }
 

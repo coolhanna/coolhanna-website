@@ -18,17 +18,22 @@ function dateLabel(iso: string): { date: string; weekday: string; month: string 
   };
 }
 
-function toneLabel(item: DeskItem): string {
-  if (item.urgency === "urgent") return "지금 확인";
-  if (item.urgency === "attention") return "오늘 판단";
-  return "제안";
+function shortDate(iso: string | null): string {
+  if (!iso) return "확인 전";
+  const [, month, day] = iso.split("-");
+  return `${Number(month)}월 ${Number(day)}일`;
+}
+
+function formatViews(views: number | null): string {
+  if (views === null) return "조회수 확인 중";
+  return `조회 ${new Intl.NumberFormat("ko-KR").format(views)}`;
 }
 
 function EmptyState({ children }: { children: React.ReactNode }) {
   return <p className={styles.empty}>{children}</p>;
 }
 
-function DecisionRow({ item, index }: { item: DeskItem; index: number }) {
+function CarryRow({ item, index }: { item: DeskItem; index: number }) {
   return (
     <article className={styles.decisionRow} data-urgency={item.urgency}>
       <div className={styles.decisionIndex}>{String(index + 1).padStart(2, "0")}</div>
@@ -36,13 +41,13 @@ function DecisionRow({ item, index }: { item: DeskItem; index: number }) {
         <div className={styles.rowMeta}>
           <span>{item.source}</span>
           <span className={styles.metaDot} />
-          <span>{toneLabel(item)}</span>
+          <span>확인 필요</span>
         </div>
         <h3>{item.title}</h3>
         <p>{item.detail}</p>
       </div>
-      <Link className={styles.rowAction} href="/dashboard" aria-label={`${item.title} 운영에서 확인`}>
-        확인
+      <Link className={styles.rowAction} href={item.href} aria-label={`${item.title} 근거 보기`}>
+        근거 보기
         <span aria-hidden="true">↗</span>
       </Link>
     </article>
@@ -77,10 +82,10 @@ export default function HannaDeskBoard({ view }: { view: HannaDeskView }) {
           <div className={styles.heroCopy}>
             <div className={styles.eyebrow}>
               <span className={styles.liveDot} />
-              HANNA DESK · READ ONLY
+              HANNA DESK · 실제 기록 연결
             </div>
-            <h1>오늘 한나가<br />판단할 것만.</h1>
-            <p>일정과 할 일을 먼저 연결한 1단계 판단함이에요.</p>
+            <h1>한나가 안 적어도<br />먼저 보는 곳.</h1>
+            <p>생활기록과 실제 계정을 대조해 아직 이어질 일만 보여줘요.</p>
           </div>
 
           <button className={styles.refresh} type="button" onClick={refresh} disabled={isPending}>
@@ -89,6 +94,14 @@ export default function HannaDeskBoard({ view }: { view: HannaDeskView }) {
           </button>
         </header>
 
+        {view.lifeRecord && (
+          <Link className={styles.recordStrip} href="/dashboard/day">
+            <span>{shortDate(view.lifeRecord.date)} 하루 기록</span>
+            <strong>{view.lifeRecord.headline}</strong>
+            <p>{view.lifeRecord.summary}</p>
+          </Link>
+        )}
+
         {view.isPartial && (
           <div className={styles.partial} role="status">
             <strong>부분 확인</strong>
@@ -96,61 +109,38 @@ export default function HannaDeskBoard({ view }: { view: HannaDeskView }) {
           </div>
         )}
 
-        <section className={styles.decisionStage} aria-labelledby="decision-heading">
+        <section className={styles.decisionStage} aria-labelledby="carry-heading">
           <div className={styles.sectionHeading}>
             <div>
               <span className={styles.sectionNumber}>01</span>
-              <h2 id="decision-heading">지금 판단할 것</h2>
+              <h2 id="carry-heading">기록에서 이어볼 것</h2>
             </div>
-            <strong className={styles.count}>{view.summary.decisions}</strong>
+            <strong className={styles.count}>{view.carryOver.length}</strong>
           </div>
 
           <div className={styles.decisionList}>
-            {view.decisions.length ? (
-              view.decisions.slice(0, 5).map((item, index) => (
-                <DecisionRow key={item.id} item={item} index={index} />
+            {view.carryOver.length ? (
+              view.carryOver.slice(0, 6).map((item, index) => (
+                <CarryRow key={item.id} item={item} index={index} />
               ))
             ) : (
-              <EmptyState>지금 바로 판단할 일은 없어요.</EmptyState>
+              <EmptyState>최근 생활기록에서 이어볼 일은 없어요.</EmptyState>
             )}
           </div>
         </section>
 
         <div className={styles.midGrid}>
-          <section className={styles.paperPanel} aria-labelledby="attention-heading">
+          <section className={styles.paperPanel} aria-labelledby="today-heading">
             <div className={styles.panelHeading}>
               <span>02</span>
-              <h2 id="attention-heading">놓치면 안 되는 것</h2>
-              <strong>{view.summary.mustNotMiss}</strong>
-            </div>
-            <div className={styles.compactList}>
-              {view.mustNotMiss.length ? (
-                view.mustNotMiss.slice(0, 6).map((item) => (
-                  <div className={styles.compactRow} key={item.id}>
-                    <span className={styles.attentionMark} aria-hidden="true">!</span>
-                    <div>
-                      <strong>{item.title}</strong>
-                      <p>{item.detail} · {item.source}</p>
-                    </div>
-                  </div>
-                ))
-              ) : (
-                <EmptyState>오늘 추가로 챙길 일은 없어요.</EmptyState>
-              )}
-            </div>
-          </section>
-
-          <section className={styles.timelinePanel} aria-labelledby="today-heading">
-            <div className={styles.panelHeading}>
-              <span>03</span>
-              <h2 id="today-heading">오늘</h2>
+              <h2 id="today-heading">오늘 루틴</h2>
               <strong>{view.today.length}</strong>
             </div>
             <div className={styles.timeline}>
               {view.today.length ? (
                 view.today.slice(0, 7).map((item) => (
                   <div className={styles.timelineRow} key={item.id}>
-                    <time>{item.time || "종일"}</time>
+                    <time>{item.time || "오늘"}</time>
                     <span className={styles.timelineDot} aria-hidden="true" />
                     <div>
                       <strong>{item.title}</strong>
@@ -159,45 +149,71 @@ export default function HannaDeskBoard({ view }: { view: HannaDeskView }) {
                   </div>
                 ))
               ) : (
-                <EmptyState>연결된 오늘 일정이 없어요.</EmptyState>
+                <EmptyState>오늘로 확인된 반복 일정은 없어요.</EmptyState>
+              )}
+            </div>
+          </section>
+
+          <section className={styles.timelinePanel} aria-labelledby="upload-heading">
+            <div className={styles.panelHeading}>
+              <span>03</span>
+              <h2 id="upload-heading">실제 업로드 확인</h2>
+              <strong>{view.uploadSummary.weekCount}</strong>
+            </div>
+            <p className={styles.panelSummary}>
+              이번 주 {view.uploadSummary.weekCount}개 · {shortDate(view.uploadSummary.latestDate)} {view.uploadSummary.latestCount}개 확인
+            </p>
+            <div className={styles.uploadList}>
+              {view.recentUploads.length ? (
+                view.recentUploads.slice(0, 5).map((upload) => (
+                  <Link className={styles.uploadRow} href="/dashboard/uploads" key={upload.id}>
+                    <div>
+                      <span>{upload.source} · {upload.platform}</span>
+                      <strong>{upload.title}</strong>
+                    </div>
+                    <p>{shortDate(upload.date)} · {formatViews(upload.views)}</p>
+                  </Link>
+                ))
+              ) : (
+                <EmptyState>실제 계정에서 확인된 업로드가 없어요.</EmptyState>
               )}
             </div>
           </section>
         </div>
 
-        <section className={styles.waitingPanel} aria-labelledby="waiting-heading">
+        <section className={styles.waitingPanel} aria-labelledby="resolved-heading">
           <div className={styles.panelHeading}>
             <span>04</span>
-            <h2 id="waiting-heading">기다리는 것</h2>
-            <strong>{view.summary.waiting}</strong>
+            <h2 id="resolved-heading">계정 확인으로 닫힌 것</h2>
+            <strong>{view.resolvedByAccounts.length}</strong>
           </div>
-          {view.waiting.length ? (
+          {view.resolvedByAccounts.length ? (
             <div className={styles.waitingGrid}>
-              {view.waiting.slice(0, 4).map((item) => (
-                <article key={item.id} data-urgency={item.urgency}>
+              {view.resolvedByAccounts.map((item) => (
+                <Link href={item.href} key={item.id}>
                   <span>{item.source}</span>
                   <h3>{item.title}</h3>
                   <p>{item.detail}</p>
-                </article>
+                </Link>
               ))}
             </div>
           ) : (
-            <EmptyState>지금 연결된 데이터에서 기다리는 일은 없어요.</EmptyState>
+            <EmptyState>생활기록과 계정에서 같은 일로 확인된 완료 항목은 아직 없어요.</EmptyState>
           )}
         </section>
 
         <footer className={styles.footer}>
           <div>
             <span className={styles.connectedDot} />
-            일정 연결됨
+            하루 기록 연결됨
           </div>
           <div>
             <span className={styles.connectedDot} />
-            할 일 연결됨
+            실제 업로드 연결됨
           </div>
           <div className={styles.preparing}>
             <span />
-            카톡 · DM 답장함은 다음 단계
+            대화 · 구매내역 연결 준비 중
           </div>
         </footer>
       </div>

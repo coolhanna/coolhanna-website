@@ -14,18 +14,14 @@ function todayInSeoul(): string {
 }
 
 export default async function HannaDeskPage() {
-  const [recommendation, scheduleV2, incomplete, stuck, paymentFollowups, quickTasks] =
-    await Promise.all([
-      dash.recommendation(),
-      dash.scheduleV2(),
-      dash.incomplete(),
-      dash.stuck(),
-      dash.paymentFollowups(),
-      dash.quickTasks(),
-    ]);
+  const [lifeLatest, scheduleV2, uploads] = await Promise.all([
+    dash.lifeLatest(),
+    dash.scheduleV2(),
+    dash.uploads(),
+  ]);
 
   const view = buildHannaDesk(
-    { recommendation, scheduleV2, incomplete, stuck, paymentFollowups, quickTasks },
+    { lifeLatest, scheduleV2, uploads },
     todayInSeoul(),
   );
 
