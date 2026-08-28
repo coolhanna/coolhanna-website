@@ -46,6 +46,8 @@ export const dash = {
     api<PlanningDecisionsResponse>("/api/dashboard/planning-decisions"),
   // v6 — 일별 카드 통합 (오늘 + 내일)
   scheduleV2: () => api<any>("/api/dashboard/schedule-v2"),
+  // 한나 데스크 — 수집기가 보낸 실시간 상태에서 미해결 항목만 조회
+  deskLive: () => api<DeskLiveResponse>("/api/dashboard/desk-live"),
   // v6.2 — 이번 주(월~일) 일별 카드 todos
   weeklyTodos: () => api<any>("/api/dashboard/weekly-todos"),
   // v6.6.3 — 다른 주 todos (-N=지난 주, +N=다음 주)
@@ -240,6 +242,17 @@ export interface UploadEntry {
 
 export interface UploadsResponse {
   uploads: UploadEntry[];
+}
+
+export interface DeskLiveResponse {
+  date: string;
+  checked_at: string | null;
+  current_work: Array<Record<string, unknown>>;
+  needs_attention: Array<Record<string, unknown>>;
+  suggestions: Array<Record<string, unknown>>;
+  sources: Array<Record<string, unknown>>;
+  unavailable_sources: string[];
+  error?: string;
 }
 
 export type FoodEntryStatus = "confirmed" | "uncertain" | "excluded";

@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { useState, useTransition } from "react";
+import { useCallback, useEffect, useState, useTransition } from "react";
 import type { DeskWorkItem, HannaDeskView } from "@/lib/hanna-desk";
 import styles from "./hanna-desk.module.css";
 
@@ -52,14 +52,19 @@ export default function HannaDeskBoard({ view }: { view: HannaDeskView }) {
   const [refreshedAt, setRefreshedAt] = useState("");
   const day = dateLabel(view.date);
 
-  const refresh = () => {
+  const refresh = useCallback(() => {
     startTransition(() => {
       router.refresh();
       setRefreshedAt(
         new Date().toLocaleTimeString("ko-KR", { hour: "2-digit", minute: "2-digit" }),
       );
     });
-  };
+  }, [router]);
+
+  useEffect(() => {
+    const timer = window.setInterval(refresh, 60 * 60 * 1000);
+    return () => window.clearInterval(timer);
+  }, [refresh]);
 
   return (
     <main className={`dashboard-root ${styles.page}`}>
@@ -168,7 +173,7 @@ export default function HannaDeskBoard({ view }: { view: HannaDeskView }) {
         </div>
 
         <footer className={styles.footer}>
-          <span>매시간 변경 확인은 다음 단계에서 연결합니다. 같은 상태는 다시 알리지 않아요.</span>
+          <span>매시간 자동으로 변경을 확인합니다. 해결된 일은 자동으로 사라져요.</span>
           <Link href="/dashboard/purchases">산 것 보기 <span aria-hidden="true">→</span></Link>
         </footer>
       </div>

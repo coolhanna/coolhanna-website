@@ -14,15 +14,15 @@ function read(relativePath: string) {
 const baseInput = {
   liveState: {
     date: "2026-08-28",
-    checkedAt: "2026-08-28T10:53:00+09:00",
-    currentWork: [
+    checked_at: "2026-08-28T10:53:00+09:00",
+    current_work: [
       {
         id: "tiktok",
         title: "TikTok 업로드 자동화",
         detail: "예약 승인 대기",
         source: "TikTok 운영 작업",
         state: "working",
-        stateLabel: "진행 중",
+        state_label: "진행 중",
       },
       {
         id: "reels-cover",
@@ -30,17 +30,17 @@ const baseInput = {
         detail: "진행률 연결 전",
         source: "한나 확인",
         state: "working",
-        stateLabel: "진행 중·연결 필요",
+        state_label: "진행 중·연결 필요",
       },
     ],
-    needsAttention: [
+    needs_attention: [
       {
         id: "tiktok-approval",
         title: "16시 강남 브이로그 최종 예약",
         detail: "한나 승인 필요",
         source: "TikTok",
         state: "needs_decision",
-        stateLabel: "승인 필요",
+        state_label: "승인 필요",
       },
     ],
     sources: [
@@ -49,7 +49,7 @@ const baseInput = {
         title: "메일",
         detail: "09시·18시 요약",
         state: "scheduled",
-        stateLabel: "일 2회",
+        state_label: "일 2회",
       },
     ],
   },

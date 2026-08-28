@@ -40,7 +40,7 @@ export interface HannaDeskView {
 type UnknownRecord = Record<string, any>;
 
 export interface HannaDeskInput {
-  liveToday?: UnknownRecord;
+  liveState?: UnknownRecord;
   scheduleV2?: UnknownRecord;
 }
 
@@ -61,22 +61,24 @@ function makeId(prefix: string, value: string, index: number): string {
   return `${prefix}-${slug || index}-${index}`;
 }
 
-function workItems(value: unknown, prefix: string): DeskWorkItem[] {
+function workItems(
+  value: unknown,
+  prefix: string,
+  lane: "working" | "needs_decision",
+): DeskWorkItem[] {
   if (!Array.isArray(value)) return [];
   return value.flatMap((raw, index) => {
     const item = asRecord(raw);
     const title = cleanText(item.title);
     if (!title) return [];
-    const state: DeskWorkState = ["working", "needs_decision", "waiting"].includes(item.state)
-      ? item.state
-      : "working";
+    const state: DeskWorkState = lane;
     return [{
       id: cleanText(item.id) || makeId(prefix, title, index),
       title,
       detail: cleanText(item.detail, "현재 상태를 확인하고 있어요."),
       source: cleanText(item.source, "현재 작업"),
       state,
-      stateLabel: cleanText(item.stateLabel, state === "needs_decision" ? "내 확인 필요" : "진행 중"),
+      stateLabel: cleanText(item.state_label, state === "needs_decision" ? "내 확인 필요" : "진행 중"),
     }];
   });
 }
@@ -95,19 +97,26 @@ function sourceItems(value: unknown): DeskSourceItem[] {
       title,
       detail: cleanText(item.detail),
       state,
-      stateLabel: cleanText(item.stateLabel, state === "pending" ? "연결 전" : "연결됨"),
+      stateLabel: cleanText(item.state_label, state === "pending" ? "연결 전" : "연결됨"),
     }];
   });
 }
 
 export function buildHannaDesk(input: HannaDeskInput, todayIso: string): HannaDeskView {
   const unavailableSources: string[] = [];
-  const live = asRecord(input.liveToday);
+  const live = asRecord(input.liveState);
   const schedule = asRecord(input.scheduleV2);
-  const liveIsToday = cleanText(live.date) === todayIso;
+  const liveHasError = hasError(input.liveState);
+  const liveIsToday = !liveHasError && cleanText(live.date) === todayIso;
 
   if (!liveIsToday) unavailableSources.push("오늘 작업 상태");
   if (hasError(input.scheduleV2)) unavailableSources.push("오늘 일정");
+  if (liveIsToday && Array.isArray(live.unavailable_sources)) {
+    live.unavailable_sources.forEach((source: unknown) => {
+      const label = cleanText(source);
+      if (label && !unavailableSources.includes(label)) unavailableSources.push(label);
+    });
+  }
 
   const todayBundle = hasError(input.scheduleV2) ? {} : asRecord(schedule.today);
   const today: DeskTodayItem[] = [];
@@ -139,6 +148,20 @@ export function buildHannaDesk(input: HannaDeskInput, todayIso: string): HannaDe
       });
     });
 
+  const suggestions = liveIsToday && Array.isArray(live.suggestions) ? live.suggestions : [];
+  suggestions.forEach((raw: UnknownRecord, index: number) => {
+    const suggestion = asRecord(raw);
+    const title = cleanText(suggestion.title);
+    if (!title) return;
+    today.push({
+      id: cleanText(suggestion.id) || makeId("suggestion", title, index),
+      title,
+      detail: cleanText(suggestion.detail, "오늘 해보면 좋을 일"),
+      time: cleanText(suggestion.time) || null,
+      source: "오늘 제안",
+    });
+  });
+
   today.sort((a, b) => {
     if (a.time && b.time) return a.time.localeCompare(b.time);
     if (a.time) return -1;
@@ -148,9 +171,11 @@ export function buildHannaDesk(input: HannaDeskInput, todayIso: string): HannaDe
 
   return {
     date: todayIso,
-    checkedAt: liveIsToday ? cleanText(live.checkedAt) || null : null,
-    currentWork: liveIsToday ? workItems(live.currentWork, "work") : [],
-    needsAttention: liveIsToday ? workItems(live.needsAttention, "attention") : [],
+    checkedAt: liveIsToday ? cleanText(live.checked_at) || null : null,
+    currentWork: liveIsToday ? workItems(live.current_work, "work", "working") : [],
+    needsAttention: liveIsToday
+      ? workItems(live.needs_attention, "attention", "needs_decision")
+      : [],
     today,
     sources: liveIsToday ? sourceItems(live.sources) : [],
     unavailableSources,
