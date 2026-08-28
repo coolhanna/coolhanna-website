@@ -444,7 +444,7 @@ export default function DashboardClient({
     <main className="dashboard-root min-h-screen bg-paper text-ink">
       <header className="max-w-page mx-auto px-5 sm:px-8 py-3 border-b border-rule">
         <div className="flex items-baseline justify-between flex-wrap gap-2">
-          <h1 className="text-sm font-medium text-muted">
+          <h1 suppressHydrationWarning className="text-sm font-medium text-muted">
             {fmtDateKo(now)}
           </h1>
           <div className="flex items-center gap-3">
@@ -468,6 +468,7 @@ export default function DashboardClient({
               ⟳
             </button>
             <span
+              suppressHydrationWarning
               className="text-lg font-medium"
               style={{ color: "var(--accent)" }}
             >
