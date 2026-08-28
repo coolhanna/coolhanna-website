@@ -24,7 +24,7 @@ function displayDay(value = "") {
 }
 
 function displayTime(value = "") {
-  if (!value) return "오늘 밤 1:30";
+  if (!value) return "예약 전";
   return new Intl.DateTimeFormat("ko-KR", { month: "numeric", day: "numeric", hour: "numeric", minute: "2-digit", timeZone: "Asia/Seoul" }).format(new Date(value));
 }
 
@@ -114,7 +114,7 @@ export default function PlanningBoard({ initialFeed, initialDecisions }: { initi
 
   async function openGpt() {
     const prompt = selected
-      ? `다음 콘텐츠 후보를 한나의 세 계정 운영 기준으로 더 발전시켜줘.\n계정: ${selected.accountLabel}\n역할: ${selected.role}\n주제: ${selected.title}\n첫 장면: ${selected.situation}\n충돌: ${selected.conflict}\n지키는 가치: ${selected.valueLine}\n마지막 판정: ${selected.judgment}\n한나 의견: ${drafts[selected.id] || requestText || "아직 없음"}\n먼저 더 확인할 실제 경험·근거·촬영 장면을 최대 3개만 질문해줘.`
+      ? `이건 한나 본계정의 청소년 실제 문제 주제 후보야. 완성 대본을 쓰지 말고, 먼저 한나의 실제 경험과 판단을 끌어내는 대화를 이어가줘.\n\n주제: ${selected.title}\n어디서 온 문제: ${selected.references[0]?.[0] || "출처 확인 필요"} · ${selected.references[0]?.[1] || ""}\n첫 장면: ${selected.situation}\n충돌: ${selected.conflict}\n한나의 관점: ${selected.valueLine}\n현재 판정: ${selected.judgment}\n릴스로 푸는 법: ${selected.primary[1]}\n한나 의견: ${drafts[selected.id] || requestText || "아직 없음"}\n\n1) 실제로 한나나 혜린에게 있었던 일인지, 2) 한나가 책임지고 말할 결론은 무엇인지, 3) 화면으로 보여줄 장면이 있는지를 최대 3개 질문으로 먼저 확인해줘. 답을 받은 뒤에만 릴스와 캐러셀 중 맞는 형식을 제안해줘.`
       : `한나의 세 계정 운영 기준으로 새 콘텐츠 후보를 찾아줘. 완성 대본보다 계정과 유입·호감·신뢰 역할을 먼저 붙여줘. 추가 요청: ${requestText || "새로운 문제와 욕구를 찾아줘."}`;
     window.open("https://chatgpt.com/", "_blank", "noopener,noreferrer");
     try { await navigator.clipboard.writeText(prompt); setNotice("후보 맥락을 복사했어 · 열린 GPT 창에 붙여넣으면 돼"); }
@@ -123,7 +123,7 @@ export default function PlanningBoard({ initialFeed, initialDecisions }: { initi
 
   return <main className={`dashboard-root ${styles.page}`}>
     <header className={styles.header}>
-      <div><span className={styles.eyebrow}>콘텐츠 기획</span><strong>{displayDay(feed.current?.date)}</strong></div>
+      <div><span className={styles.eyebrow}>콘텐츠 기획</span><strong>{feed.current?.batch_label || displayDay(feed.current?.date)}</strong></div>
       <div className={styles.headerActions}>
         <label>지난 후보 <select value={feed.current?.date || ""} disabled={loadingDay} onChange={(event) => loadDay(event.target.value)}>{feed.dates.map((item) => <option key={item.date} value={item.date}>{item.date} · {item.candidate_count || 6}개</option>)}</select></label>
         <span>후보 {ideas.length}</span><button type="button" className={progressOnly ? styles.activeProgress : ""} onClick={toggleProgress}>발전 중 {progressCount}</button>
@@ -131,9 +131,9 @@ export default function PlanningBoard({ initialFeed, initialDecisions }: { initi
     </header>
 
     <section className={styles.cycleStatus} aria-label={loopSteps.join(" → ")}>
-      <div className={styles.todayTask}><small>오늘 할 일</small><b>한나 판단 중</b><span>{ideas.length}개 중 최대 2개만 발전</span></div>
-      <div className={styles.cycleTrail}><span>밤 조사 완료</span><strong>한나 판단 중</strong><span>선택 후 발전</span></div>
-      <div className={styles.nextRun}><b>다음 조사</b>{displayTime(feed.current?.next_run_at)} · 지난 후보는 보존</div>
+      <div className={styles.todayTask}><small>오늘 할 일</small><b>한나 판단 중</b><span>{ideas.length}개 중 발전할 것만 고르기</span></div>
+      <div className={styles.cycleTrail}><span>이틀 조사</span><span>20개 후보</span><strong>한나 판단</strong><span>선택 후보 발전</span><span>성과 확인</span><span>다음 조사 반영</span></div>
+      <div className={styles.nextRun}><b>다음 조사</b>{displayTime(feed.current?.next_run_at)} · 이틀마다 20개 · 지난 묶음 보존</div>
     </section>
     <ResearchStrip research={feed.current?.research} open={researchOpen} onToggle={() => setResearchOpen((value) => !value)} />
     <Link className={styles.productShortcut} href="/dashboard/products"><span>제품 후보 {feed.current?.product_radar?.length || 0}</span><em>오늘 살 것과 먼저 볼 것은 제품 탭에서 분리해 보기</em><b>제품 보기 →</b></Link>
@@ -153,7 +153,7 @@ export default function PlanningBoard({ initialFeed, initialDecisions }: { initi
 
     <div className={styles.workspace}>
       <section className={styles.listPane} aria-label="기획 후보">
-        <div className={styles.listHeader}><strong>오늘 A/B 후보</strong><span>{visible.length}개 · {currentPage + 1}/{pageCount}쪽</span></div>
+        <div className={styles.listHeader}><strong>청소년 실제 문제</strong><span>{visible.length}개 · {currentPage + 1}/{pageCount}쪽</span></div>
         <div className={styles.ideaList}>{pagedVisible.map((idea, index) => {
           const decision = decisions.get(idea.id)?.decision;
           return <button key={idea.id} type="button" className={`${styles.ideaRow} ${accountRowClass[idea.account]} ${idea.id === effectiveSelectedId ? styles.selectedRow : ""} ${decision ? styles.decidedRow : ""}`} onClick={() => setSelectedId(idea.id)}>
@@ -178,7 +178,7 @@ function ResearchStrip({ research, open, onToggle }: { research?: PlanningResear
   return <section className={`${styles.researchStrip} ${open ? styles.researchOpen : ""}`}>
     <button type="button" className={styles.researchToggle} onClick={onToggle}><b>밤 조사 기록</b><span>{open ? "접기" : "펼치기"}</span></button>
     <div className={styles.researchSummary}><span><b>무엇을 찾았나</b>{searched[0]}</span><span><b>무엇을 알게 됐나</b>{learned[0]}</span></div>
-    {open && <div className={styles.researchDetails}><section><h2>검색·확인</h2>{searched.map((item) => <p key={item}>· {item}</p>)}</section><section><h2>새로 알게 된 것</h2>{learned.map((item) => <p key={item}>· {item}</p>)}</section><section><h2>참고한 곳</h2>{(research?.sources || []).map((item) => <p key={item.label}><b>{item.label}</b>{item.note}</p>)}</section></div>}
+    {open && <div className={styles.researchDetails}><section><h2>검색·확인</h2>{searched.map((item) => <p key={item}>· {item}</p>)}</section><section><h2>새로 알게 된 것</h2>{learned.map((item) => <p key={item}>· {item}</p>)}</section><section><h2>참고한 곳</h2>{(research?.sources || []).map((item) => <p key={item.label}>{item.url ? <a href={item.url} target="_blank" rel="noreferrer"><b>{item.label}</b></a> : <b>{item.label}</b>}{item.note}</p>)}</section></div>}
   </section>;
 }
 
@@ -186,27 +186,18 @@ function IdeaDetail({ idea, feedback, decision, saving, notice, requestType, req
   return <div className={styles.detailInner}>
     <div className={styles.detailTop}><span className={styles.pills}><Pill className={accountClass[idea.account]}>{idea.accountLabel}</Pill>{idea.sources.map((source) => <Pill key={source} className={sourceClass[source]}>{sourceFilters.find(([value]) => value === source)?.[1]}</Pill>)}<Pill>{idea.formatLabel}</Pill><Pill>{idea.role}</Pill></span><span>AI 적합도 {idea.score}/100</span></div>
     <h1>{idea.title}</h1><p className={styles.verdict}>{idea.verdict}</p>
-    <div className={styles.storyAxes}>
-      <StoryAxis label="첫 장면" value={idea.situation} />
-      <StoryAxis label="충돌" value={idea.conflict} />
-      <StoryAxis label="지키는 가치" value={idea.valueLine} />
-      <StoryAxis label="마지막 판정" value={idea.judgment} judgment />
+    <div className={styles.handoffGrid}>
+      <section className={styles.originCard}><small>어디서 온 문제</small><strong>{idea.references[0]?.[0] || "출처 확인 필요"}</strong><p>{idea.references[0]?.[1] || "실제 출처를 더 확인한 뒤 발전한다."}</p></section>
+      <section className={styles.angleCard}><small>한나의 관점</small><strong>충돌</strong><p>{idea.conflict}</p><strong>지키는 가치</strong><p>{idea.valueLine}</p><strong>마지막 판정</strong><p>{idea.judgment}</p></section>
+      <section className={styles.sceneCard}><small>릴스로 푸는 법</small><strong>첫 장면</strong><p>{idea.situation}</p><strong>{idea.primary[0]}</strong><p>{idea.primary[1]}</p></section>
     </div>
-    <div className={styles.detailActions}><button type="button" className={styles.develop} disabled={saving} onClick={() => onDecision("발전")}>이 후보 발전</button><button type="button" disabled={saving} onClick={() => onDecision("형식 변경")}>형식 변경</button><button type="button" disabled={saving} onClick={() => onDecision("스토리 먼저")}>스토리 먼저</button><button type="button" disabled={saving} onClick={() => onDecision("보류")}>보류</button><button type="button" disabled={saving} onClick={() => onDecision("버림")}>버림</button></div>
-    <div className={styles.routes}><Route label="우선 형식" value={idea.primary} primary /><Route label="깊이 확장" value={idea.post} /><Route label="반응 수집" value={idea.story} /></div>
-    <div className={styles.detailGrid}><section><h2>왜 이 형식인가</h2><p><b>{idea.why[0]}</b>{idea.why[1]}</p><p><b>시리즈</b>{idea.series}</p><p><b>역할</b>{idea.role}</p></section><section><h2>A/B 구조</h2>{idea.ab.map(([label, text]) => <p key={label}><b>{label}</b>{text}</p>)}<p className={styles.risk}><b>주의</b>{idea.risk}</p></section><section className={styles.references}><h2>참고한 자료</h2>{idea.references.map(([label, text]) => <div key={`${label}-${text}`}><b>{label}</b><span>{text}</span></div>)}</section></div>
+    <div className={styles.expansionStrip}><section><small>더 깊게 쓸 것</small><strong>{idea.post[0]}</strong><p>{idea.post[1]}</p></section><section><small>반응을 받을 것</small><strong>{idea.story[0]}</strong><p>{idea.story[1]}</p></section><section><small>주의</small><p>{idea.risk}</p></section></div>
+    <details className={styles.references}><summary>참고한 자료 {idea.references.length}개</summary>{idea.references.map(([label, text]) => <div key={`${label}-${text}`}><b>{label}</b><span>{text}</span></div>)}</details>
     <div className={styles.feedbackBox}>
       <label htmlFor="planning-feedback">한나 의견</label><textarea id="planning-feedback" value={feedback} onChange={(event) => onFeedback(event.target.value)} placeholder="예: 주제는 맞는데 상황극보다 내 생각을 말하는 게 맞아." />
-      <div className={styles.followUp}><div className={styles.followButtons}><button type="button" className={requestType === "deeper" ? styles.activeRequest : ""} onClick={() => onRequestType("deeper")}>이 주제 더 깊게</button><button type="button" className={requestType === "similar" ? styles.activeRequest : ""} onClick={() => onRequestType("similar")}>유사 주제 찾기</button><button type="button" className={requestType === "new" ? styles.activeRequest : ""} onClick={() => onRequestType("new")}>새 주제 더 받기</button></div><div className={styles.requestRow}><input value={requestText} onChange={(event) => onRequestText(event.target.value)} placeholder="더 찾을 방향이 있으면 한 줄만 적어줘" /><button type="button" disabled={requesting} onClick={onRequest}>AI 조사에 넣기</button><button type="button" onClick={onOpenGpt}>복사하고 GPT 열기</button></div></div>
+      <div className={styles.detailActions}><button type="button" className={styles.develop} disabled={saving} onClick={() => onDecision("발전")}>발전</button><button type="button" disabled={saving} onClick={() => onDecision("보류")}>보류</button><button type="button" disabled={saving} onClick={() => onDecision("버림")}>제외</button><span>{decision ? `현재: ${decision === "버림" ? "제외" : decision}` : "아직 판정 전"}</span></div>
+      <div className={styles.followUp}><div className={styles.followButtons}><button type="button" className={requestType === "deeper" ? styles.activeRequest : ""} onClick={() => onRequestType("deeper")}>이 주제 더 깊게</button><button type="button" className={requestType === "similar" ? styles.activeRequest : ""} onClick={() => onRequestType("similar")}>유사 주제 찾기</button><button type="button" className={requestType === "new" ? styles.activeRequest : ""} onClick={() => onRequestType("new")}>새 주제 더 받기</button></div><div className={styles.requestRow}><input value={requestText} onChange={(event) => onRequestText(event.target.value)} placeholder="더 찾을 방향이 있으면 한 줄만 적어줘" /><button type="button" disabled={requesting} onClick={onRequest}>다음 조사에 넣기</button><button type="button" onClick={onOpenGpt}>AI 인계문 복사 · GPT 열기</button></div></div>
       <div className={styles.saveState}>{saving || requesting ? "저장 중…" : notice || (decision ? `${decision} 저장됨` : "")}</div>
     </div>
   </div>;
-}
-
-function StoryAxis({ label, value, judgment = false }: { label: string; value: string; judgment?: boolean }) {
-  return <div className={judgment ? styles.judgmentAxis : ""}><small>{label}</small><p>{value}</p></div>;
-}
-
-function Route({ label, value, primary = false }: { label: string; value: [string, string]; primary?: boolean }) {
-  return <div className={primary ? styles.primaryRoute : ""}><small>{label}</small><strong>{value[0]}</strong><p>{value[1]}</p></div>;
 }

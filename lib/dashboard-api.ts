@@ -137,6 +137,9 @@ export interface PlanningDay {
   date: string;
   generated_at: string;
   next_run_at?: string;
+  batch_label?: string;
+  cycle_days?: number;
+  target_account?: string;
   status: string;
   research: PlanningResearch;
   product_radar?: PlanningProduct[];

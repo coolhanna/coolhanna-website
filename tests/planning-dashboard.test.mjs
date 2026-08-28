@@ -25,7 +25,7 @@ test("planning is a real dashboard route with the dense decision desk", () => {
   for (const copy of ["본계정", "혜린", "먹거리", "가치관", "실제 고민", "유행·시의성", "제품·계절", "상황극", "브이로그", "비교·리뷰"]) {
     assert.ok(board.includes(copy), `missing planning filter: ${copy}`);
   }
-  for (const copy of ["우선 형식", "깊이 확장", "반응 수집", "A/B 구조", "참고한 자료", "한나 의견", "발전", "형식 변경", "스토리 먼저", "보류", "버림"]) {
+  for (const copy of ["어디서 온 문제", "한나의 관점", "릴스로 푸는 법", "더 깊게 쓸 것", "반응을 받을 것", "참고한 자료", "한나 의견", "발전", "보류", "제외"]) {
     assert.ok(board.includes(copy), `missing planning detail: ${copy}`);
   }
   assert.ok(styles.includes("grid-template-columns"));
@@ -39,9 +39,9 @@ test("planning makes the nightly research loop, history, and follow-up actions v
 
   assert.ok(page.includes("planningFeed"));
   for (const copy of [
-    "밤 조사", "아침 후보", "한나 판단", "선택 후보 발전", "성과 확인", "다음 밤 반영",
+    "이틀 조사", "20개 후보", "한나 판단", "선택 후보 발전", "성과 확인", "다음 조사 반영",
     "지난 후보", "다음 조사", "무엇을 찾았나", "무엇을 알게 됐나", "적합",
-    "이 주제 더 깊게", "유사 주제 찾기", "새 주제 더 받기", "복사하고 GPT 열기",
+    "이 주제 더 깊게", "유사 주제 찾기", "새 주제 더 받기", "AI 인계문 복사",
   ]) {
     assert.ok(board.includes(copy), `missing daily planning loop copy: ${copy}`);
   }
@@ -85,7 +85,7 @@ test("planning uses color rather than heavy bold for candidate hierarchy", () =>
   const board = read("app/dashboard/planning/PlanningBoard.tsx");
   const styles = read("app/dashboard/planning/planning.module.css");
 
-  assert.ok(board.includes("{ideas.length}개 중 최대 2개만 발전"));
+  assert.ok(board.includes("{ideas.length}개 중 발전할 것만 고르기"));
   assert.ok(!board.includes("6개 중 최대 2개만 발전"));
   assert.match(styles, /\.page\s*\{[^}]*font-size:\s*12px/s);
   assert.ok(board.includes("accountRowClass[idea.account]"));
