@@ -27,7 +27,7 @@ export default function DashboardNav() {
   if (path.startsWith("/dashboard/login")) return null;
 
   return (
-    <nav className="max-w-page mx-auto px-5 sm:px-8 pt-3 pb-1 flex items-center gap-1 text-[13px] overflow-x-auto whitespace-nowrap">
+    <nav className="max-w-page mx-auto px-2 sm:px-5 pt-3 pb-2 flex flex-wrap items-center gap-x-0.5 gap-y-1 text-[11px] sm:text-[12px] whitespace-nowrap">
       {TABS.map((t) => {
         const active =
           t.href === "/dashboard"
@@ -38,7 +38,7 @@ export default function DashboardNav() {
             key={t.href}
             href={t.href}
             aria-current={active ? "page" : undefined}
-            className="px-3 py-1.5 rounded-lg transition shrink-0"
+            className="px-1.5 sm:px-2 py-1.5 rounded-lg transition shrink-0"
             style={{
               backgroundColor: active ? "var(--accent)" : "transparent",
               color: active ? "#fff" : "var(--text-secondary)",

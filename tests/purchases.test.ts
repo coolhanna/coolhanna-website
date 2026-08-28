@@ -55,6 +55,8 @@ test("산 것 탭과 개인정보 최소 표시 원칙이 화면에 포함된다
   const desk = read("app/dashboard/desk/HannaDeskBoard.tsx");
 
   assert.ok(nav.includes('{ label: "산 것", href: "/dashboard/purchases" }'));
+  assert.ok(nav.includes("flex-wrap"));
+  assert.ok(!nav.includes("overflow-x-auto"));
   assert.ok(desk.includes('<Link href="/dashboard/purchases">산 것 보기'));
   for (const copy of ["먼저 볼 것", "오늘·곧 도착", "촬영·일정과 연결", "그냥 생활 구매", "읽기 연결"])
     assert.ok(board.includes(copy), `missing copy: ${copy}`);
