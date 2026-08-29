@@ -164,7 +164,7 @@ test("product recommendations can be classified, saved, excluded, tried, and exp
   assert.ok(products.includes('/api/dashboard/proxy/planning-product-request'));
   for (const copy of [
     "보관함", "먹어볼 것", "제외", "밀키트", "원재료 좋음", "유행",
-    "보관", "주문해서 먹어볼래", "비슷한 거 더 찾아", "성분 좋은 걸로 더 찾아",
+    "보관", "주문해서 먹어볼래", "이 제품 깊게 비교할래", "성분 좋은 걸로 더 찾아",
   ]) {
     assert.ok(products.includes(copy), `missing product feedback action: ${copy}`);
   }
@@ -226,32 +226,21 @@ test("product research shows the daily 30-video screen, repeat signals, importan
   assert.ok(products.includes("product.signal === \"trend\" && !recentSocial"));
 });
 
-test("product desk keeps the twelve recommendations in four visible comparison groups", () => {
+test("product desk presents a diverse discovery feed before Hanna asks for a comparison", () => {
   const products = read("app/dashboard/products/ProductBoard.tsx");
   const api = read("lib/dashboard-api.ts");
   const styles = read("app/dashboard/products/products.module.css");
 
-  assert.ok(api.includes("comparison_group: string"));
-  assert.ok(products.includes("comparisonGroups"));
-  assert.ok(products.includes("비교 묶음"));
-  assert.ok(products.includes("3개 비교"));
-  assert.ok(styles.includes(".comparisonGroup"));
-  assert.ok(styles.includes(".comparisonGrid"));
-});
-
-test("product desk promotes one researched comparison instead of presenting twelve equal recommendations", () => {
-  const products = read("app/dashboard/products/ProductBoard.tsx");
-  const api = read("lib/dashboard-api.ts");
-  const styles = read("app/dashboard/products/products.module.css");
-
-  for (const copy of ["오늘의 단독 추천", "후보", "검토 후 결승 3개", "유명 기준", "새 발견", "다른 강점", "나머지 후보"]) {
-    assert.ok(products.includes(copy), `missing product promotion copy: ${copy}`);
+  for (const copy of ["오늘 새로 볼 제품", "맛이 먼저", "원재료가 먼저", "가격이 좋음", "요즘 유행", "영상으로 만들면", "이 제품 깊게 비교할래"]) {
+    assert.ok(products.includes(copy), `missing product discovery copy: ${copy}`);
   }
-  for (const field of ["product_selection", "featured_group", "solo_product_key", "candidate_total", "source_total", "finalists"]) {
-    assert.ok(api.includes(field), `missing product selection field: ${field}`);
+  for (const field of ["primary_angle", "recommendation_summary", "video_idea"]) {
+    assert.ok(api.includes(field), `missing product discovery field: ${field}`);
   }
-  assert.ok(styles.includes(".soloSection"));
-  assert.ok(styles.includes(".candidatePool"));
+  assert.ok(!products.includes("FINAL THREE"));
+  assert.ok(!products.includes("오늘의 단독 추천"));
+  assert.ok(styles.includes(".angleFilters"));
+  assert.ok(styles.includes(".discoveryGrid"));
 });
 
 test("planning decisions use the authenticated dashboard API", () => {
