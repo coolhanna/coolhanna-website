@@ -114,10 +114,20 @@ export interface PlanningDecisionsResponse {
   error?: string;
 }
 
+export type PlanningDiscoveryChannel =
+  | "manufacturer"
+  | "retailer_new"
+  | "retailer_reviews"
+  | "social"
+  | "specialty"
+  | "crowdfunding"
+  | "editorial";
+
 export interface PlanningResearch {
   searched: string[];
   learned: string[];
   sources: Array<{ label: string; note: string; url?: string }>;
+  product_search_channels?: PlanningDiscoveryChannel[];
   video_audit?: {
     evidence_total: number;
     screened_total: number;
@@ -127,6 +137,7 @@ export interface PlanningResearch {
     repeated_product_total: number;
     cutoff_date: string;
     items: Array<{
+      channel: "social";
       creator: string;
       title: string;
       url: string;
@@ -146,15 +157,19 @@ export interface PlanningProduct {
   category: string;
   signal: "trend" | "evergreen" | "discovery";
   score: number;
+  why_now_type: "new_product" | "season" | "price_change" | "new_cooking_method";
   why_now: string;
   why_fit: string;
+  storage: "frozen" | "refrigerated" | "ambient" | "fresh";
   ingredient_check: string;
   ingredient_evidence?: {
-    status: "verified" | "partial" | "unverified";
+    status: "verified" | "partial";
     summary: string;
     source_label: string;
     source_url: string;
     checked_at: string;
+    full_ingredients_checked: boolean;
+    per_serving_nutrition_checked: boolean;
   };
   product_image?: {
     url: string;
@@ -195,7 +210,7 @@ export interface PlanningProduct {
     checked_at: string;
   };
   discovered_from?: {
-    channel: string;
+    channel: PlanningDiscoveryChannel;
     label: string;
     reason: string;
     url: string;

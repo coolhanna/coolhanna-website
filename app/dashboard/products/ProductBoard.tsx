@@ -20,6 +20,10 @@ const reasonLabel: Record<NonNullable<PlanningProduct["recommendation_reasons"]>
 };
 
 const archiveTags = ["밀키트", "원재료 좋음", "유행", "냉동 간편식", "아이 혼자", "모녀 비교", "한 끼 보완", "재구매 후보"];
+const canonicalDiscoveryChannels = new Set([
+  "manufacturer", "retailer_new", "retailer_reviews", "social",
+  "specialty", "crowdfunding", "editorial",
+]);
 
 function isRecentVideo(publishedAt: string, cutoffDate: string) {
   return /^\d{4}-\d{2}-\d{2}$/.test(publishedAt) && publishedAt >= cutoffDate;
@@ -31,22 +35,30 @@ function needsMoreChecking(product: PlanningProduct, cutoffDate: string) {
   const trendCreators = new Set(social.map((item) => item.creator.trim().toLowerCase()));
   const recentSocial = social.some((item) => isRecentVideo(item.published_at, cutoffDate));
   const ingredientReason = product.recommendation_reasons?.some((item) => item.category === "ingredients");
+  const requiresSocialEvidence = product.discovered_from?.channel === "social";
+  const canonicalChannel = canonicalDiscoveryChannels.has(product.discovered_from?.channel || "");
   return !product.buy_links?.length || !product.price || !product.reviews || !product.discovered_from
-    || !product.product_image || !social.length || !product.recommendation_reasons?.length
-    || (product.signal === "trend" && trendCreators.size < 2)
-    || (product.signal === "trend" && !recentSocial)
+    || !canonicalChannel || !product.product_image || !product.recommendation_reasons?.length
+    || (requiresSocialEvidence && !social.length)
+    || (requiresSocialEvidence && product.signal === "trend" && trendCreators.size < 2)
+    || (requiresSocialEvidence && product.signal === "trend" && !recentSocial)
     || (ingredientReason && product.ingredient_evidence?.status !== "verified")
     || /확인 전|미확인|추가 확인|확인 못|확인 필요/.test(note);
 }
 
 function productSignalLabel(product: PlanningProduct, cutoffDate: string) {
   const social = product.social_evidence || [];
+  const recentSocial = social.some((item) => isRecentVideo(item.published_at, cutoffDate));
+  if (!canonicalDiscoveryChannels.has(product.discovered_from?.channel || "")) return "발굴 채널 재검증";
+  const requiresSocial = product.discovered_from?.channel === "social";
+  if (!requiresSocial && product.signal === "trend") return "현재 신호 확인";
   if (product.signal === "trend") {
     const independent = new Set(social.map((item) => item.creator.trim().toLowerCase())).size >= 2;
     if (!independent) return "유행 근거 없음";
-    return social.some((item) => isRecentVideo(item.published_at, cutoffDate)) ? "최근 유행 확인" : "유행 근거 오래됨";
+    if (product.signal === "trend" && !recentSocial) return "유행 근거 오래됨";
+    return "최근 유행 확인";
   }
-  if (product.signal === "evergreen") return social.length ? "꾸준히 언급" : "SNS 근거 없음";
+  if (product.signal === "evergreen") return requiresSocial ? (social.length ? "꾸준히 언급" : "SNS 근거 없음") : "현재 신호 확인";
   return "새로 발견";
 }
 
@@ -121,7 +133,7 @@ function ProductCard({
       {socialEvidence.length ? <div>{socialEvidence.map((source) => {
         const recent = isRecentVideo(source.published_at, recentCutoff);
         return <a key={source.url} href={source.url} target="_blank" rel="noreferrer"><em>{source.platform === "youtube" ? "YouTube" : "Instagram"}</em><span>{source.creator} · {source.title}</span><small><i className={recent ? styles.recentVideo : styles.oldVideo}>{recent ? "최근 6개월" : "6개월 초과"}</i>{source.reason} · 게시 {source.published_at}</small></a>;
-      })}</div> : <p>YouTube·Instagram 발견 근거 없음</p>}
+      })}</div> : <p>{product.discovered_from?.channel === "social" ? "YouTube·Instagram 발견 근거 없음" : "영상 근거는 social 발굴 제품에만 적용"}</p>}
     </div>
     <p><b>원재료·영양표</b><span>{product.ingredient_check}</span></p>
     <p><b>성분 근거 확인</b><span>{product.ingredient_evidence ? <><a href={product.ingredient_evidence.source_url} target="_blank" rel="noreferrer">{product.ingredient_evidence.status === "verified" ? "공식 표시 확인" : product.ingredient_evidence.status === "partial" ? "일부 확인" : "미확인"} · {product.ingredient_evidence.summary}</a><small>{product.ingredient_evidence.source_label} · {checkedLabel(product.ingredient_evidence.checked_at)}</small></> : "성분 근거 확인 전"}</span></p>
@@ -242,9 +254,10 @@ export default function ProductBoard({ day, feedback: initialFeedback }: { day: 
 
     <section className={styles.evidenceRule}>
       <b>추천이 만들어지는 순서</b>
-      <span>1. YouTube·Instagram에서 실제 제품 발견</span>
-      <span>2. 판매처에서 사진·가격·후기 확인</span>
-      <span>3. 원재료 추천은 공식 표시사항까지 검증</span>
+      <span>1. 7개 발굴 채널 중 서로 다른 4종 이상 확인</span>
+      <span>2. social만 YouTube·Instagram 영상 30개 확인</span>
+      <span>3. 유통사 3곳 이상에서 사진·가격·후기 확인</span>
+      <span>4. 원재료 추천은 전체 원재료명·1회 영양표까지 검증</span>
     </section>
 
     <section className={styles.videoAudit}>
