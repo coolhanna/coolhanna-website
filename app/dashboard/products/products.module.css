@@ -48,8 +48,7 @@
 .section { width: min(1180px, 100%); margin: 9px auto 0; border: 1px solid var(--border-strong); background: var(--bg-card); }
 .buySection { --section-accent: #A56550; }
 .reviewSection { --section-accent: #667A90; }
-.comparisonSection { --section-accent: #7A5C47; }
-.soloSection { --section-accent: #55734E; }
+.discoverySection { --section-accent: #566F7F; }
 .sectionTitle { min-height: 62px; padding: 10px 13px; display: grid; grid-template-columns: 150px minmax(0, 1fr) auto; align-items: center; gap: 14px; border-bottom: 1px solid var(--border); }
 .sectionTitle > div { border-left: 3px solid var(--section-accent); padding-left: 9px; }
 .sectionTitle span { color: var(--section-accent); font-size: 8px; letter-spacing: .12em; }
@@ -57,25 +56,17 @@
 .sectionTitle p { margin: 0; color: var(--text-secondary); font-size: 10px; line-height: 1.45; }
 .sectionTitle em { color: var(--section-accent); font-size: 20px; font-style: normal; font-weight: 500; }
 
-.cardGrid { padding: 10px; display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 9px; }
-.comparisonList { padding: 10px; display: grid; gap: 12px; background: #F7F5F1; }
-.comparisonGroup { border: 1px solid var(--border-strong); background: var(--bg-card); }
-.comparisonGroupHeader { min-height: 54px; padding: 9px 11px; display: grid; grid-template-columns: minmax(180px, 1fr) minmax(140px, auto) auto; align-items: center; gap: 12px; border-bottom: 1px solid var(--border); background: #FBFAF7; }
-.comparisonGroupHeader > div { display: flex; align-items: center; gap: 8px; }
-.comparisonGroupHeader > div span { width: 25px; height: 25px; display: grid; place-items: center; border: 1px solid #B8A08B; color: #7A5C47; font-size: 9px; }
-.comparisonGroupHeader h3 { margin: 0; color: #684A36; font-size: 15px; font-weight: 600; }
-.comparisonGroupHeader p { margin: 0; color: var(--text-secondary); font-size: 9px; text-align: right; }
-.comparisonGroupHeader em { padding: 4px 7px; border: 1px solid #C9B8A8; border-radius: 999px; color: #7A5C47; font-size: 9px; font-style: normal; }
-.comparisonGrid { padding: 9px; display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 8px; }
-.soloBody { padding: 10px; background: #F4F8F2; }
-.soloBody .card { max-width: 760px; margin: 0 auto; }
 .card { --product-accent: #667A90; min-width: 0; padding: 12px 13px; border: 1px solid var(--border); border-left: 3px solid var(--product-accent); background: var(--bg-card); }
 .buyCard { --product-accent: #A56550; }
 .reviewCard { --product-accent: #667A90; }
 .excludedCard { opacity: .64; }
 .cardTop { display: flex; align-items: center; justify-content: space-between; gap: 8px; }
 .cardTop > div { display: flex; align-items: center; gap: 5px; }
-.selectionRole { padding: 3px 6px; border-radius: 3px; background: #7A5C47; color: #FFF; font-size: 9px; font-weight: 600; }
+.primaryAngle { padding: 3px 6px; border-radius: 3px; color: #FFF; font-size: 9px; font-weight: 600; }
+.angle_taste { background: #A56550; }
+.angle_ingredients { background: #55734E; }
+.angle_value { background: #7A5C47; }
+.angle_trend { background: #7A648A; }
 .signal { padding: 2px 5px; border: 1px solid currentColor; border-radius: 3px; font-size: 9px; font-weight: 500; }
 .trend { color: #9A604B; }
 .evergreen { color: #566F7F; }
@@ -96,6 +87,10 @@
 .card p span small { display: block; margin-top: 2px; color: var(--text-muted-new); font-size: 8px; }
 .card p span a { color: var(--product-accent); text-decoration: underline; text-underline-offset: 2px; }
 .reasonBox, .socialBox { margin-top: 8px; padding: 8px 9px; display: grid; grid-template-columns: 86px minmax(0, 1fr); gap: 8px; border: 1px solid var(--border); background: #FCFCFB; font-size: 10px; }
+.angleSummary, .videoIdea { margin-top: 8px; padding: 9px; display: grid; grid-template-columns: 86px minmax(0, 1fr); gap: 8px; border: 1px solid var(--border); background: #F7FAFB; }
+.angleSummary b, .videoIdea b { color: var(--product-accent); font-size: 10px; font-weight: 600; }
+.angleSummary p, .videoIdea p { margin: 0; display: block; color: var(--text-secondary); font-size: 10px; line-height: 1.45; }
+.videoIdea { border-color: #C9B8A8; background: #FFFDF8; }
 .reasonBox > b, .socialBox > b { color: var(--product-accent); font-weight: 500; }
 .reasonBox > div, .socialBox > div { display: grid; gap: 5px; }
 .reasonBox span { display: grid; grid-template-columns: 52px minmax(0, 1fr); gap: 5px; color: var(--text-secondary); line-height: 1.4; }
@@ -123,33 +118,17 @@
 .card footer a { flex: 0 0 auto; color: var(--product-accent); font-weight: 500; text-underline-offset: 2px; }
 .card footer em { font-style: normal; }
 .empty { grid-column: 1 / -1; margin: 0; padding: 28px; color: var(--text-secondary); text-align: center; }
-
-.candidatePool, .otherComparisons { width: min(1180px, 100%); margin: 9px auto 0; border: 1px solid var(--border-strong); background: #FFF; }
-.candidatePool summary, .otherComparisons summary { padding: 12px 13px; display: flex; align-items: center; gap: 9px; cursor: pointer; list-style: none; }
-.candidatePool summary::-webkit-details-marker, .otherComparisons summary::-webkit-details-marker { display: none; }
-.candidatePool summary span { color: #7A5C47; font-size: 8px; letter-spacing: .12em; }
-.candidatePool summary b { color: #684A36; font-size: 14px; font-weight: 600; }
-.candidatePool summary em { margin-left: auto; color: var(--text-muted-new); font-size: 9px; font-style: normal; }
-.candidatePool > p { margin: 0; padding: 0 13px 10px; color: var(--text-secondary); font-size: 10px; }
-.candidatePool > div { padding: 10px; display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 7px; border-top: 1px solid var(--border); background: #F7F5F1; }
-.candidatePool article { min-width: 0; padding: 9px; display: grid; gap: 3px; border: 1px solid var(--border); background: #FFF; }
-.candidatePool article > span { color: #8C624D; font-size: 8px; }
-.candidatePool article > b { overflow: hidden; font-size: 10px; font-weight: 600; text-overflow: ellipsis; white-space: nowrap; }
-.candidatePool article > p { margin: 0; color: var(--text-secondary); font-size: 9px; line-height: 1.4; }
-.candidatePool article > a { color: #566F7F; font-size: 8px; }
-.otherComparisons summary { color: var(--text-secondary); font-size: 10px; }
-.otherComparisons > div { padding: 0 12px 10px; display: grid; gap: 5px; }
-.otherComparisons p { margin: 0; padding: 7px 8px; display: grid; grid-template-columns: 180px 1fr; gap: 8px; background: #F7FAFB; color: var(--text-secondary); font-size: 9px; }
-.otherComparisons p b { color: #566F7F; font-weight: 600; }
+.angleFilters { padding: 9px 10px; display: flex; flex-wrap: wrap; gap: 6px; border-bottom: 1px solid var(--border); background: #F7FAFB; }
+.angleFilters button { padding: 5px 9px; border: 1px solid var(--border-strong); border-radius: 999px; background: #FFF; color: var(--text-secondary); cursor: pointer; font-size: 9px; }
+.angleFilters .activeAngle { border-color: #566F7F; background: #E9EFF2; color: #445A6C; font-weight: 600; }
+.discoveryGrid { padding: 10px; display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 9px; background: #F7F5F1; }
 
 @media (max-width: 900px) {
   .page { padding: 12px 16px 28px; }
-  .cardGrid { grid-template-columns: 1fr; }
   .archiveList { grid-template-columns: repeat(2, minmax(0, 1fr)); }
   .videoAudit { grid-template-columns: repeat(2, minmax(0, 1fr)); }
   .videoAudit > div { grid-column: 1 / -1; }
-  .comparisonGrid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
-  .candidatePool > div { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .discoveryGrid { grid-template-columns: 1fr; }
 }
 
 @media (max-width: 620px) {
@@ -158,6 +137,7 @@
   .sectionTitle p { grid-column: 1 / -1; }
   .card p { grid-template-columns: 1fr; gap: 2px; }
   .reasonBox, .socialBox { grid-template-columns: 1fr; }
+  .angleSummary, .videoIdea { grid-template-columns: 1fr; }
   .productIntro { grid-template-columns: 96px minmax(0, 1fr); }
   .productImage { width: 96px; height: 82px; }
   .shelfTop { align-items: flex-start; flex-direction: column; }
@@ -166,9 +146,4 @@
   .actionGrid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
   .videoAudit { grid-template-columns: 1fr; }
   .videoAudit > div { grid-column: auto; }
-  .comparisonGroupHeader { grid-template-columns: 1fr auto; }
-  .comparisonGroupHeader p { grid-column: 1 / -1; grid-row: 2; text-align: left; }
-  .comparisonGrid { grid-template-columns: 1fr; }
-  .candidatePool > div { grid-template-columns: 1fr; }
-  .otherComparisons p { grid-template-columns: 1fr; }
 }
