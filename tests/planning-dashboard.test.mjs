@@ -88,15 +88,19 @@ test("planning keeps candidate hierarchy readable: color, not tiny dense type", 
   assert.ok(board.includes("{ideas.length}개 중 발전할 것만 고르기"));
   assert.ok(!board.includes("6개 중 최대 2개만 발전"));
 
-  // 읽을 수 있는 최소 크기 — 한나가 화면에서 글자가 안 들어온다고 한 뒤 정한 바닥값.
-  assert.match(styles, /\.page\s*\{[^}]*font-size:\s*15px/s);
-  assert.match(styles, /\.rowBody\s*>\s*strong\s*\{[^}]*font-size:\s*16px[^}]*font-weight:\s*600/s);
-  assert.match(styles, /\.detailInner h1\s*\{[^}]*font-size:\s*clamp\(22px,[^)]+30px\)[^}]*font-weight:\s*600/s);
-
-  const tooSmall = [...styles.matchAll(/font-size:\s*(\d+)px/g)]
-    .map((match) => Number(match[1]))
-    .filter((size) => size < 12);
+  // 바닥값만 강제한다. 정확한 눈금은 한나가 화면 보고 조절하는 취향이라 고정하지 않는다.
+  // 2026-08-29: 12px 조판 → "글자가 눈에 안 들어와" → 키움 → "너무 커" → 한 눈금 내림.
+  const sizes = [...styles.matchAll(/font-size:\s*(\d+(?:\.\d+)?)px/g)].map((m) => Number(m[1]));
+  const tooSmall = sizes.filter((size) => size < 12);
   assert.deepEqual(tooSmall, [], `12px 미만 글자 크기 금지: ${tooSmall.join(", ")}`);
+
+  // 계층은 남아 있어야 한다 — 목록 제목과 상세 제목이 본문보다 크다.
+  const base = Number(/\.page\s*\{[^}]*font-size:\s*(\d+)px/s.exec(styles)[1]);
+  assert.ok(base >= 13 && base <= 16, `본문 기준은 13~16px: ${base}px`);
+  const rowTitle = Number(/\.rowBody\s*>\s*strong\s*\{[^}]*font-size:\s*(\d+)px/s.exec(styles)[1]);
+  assert.ok(rowTitle >= base, `목록 제목은 본문 이상: ${rowTitle}px vs ${base}px`);
+  const h1Min = Number(/\.detailInner h1\s*\{[^}]*font-size:\s*clamp\((\d+)px/s.exec(styles)[1]);
+  assert.ok(h1Min >= base + 3, `상세 제목 최소값은 본문+3px 이상: ${h1Min}px vs ${base}px`);
 
   // 계층은 굵기가 아니라 색으로.
   assert.ok(board.includes("accountRowClass[idea.account]"));
