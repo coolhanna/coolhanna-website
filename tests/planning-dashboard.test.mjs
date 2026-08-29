@@ -183,6 +183,21 @@ test("product recommendations show verified price, review, and discovery source"
   }
 });
 
+test("product discovery uses the seven canonical channels and social-only video evidence", () => {
+  const products = read("app/dashboard/products/ProductBoard.tsx");
+  const api = read("lib/dashboard-api.ts");
+
+  for (const channel of ["manufacturer", "retailer_new", "retailer_reviews", "social", "specialty", "crowdfunding", "editorial"]) {
+    assert.ok(api.includes(channel), `missing canonical discovery channel: ${channel}`);
+  }
+  for (const field of ["why_now_type", "storage", "full_ingredients_checked", "per_serving_nutrition_checked"]) {
+    assert.ok(api.includes(field), `missing product rule field: ${field}`);
+  }
+  assert.ok(products.includes('product.discovered_from?.channel === "social"'));
+  assert.ok(products.includes("발굴 채널 재검증"));
+  assert.ok(products.includes("현재 신호 확인"));
+});
+
 test("product recommendations show the product appearance, social proof, and categorized reasons", () => {
   const products = read("app/dashboard/products/ProductBoard.tsx");
   const api = read("lib/dashboard-api.ts");
