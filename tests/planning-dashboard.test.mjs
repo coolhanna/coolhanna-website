@@ -158,6 +158,17 @@ test("product recommendations can be classified, saved, excluded, tried, and exp
   assert.ok(products.includes("request_type"));
 });
 
+test("product recommendations show verified price, review, and discovery source", () => {
+  const products = read("app/dashboard/products/ProductBoard.tsx");
+  const api = read("lib/dashboard-api.ts");
+  for (const copy of ["가격", "후기", "발견한 곳", "확인 전"]) {
+    assert.ok(products.includes(copy), `missing product evidence label: ${copy}`);
+  }
+  for (const field of ["price", "reviews", "discovered_from"]) {
+    assert.ok(api.includes(field), `missing product evidence field: ${field}`);
+  }
+});
+
 test("planning decisions use the authenticated dashboard API", () => {
   const api = read("lib/dashboard-api.ts");
   const board = read("app/dashboard/planning/PlanningBoard.tsx");
