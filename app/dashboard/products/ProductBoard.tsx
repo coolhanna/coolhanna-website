@@ -8,6 +8,7 @@ import type {
   PlanningProductFeedbackResponse,
   PlanningProductRequest,
 } from "@/lib/dashboard-api";
+import { ingredientEvidenceNeedsReview } from "./product-readiness";
 import styles from "./products.module.css";
 
 const reasonLabel: Record<NonNullable<PlanningProduct["recommendation_reasons"]>[number]["category"], string> = {
@@ -39,6 +40,7 @@ function needsMoreChecking(product: PlanningProduct, cutoffDate: string) {
   const canonicalChannel = canonicalDiscoveryChannels.has(product.discovered_from?.channel || "");
   return !product.buy_links?.length || !product.price || !product.reviews || !product.discovered_from
     || !canonicalChannel || !product.product_image || !product.recommendation_reasons?.length
+    || ingredientEvidenceNeedsReview(product.ingredient_evidence)
     || (requiresSocialEvidence && !social.length)
     || (requiresSocialEvidence && product.signal === "trend" && trendCreators.size < 2)
     || (requiresSocialEvidence && product.signal === "trend" && !recentSocial)

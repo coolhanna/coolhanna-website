@@ -1,7 +1,7 @@
 import assert from "node:assert/strict";
 import test from "node:test";
 
-import { ingredientEvidenceNeedsReview } from "../app/dashboard/products/product-readiness";
+import { ingredientEvidenceNeedsReview } from "../app/dashboard/products/product-readiness.ts";
 
 test("partial ingredient evidence always stays in review", () => {
   assert.equal(ingredientEvidenceNeedsReview({ status: "partial" }), true);
