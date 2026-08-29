@@ -6,6 +6,21 @@
   font-size: 12px;
 }
 
+.failedRun {
+  display: flex;
+  gap: 10px;
+  align-items: center;
+  margin: 0 0 10px;
+  padding: 10px 12px;
+  border: 1px solid #e5b8ac;
+  border-radius: 10px;
+  background: #fff4f0;
+  color: #7a3426;
+}
+
+.failedRun b { font-weight: 600; }
+.failedRun span { color: #754c43; }
+
 .header {
   width: min(1320px, 100%);
   min-height: 48px;

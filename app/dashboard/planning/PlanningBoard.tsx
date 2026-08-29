@@ -33,7 +33,7 @@ function Pill({ children, className = "" }: { children: React.ReactNode; classNa
 }
 
 export default function PlanningBoard({ initialFeed, initialDecisions }: { initialFeed: any; initialDecisions: any }) {
-  const [feed, setFeed] = useState<PlanningFeedResponse>(() => initialFeed?.current ? initialFeed : { current: null, dates: [], requests: [], status: "missing" });
+  const [feed, setFeed] = useState<PlanningFeedResponse>(() => initialFeed || { current: null, dates: [], requests: [], status: "missing" });
   const ideas = useMemo(() => planningIdeasForDay(feed.current?.candidates), [feed.current]);
   const initialDecisionMap = useMemo(() => {
     const map = new Map<string, PlanningDecision>();
@@ -129,6 +129,8 @@ export default function PlanningBoard({ initialFeed, initialDecisions }: { initi
         <span>후보 {ideas.length}</span><button type="button" className={progressOnly ? styles.activeProgress : ""} onClick={toggleProgress}>발전 중 {progressCount}</button>
       </div>
     </header>
+
+    {!feed.current && <section className={styles.failedRun} role="status"><b>오늘 조사가 완료되지 않았어</b><span>예전 추천으로 채우지 않았어. 새 조사와 검증이 끝나면 여기에 오늘 후보만 보여줄게.</span></section>}
 
     <section className={styles.cycleStatus} aria-label={loopSteps.join(" → ")}>
       <div className={styles.todayTask}><small>오늘 할 일</small><b>한나 판단 중</b><span>{ideas.length}개 중 발전할 것만 고르기</span></div>

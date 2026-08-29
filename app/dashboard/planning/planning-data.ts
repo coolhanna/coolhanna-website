@@ -42,10 +42,9 @@ function normalizePlanningIdea(item: PlanningIdeaSeed | Record<string, any>): Pl
   } as PlanningIdea;
 }
 
-const dailyFallbackIds = ["phone-check", "photo-consent", "hyerin-retro-playlist", "hyerin-lp-no-skip", "pizza-crust-truce", "first-bite-retrial"];
-
 export function planningIdeasForDay(raw: Array<Record<string, any>> | undefined): PlanningIdea[] {
-  const input: Array<Record<string, any>> = raw?.length ? raw : dailyFallbackIds.map((id, index) => ({ id, variant: index % 2 ? "B형" : "A형" }));
+  if (!raw?.length) return [];
+  const input: Array<Record<string, any>> = raw;
   return input.flatMap((item) => {
     const seed = seedIdeas.find((idea) => idea.id === item.id);
     if (seed) return [normalizePlanningIdea({ ...seed, ...item })];

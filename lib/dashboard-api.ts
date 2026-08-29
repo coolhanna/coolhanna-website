@@ -148,9 +148,10 @@ export interface PlanningDay {
 
 export interface PlanningFeedResponse {
   current: PlanningDay | null;
+  latest_attempt?: PlanningDay | null;
   dates: Array<{ date: string; generated_at: string; status: string; candidate_count: number }>;
   requests: Array<{ id: string; status: string; request_type: string; candidate_id: string }>;
-  status: "ok" | "missing";
+  status: "ok" | "missing" | "blocked";
   error?: string;
 }
 

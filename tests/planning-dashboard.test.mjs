@@ -96,15 +96,13 @@ test("planning uses color rather than heavy bold for candidate hierarchy", () =>
   assert.ok(!styles.includes(".accountTabs .activeTab, .quickFilters > .activeProgress { background: var(--accent-soft)"));
 });
 
-test("the default Hyerin and food ideas are specific character incidents, not generic writer or product cards", () => {
+test("a failed nightly run never falls back to old built-in recommendations", () => {
   const data = read("app/dashboard/planning/planning-data.ts");
+  const board = read("app/dashboard/planning/PlanningBoard.tsx");
 
-  for (const stale of ["hyerin-writer", "hyerin-book", "solo-meal", "mango"]) {
-    assert.ok(!data.includes(`id: "${stale}"`), `stale generic seed remains: ${stale}`);
-  }
-  for (const fresh of ["hyerin-retro-playlist", "hyerin-lp-no-skip", "pizza-crust-truce", "first-bite-retrial"]) {
-    assert.ok(data.includes(`id: "${fresh}"`), `missing specific seed: ${fresh}`);
-  }
+  assert.ok(!data.includes("dailyFallbackIds"));
+  assert.match(data, /if \(!raw\?\.length\) return \[\]/);
+  assert.ok(board.includes("오늘 조사가 완료되지 않았어"));
 });
 
 test("products move out of planning into a separate buy-versus-review desk", () => {
