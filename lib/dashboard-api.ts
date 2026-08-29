@@ -120,8 +120,11 @@ export interface PlanningResearch {
   sources: Array<{ label: string; note: string; url?: string }>;
   video_audit?: {
     evidence_total: number;
+    screened_total: number;
     content_checked_total: number;
     recent_6m_total: number;
+    important_total: number;
+    repeated_product_total: number;
     cutoff_date: string;
     items: Array<{
       creator: string;
@@ -130,6 +133,8 @@ export interface PlanningResearch {
       published_at: string;
       content_checked: boolean;
       scope: "exact_product" | "category_context";
+      important: boolean;
+      product_keys: string[];
     }>;
   };
 }

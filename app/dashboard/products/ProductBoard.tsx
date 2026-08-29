@@ -158,6 +158,8 @@ export default function ProductBoard({ day, feedback: initialFeedback }: { day: 
   const products = day?.product_radar || [];
   const videoAudit = day?.research?.video_audit;
   const recentCutoff = videoAudit?.cutoff_date || "9999-12-31";
+  const screenedTotal = videoAudit?.screened_total ?? videoAudit?.evidence_total ?? 0;
+  const videoAuditReady = screenedTotal >= 30 && (videoAudit?.recent_6m_total || 0) >= 24;
   const [feedback, setFeedback] = useState<PlanningProductFeedbackResponse>(initialFeedback);
   const [archiveView, setArchiveView] = useState<ArchiveView>("saved");
   const [tagFilter, setTagFilter] = useState("전체");
@@ -246,10 +248,11 @@ export default function ProductBoard({ day, feedback: initialFeedback }: { day: 
     </section>
 
     <section className={styles.videoAudit}>
-      <div><span>VIDEO CHECK</span><h2>이번 조사에서 실제로 본 영상</h2></div>
-      <p><b>{videoAudit?.content_checked_total ?? 0}</b><span>자막·내용 확인</span></p>
-      <p><b>{videoAudit?.evidence_total ?? 0}</b><span>근거로 연결</span></p>
-      <p className={(videoAudit?.recent_6m_total || 0) >= 6 ? styles.auditGood : styles.auditWeak}><b>{videoAudit?.recent_6m_total ?? 0}</b><span>최근 6개월 · 기준 {videoAudit?.cutoff_date || "기록 없음"}</span></p>
+      <div><span>VIDEO CHECK</span><h2>매일 영상 30개 확인</h2></div>
+      <p className={videoAuditReady ? styles.auditGood : styles.auditWeak}><b>{screenedTotal}<small>/30</small></b><span>확인한 영상</span></p>
+      <p className={(videoAudit?.recent_6m_total || 0) >= 24 ? styles.auditGood : styles.auditWeak}><b>{videoAudit?.recent_6m_total ?? 0}</b><span>최근 6개월 · 기준 {videoAudit?.cutoff_date || "기록 없음"}</span></p>
+      <p><b>{videoAudit?.repeated_product_total ?? 0}</b><span>반복 발견 제품</span></p>
+      <p><b>{videoAudit?.important_total ?? videoAudit?.content_checked_total ?? 0}</b><span>중요 영상 · 자막·내용 {videoAudit?.content_checked_total ?? 0}</span></p>
     </section>
 
     <section className={styles.feedbackShelf}>
