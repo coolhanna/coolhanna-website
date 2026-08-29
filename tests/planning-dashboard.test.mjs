@@ -139,6 +139,25 @@ test("the product desk uses colored status hierarchy without heavy bold", () => 
   assert.match(styles, /\.reviewCard\s*\{[^}]*--product-accent:\s*#[0-9A-Fa-f]{6}/s);
 });
 
+test("product recommendations can be classified, saved, excluded, tried, and expanded by feedback", () => {
+  const api = read("lib/dashboard-api.ts");
+  const page = read("app/dashboard/products/page.tsx");
+  const products = read("app/dashboard/products/ProductBoard.tsx");
+
+  assert.ok(page.includes("productFeedback"));
+  assert.ok(api.includes("PlanningProductFeedbackResponse"));
+  assert.ok(products.includes('/api/dashboard/proxy/planning-product-feedback'));
+  assert.ok(products.includes('/api/dashboard/proxy/planning-product-request'));
+  for (const copy of [
+    "보관함", "먹어볼 것", "제외", "밀키트", "원재료 좋음", "유행",
+    "보관", "주문해서 먹어볼래", "비슷한 거 더 찾아", "성분 좋은 걸로 더 찾아",
+  ]) {
+    assert.ok(products.includes(copy), `missing product feedback action: ${copy}`);
+  }
+  assert.ok(products.includes("product.id"));
+  assert.ok(products.includes("request_type"));
+});
+
 test("planning decisions use the authenticated dashboard API", () => {
   const api = read("lib/dashboard-api.ts");
   const board = read("app/dashboard/planning/PlanningBoard.tsx");
