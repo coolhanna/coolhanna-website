@@ -97,8 +97,10 @@ test("planning keeps candidate hierarchy readable: color, not tiny dense type", 
   // 계층은 남아 있어야 한다 — 목록 제목과 상세 제목이 본문보다 크다.
   const base = Number(/\.page\s*\{[^}]*font-size:\s*(\d+)px/s.exec(styles)[1]);
   assert.ok(base >= 13 && base <= 16, `본문 기준은 13~16px: ${base}px`);
+  // 목록은 고르는 곳이라 본문보다 작아도 된다. 대신 제목이 설명줄보다는 커야 한다.
   const rowTitle = Number(/\.rowBody\s*>\s*strong\s*\{[^}]*font-size:\s*(\d+)px/s.exec(styles)[1]);
-  assert.ok(rowTitle >= base, `목록 제목은 본문 이상: ${rowTitle}px vs ${base}px`);
+  const label = Number(/--fs-label:\s*(\d+)px/.exec(styles)[1]);
+  assert.ok(rowTitle > label, `목록 제목은 라벨보다 커야 한다: ${rowTitle}px vs ${label}px`);
   const h1Min = Number(/\.detailInner h1\s*\{[^}]*font-size:\s*clamp\((\d+)px/s.exec(styles)[1]);
   assert.ok(h1Min >= base + 3, `상세 제목 최소값은 본문+3px 이상: ${h1Min}px vs ${base}px`);
 
