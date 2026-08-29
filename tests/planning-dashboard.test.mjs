@@ -81,19 +81,27 @@ test("planning adapts the candidate list to the installed dashboard window", () 
   assert.match(styles, /@media \(max-width: 900px\)[\s\S]*?\.ideaList\s*\{[^}]*overflow:\s*visible/s);
 });
 
-test("planning uses color rather than heavy bold for candidate hierarchy", () => {
+test("planning keeps candidate hierarchy readable: color, not tiny dense type", () => {
   const board = read("app/dashboard/planning/PlanningBoard.tsx");
   const styles = read("app/dashboard/planning/planning.module.css");
 
   assert.ok(board.includes("{ideas.length}개 중 발전할 것만 고르기"));
   assert.ok(!board.includes("6개 중 최대 2개만 발전"));
-  assert.match(styles, /\.page\s*\{[^}]*font-size:\s*12px/s);
+
+  // 읽을 수 있는 최소 크기 — 한나가 화면에서 글자가 안 들어온다고 한 뒤 정한 바닥값.
+  assert.match(styles, /\.page\s*\{[^}]*font-size:\s*15px/s);
+  assert.match(styles, /\.rowBody\s*>\s*strong\s*\{[^}]*font-size:\s*16px[^}]*font-weight:\s*600/s);
+  assert.match(styles, /\.detailInner h1\s*\{[^}]*font-size:\s*clamp\(22px,[^)]+30px\)[^}]*font-weight:\s*600/s);
+
+  const tooSmall = [...styles.matchAll(/font-size:\s*(\d+)px/g)]
+    .map((match) => Number(match[1]))
+    .filter((size) => size < 12);
+  assert.deepEqual(tooSmall, [], `12px 미만 글자 크기 금지: ${tooSmall.join(", ")}`);
+
+  // 계층은 굵기가 아니라 색으로.
   assert.ok(board.includes("accountRowClass[idea.account]"));
-  assert.match(styles, /\.rowBody\s*>\s*strong\s*\{[^}]*font-size:\s*13px[^}]*font-weight:\s*600/s);
-  assert.match(styles, /\.detailInner h1\s*\{[^}]*font-size:\s*clamp\(18px,[^)]+24px\)[^}]*font-weight:\s*600/s);
   assert.match(styles, /\.selectedRow\s*\{[^}]*box-shadow:\s*inset 3px 0 var\(--row-accent\)/s);
   assert.match(styles, /\.score\s*\{[^}]*color:\s*var\(--row-accent\)[^}]*font-weight:\s*600/s);
-  assert.ok(!styles.includes(".accountTabs .activeTab, .quickFilters > .activeProgress { background: var(--accent-soft)"));
 });
 
 test("a failed nightly run never falls back to old built-in recommendations", () => {
@@ -118,7 +126,7 @@ test("products move out of planning into a separate buy-versus-review desk", () 
   assert.ok(board.includes("제품 탭에서 분리해 보기"));
   assert.ok(!board.includes("function ProductRadar"));
   for (const copy of [
-    "오늘 살 것", "먼저 볼 것", "SNS 유행 확인", "유행 근거 없음", "새로 발견",
+    "오늘 살 것", "먼저 볼 것", "최근 유행 확인", "유행 근거 오래됨", "유행 근거 없음", "새로 발견",
     "추천 이유", "원재료·영양표", "발견 영상", "먹어볼 방법", "구매처 확인",
   ]) {
     assert.ok(products.includes(copy), `missing product desk copy: ${copy}`);
@@ -182,6 +190,19 @@ test("product recommendations show the product appearance, social proof, and cat
   assert.ok(products.includes("product.social_evidence"));
   assert.ok(products.includes("product.recommendation_reasons"));
   assert.ok(products.includes("product.product_image"));
+});
+
+test("product research makes watched-video depth and six-month freshness visible", () => {
+  const products = read("app/dashboard/products/ProductBoard.tsx");
+  const api = read("lib/dashboard-api.ts");
+
+  for (const copy of ["이번 조사에서 실제로 본 영상", "자막·내용 확인", "근거로 연결", "최근 6개월", "6개월 초과"]) {
+    assert.ok(products.includes(copy), `missing video audit copy: ${copy}`);
+  }
+  for (const field of ["video_audit", "evidence_total", "content_checked_total", "recent_6m_total", "cutoff_date"]) {
+    assert.ok(api.includes(field), `missing video audit field: ${field}`);
+  }
+  assert.ok(products.includes("product.signal === \"trend\" && !recentSocial"));
 });
 
 test("planning decisions use the authenticated dashboard API", () => {
