@@ -12,7 +12,7 @@ type RequestType = "new" | "deeper" | "similar";
 const accountFilters: Array<[FilterState["account"], string]> = [["all", "전체"], ["main", "본계정"], ["hyerin", "혜린"], ["food", "먹거리"]];
 const sourceFilters: Array<[FilterState["source"], string]> = [["all", "모두"], ["value", "가치관"], ["concern", "실제 고민"], ["trend", "유행·시의성"], ["season", "제품·계절"]];
 const formatFilters: Array<[FilterState["format"], string]> = [["all", "모두"], ["skit", "상황극"], ["thought", "생각 설명"], ["vlog", "브이로그"], ["review", "비교·리뷰"], ["experiment", "생활실험"]];
-const loopSteps = ["밤 조사", "아침 후보", "한나 판단", "선택 후보 발전", "성과 확인", "다음 밤 반영"];
+const loopSteps = ["매일 조사", "아침 후보", "한나 판단", "선택 후보 발전", "성과 확인", "다음 조사 반영"];
 const accountClass: Record<Account, string> = { main: styles.mainAccount, hyerin: styles.hyerinAccount, food: styles.foodAccount };
 const accountRowClass: Record<Account, string> = { main: styles.mainRow, hyerin: styles.hyerinRow, food: styles.foodRow };
 const sourceClass: Record<Source, string> = { value: styles.valueSource, concern: styles.concernSource, trend: styles.trendSource, season: styles.seasonSource };
@@ -134,8 +134,8 @@ export default function PlanningBoard({ initialFeed, initialDecisions }: { initi
 
     <section className={styles.cycleStatus} aria-label={loopSteps.join(" → ")}>
       <div className={styles.todayTask}><small>오늘 할 일</small><b>한나 판단 중</b><span>{ideas.length}개 중 발전할 것만 고르기</span></div>
-      <div className={styles.cycleTrail}><span>이틀 조사</span><span>20개 후보</span><strong>한나 판단</strong><span>선택 후보 발전</span><span>성과 확인</span><span>다음 조사 반영</span></div>
-      <div className={styles.nextRun}><b>다음 조사</b>{displayTime(feed.current?.next_run_at)} · 이틀마다 20개 · 지난 묶음 보존</div>
+      <div className={styles.cycleTrail}><span>매일 조사</span><span>6개 후보</span><strong>한나 판단</strong><span>선택 후보 발전</span><span>성과 확인</span><span>다음 조사 반영</span></div>
+      <div className={styles.nextRun}><b>다음 조사</b>{displayTime(feed.current?.next_run_at)} · 매일 6개 · 지난 묶음 보존</div>
     </section>
     <ResearchStrip research={feed.current?.research} open={researchOpen} onToggle={() => setResearchOpen((value) => !value)} />
     <Link className={styles.productShortcut} href="/dashboard/products"><span>제품 후보 {feed.current?.product_radar?.length || 0}</span><em>오늘 살 것과 먼저 볼 것은 제품 탭에서 분리해 보기</em><b>제품 보기 →</b></Link>

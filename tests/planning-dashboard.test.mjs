@@ -39,7 +39,7 @@ test("planning makes the nightly research loop, history, and follow-up actions v
 
   assert.ok(page.includes("planningFeed"));
   for (const copy of [
-    "이틀 조사", "20개 후보", "한나 판단", "선택 후보 발전", "성과 확인", "다음 조사 반영",
+    "매일 조사", "6개 후보", "한나 판단", "선택 후보 발전", "성과 확인", "다음 조사 반영",
     "지난 후보", "다음 조사", "무엇을 찾았나", "무엇을 알게 됐나", "적합",
     "이 주제 더 깊게", "유사 주제 찾기", "새 주제 더 받기", "AI 인계문 복사",
   ]) {
@@ -159,7 +159,7 @@ test("planning treats each two-day teen batch as a research-to-AI handoff desk",
     assert.ok(api.includes(field), `missing planning batch metadata: ${field}`);
   }
   for (const copy of [
-    "이틀마다 20개",
+    "매일 6개",
     "어디서 온 문제",
     "한나의 관점",
     "릴스로 푸는 법",
