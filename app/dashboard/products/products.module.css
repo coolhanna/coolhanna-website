@@ -57,6 +57,8 @@
 .currentState { margin: -2px 0 8px; color: #8C624D; font-size: 9px; }
 .card p { margin: 5px 0; display: grid; grid-template-columns: 86px minmax(0, 1fr); gap: 8px; color: var(--text-secondary); font-size: 10px; line-height: 1.48; }
 .card p b { color: var(--product-accent); font-weight: 500; }
+.card p span small { display: block; margin-top: 2px; color: var(--text-muted-new); font-size: 8px; }
+.card p span a { color: var(--product-accent); text-decoration: underline; text-underline-offset: 2px; }
 .tagBox { margin-top: 9px; padding-top: 8px; border-top: 1px solid var(--border); }
 .tagBox > span { display: block; margin-bottom: 5px; color: var(--product-accent); font-size: 9px; }
 .tagBox > div { display: flex; flex-wrap: wrap; gap: 4px; }

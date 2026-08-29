@@ -130,6 +130,30 @@ export interface PlanningProduct {
   why_now: string;
   why_fit: string;
   ingredient_check: string;
+  price?: {
+    amount: number;
+    display: string;
+    quantity?: string;
+    unit_price?: string;
+    source_label: string;
+    source_url: string;
+    checked_at: string;
+  };
+  reviews?: {
+    count: number;
+    rating?: number | null;
+    summary: string;
+    source_label: string;
+    source_url: string;
+    checked_at: string;
+  };
+  discovered_from?: {
+    channel: string;
+    label: string;
+    reason: string;
+    url: string;
+    checked_at: string;
+  };
   test_format: string;
   test_plan: string;
   caution?: string;

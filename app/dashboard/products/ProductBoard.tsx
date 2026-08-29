@@ -20,7 +20,11 @@ const archiveTags = ["밀키트", "원재료 좋음", "유행", "냉동 간편�
 
 function needsMoreChecking(product: PlanningProduct) {
   const note = product.ingredient_check || "";
-  return !product.buy_links?.length || /확인 전|미확인|추가 확인|확인 못|확인 필요/.test(note);
+  return !product.buy_links?.length || !product.price || !product.reviews || !product.discovered_from || /확인 전|미확인|추가 확인|확인 못|확인 필요/.test(note);
+}
+
+function checkedLabel(value?: string) {
+  return value ? value.replace("T", " ").slice(5, 16) : "확인 시각 없음";
 }
 
 function suggestedTags(product: PlanningProduct) {
@@ -73,6 +77,9 @@ function ProductCard({
     {feedback && feedback.status !== "active" && <div className={styles.currentState}>{feedback.status === "saved" ? "보관함" : feedback.status === "try" ? "먹어볼 것" : "제외"}{feedback.tags.length ? ` · ${feedback.tags.join(" · ")}` : ""}</div>}
     <p><b>왜 우리 핏</b><span>{product.why_fit}</span></p>
     <p><b>원재료·영양표</b><span>{product.ingredient_check}</span></p>
+    <p><b>가격</b><span>{product.price ? <>{product.price.display}{product.price.quantity ? ` · ${product.price.quantity}` : ""}{product.price.unit_price ? ` · ${product.price.unit_price}` : ""}<small>{product.price.source_label} · {checkedLabel(product.price.checked_at)}</small></> : "가격 확인 전"}</span></p>
+    <p><b>후기</b><span>{product.reviews ? <>{product.reviews.rating != null ? `${product.reviews.rating.toFixed(1)}점 · ` : ""}{product.reviews.count.toLocaleString("ko-KR")}개 · {product.reviews.summary}<small>{product.reviews.source_label} · {checkedLabel(product.reviews.checked_at)}</small></> : "후기 수·평점 확인 전"}</span></p>
+    <p><b>발견한 곳</b><span>{product.discovered_from ? <><a href={product.discovered_from.url} target="_blank" rel="noreferrer">{product.discovered_from.label}</a> · {product.discovered_from.reason}<small>{checkedLabel(product.discovered_from.checked_at)}</small></> : "발견 경로 확인 전"}</span></p>
     <p><b>먹어볼 방법</b><span>{product.test_format} · {product.test_plan}</span></p>
 
     <div className={styles.tagBox}>
@@ -94,7 +101,7 @@ function ProductCard({
 
     <footer>
       <span>{product.caution || (ready ? "실제 주문 전 수량만 결정" : "확인할 항목을 먼저 검토")}</span>
-      {buy ? <a href={buy.url} target="_blank" rel="noreferrer">구매처 확인</a> : <em>구매처 확인 필요</em>}
+      {buy ? <a href={buy.url} target="_blank" rel="noreferrer">구매처 확인 · {buy.label}</a> : <em>구매처 확인 필요</em>}
     </footer>
   </article>;
 }
