@@ -25,6 +25,15 @@ const canonicalDiscoveryChannels = new Set([
   "manufacturer", "retailer_new", "retailer_reviews", "social",
   "specialty", "crowdfunding", "editorial",
 ]);
+const selectionRoleLabel = {
+  reference: "유명 기준",
+  new_discovery: "새 발견",
+  challenger: "다른 강점",
+} as const;
+
+function productKey(product: PlanningProduct) {
+  return `${product.brand}::${product.name}`;
+}
 
 function isRecentVideo(publishedAt: string, cutoffDate: string) {
   return /^\d{4}-\d{2}-\d{2}$/.test(publishedAt) && publishedAt >= cutoffDate;
@@ -93,6 +102,7 @@ function ProductCard({
   onFeedback,
   onRequest,
   recentCutoff,
+  selectionRole,
 }: {
   product: PlanningProduct;
   ready: boolean;
@@ -104,6 +114,7 @@ function ProductCard({
   onFeedback: (action: "save" | "exclude" | "try" | "restore") => void;
   onRequest: (requestType: "similar" | "better_ingredients") => void;
   recentCutoff: string;
+  selectionRole?: keyof typeof selectionRoleLabel;
 }) {
   const buy = product.buy_links?.[0];
   const similarPending = requests.some((item) => item.product_id === product.id && item.request_type === "similar" && item.status === "pending");
@@ -114,7 +125,7 @@ function ProductCard({
 
   return <article className={`${styles.card} ${ready ? styles.buyCard : styles.reviewCard} ${feedback?.status === "excluded" ? styles.excludedCard : ""}`}>
     <div className={styles.cardTop}>
-      <span className={`${styles.signal} ${styles[product.signal]}`}>{productSignalLabel(product, recentCutoff)}</span>
+      <div>{selectionRole && <strong className={styles.selectionRole}>{selectionRoleLabel[selectionRole]}</strong>}<span className={`${styles.signal} ${styles[product.signal]}`}>{productSignalLabel(product, recentCutoff)}</span></div>
       <span className={styles.score}>{product.score}</span>
     </div>
     <div className={styles.productIntro}>
@@ -171,6 +182,7 @@ function ProductCard({
 export default function ProductBoard({ day, feedback: initialFeedback }: { day: PlanningDay | null; feedback: PlanningProductFeedbackResponse }) {
   const products = day?.product_radar || [];
   const videoAudit = day?.research?.video_audit;
+  const productSelection = day?.research?.product_selection;
   const recentCutoff = videoAudit?.cutoff_date || "9999-12-31";
   const screenedTotal = videoAudit?.screened_total ?? videoAudit?.evidence_total ?? 0;
   const videoAuditReady = screenedTotal >= 30 && (videoAudit?.recent_6m_total || 0) >= 24;
@@ -193,6 +205,12 @@ export default function ProductBoard({ day, feedback: initialFeedback }: { day: 
     groups.set(label, [...(groups.get(label) || []), product]);
     return groups;
   }, new Map<string, PlanningProduct[]>()).entries());
+  const finalistByKey = new Map((productSelection?.finalists || []).map((item) => [item.product_key, item]));
+  const featuredProducts = (productSelection?.finalists || [])
+    .map((item) => activeProducts.find((product) => productKey(product) === item.product_key))
+    .filter((product): product is PlanningProduct => Boolean(product));
+  const soloProduct = activeProducts.find((product) => productKey(product) === productSelection?.solo_product_key);
+  const remainingPool = (productSelection?.candidates || []).filter((item) => item.status !== "finalist");
   const archiveItems = feedback.items.filter((item) => item.status === archiveView && (tagFilter === "전체" || item.tags.includes(tagFilter)));
   const counts = {
     saved: feedback.items.filter((item) => item.status === "saved").length,
@@ -244,12 +262,13 @@ export default function ProductBoard({ day, feedback: initialFeedback }: { day: 
     });
   }
 
-  function renderCard(product: PlanningProduct, ready: boolean) {
+  function renderCard(product: PlanningProduct, ready: boolean, selectionRole?: keyof typeof selectionRoleLabel) {
     return <ProductCard
       key={product.id} product={product} ready={ready} feedback={feedbackByProduct.get(product.id)}
       selectedTags={tagDrafts[product.id] || []} requests={feedback.requests} busy={busy}
       onToggleTag={(tag) => toggleTag(product, tag)} onFeedback={(action) => saveFeedback(product, action)}
       onRequest={(requestType) => requestMore(product, requestType)} recentCutoff={recentCutoff}
+      selectionRole={selectionRole}
     />;
   }
 
@@ -286,23 +305,51 @@ export default function ProductBoard({ day, feedback: initialFeedback }: { day: 
       <div className={styles.archiveList}>{archiveItems.map((item) => <article key={item.product_id}><span>{item.status === "saved" ? "보관" : item.status === "try" ? "먹어볼 것" : "제외"}</span><b>{item.product.brand} · {item.product.name}</b><em>{item.tags.join(" · ") || "분류 없음"}</em></article>)}{!archiveItems.length && <p>이 분류에 저장한 제품이 아직 없어.</p>}</div>
     </section>
 
+    <section className={`${styles.section} ${styles.soloSection}`}>
+      <div className={styles.sectionTitle}>
+        <div><span>ONE PICK</span><h2>오늘의 단독 추천</h2></div>
+        <p>비교 없이 바로 추천할 제품은 전체 원재료명과 1회 영양표까지 확인된 경우에만 올려.</p>
+        <em>{soloProduct ? "1" : "0"}</em>
+      </div>
+      <div className={styles.soloBody}>{soloProduct
+        ? renderCard(soloProduct, !needsMoreChecking(soloProduct, recentCutoff))
+        : <p className={styles.empty}>오늘은 성분표까지 확인된 단독 추천이 없어. 억지로 하나를 고르지 않았어.</p>}
+      </div>
+    </section>
+
     <section className={`${styles.section} ${styles.comparisonSection}`}>
       <div className={styles.sectionTitle}>
-        <div><span>COMPARE</span><h2>오늘 비교 묶음</h2></div>
-        <p>세 제품씩 바로 비교 · 오늘 살 것 {readyToBuy.length}개 · 성분표를 먼저 볼 것 {reviewFirst.length}개</p>
-        <em>{comparisonGroups.length}</em>
+        <div><span>FINAL THREE</span><h2>오늘 비교 묶음</h2></div>
+        <p>후보 {productSelection?.candidate_total || 0}개 · 출처 {productSelection?.source_total || 0}곳 검토 후 결승 3개 · 오늘 살 것 {readyToBuy.length}개 · 먼저 볼 것 {reviewFirst.length}개</p>
+        <em>{featuredProducts.length}</em>
       </div>
-      <div className={styles.comparisonList}>{comparisonGroups.map(([label, groupProducts], index) => {
-        const groupReady = groupProducts.filter((product) => !needsMoreChecking(product, recentCutoff)).length;
-        return <section className={styles.comparisonGroup} key={label}>
-          <div className={styles.comparisonGroupHeader}>
-            <div><span>{String(index + 1).padStart(2, "0")}</span><h3>{label}</h3></div>
-            <p>{groupReady ? `성분·구매 확인 ${groupReady}개` : "전체 성분표 확인 대기"}</p>
-            <em>{groupProducts.length === 3 ? "3개 비교" : `${groupProducts.length}개 비교`}</em>
-          </div>
-          <div className={styles.comparisonGrid}>{groupProducts.map((product) => renderCard(product, !needsMoreChecking(product, recentCutoff)))}</div>
-        </section>;
-      })}{!comparisonGroups.length && <p className={styles.empty}>오늘 비교할 제품이 아직 없어.</p>}</div>
+      <div className={styles.comparisonList}>{featuredProducts.length ? <section className={styles.comparisonGroup}>
+        <div className={styles.comparisonGroupHeader}>
+          <div><span>01</span><h3>{productSelection?.featured_group || "대표 비교 묶음"}</h3></div>
+          <p>{productSelection?.criteria?.join(" · ") || "유명 기준 · 새 발견 · 다른 강점"}</p>
+          <em>3개 비교</em>
+        </div>
+        <div className={styles.comparisonGrid}>{featuredProducts.map((product) => {
+          const finalist = finalistByKey.get(productKey(product));
+          return renderCard(product, !needsMoreChecking(product, recentCutoff), finalist?.role);
+        })}</div>
+      </section> : <p className={styles.empty}>넓은 후보 조사를 통과한 비교 묶음이 아직 없어.</p>}</div>
     </section>
+
+    <details className={styles.candidatePool}>
+      <summary><span>CANDIDATE POOL</span><b>나머지 후보 {remainingPool.length}개</b><em>펼쳐 보기</em></summary>
+      <p>유명한 제품만 세 개 고른 게 아니라 같은 종류를 더 넓게 찾은 기록이야. 가격·후기·성분표가 더 확인되면 다음 결승으로 올라와.</p>
+      <div>{remainingPool.map((item) => <article key={item.product_key}>
+        <span>{item.status === "excluded" ? "이번엔 제외" : "후보 보류"}</span>
+        <b>{item.product_key.replace("::", " · ")}</b>
+        <p>{item.note}</p>
+        <a href={item.source_url} target="_blank" rel="noreferrer">{item.source_label}</a>
+      </article>)}</div>
+    </details>
+
+    <details className={styles.otherComparisons}>
+      <summary>다음 비교 묶음 {Math.max(comparisonGroups.length - 1, 0)}개</summary>
+      <div>{comparisonGroups.filter(([label]) => label !== productSelection?.featured_group).map(([label, groupProducts]) => <p key={label}><b>{label}</b><span>{groupProducts.map((product) => product.name).join(" · ")}</span></p>)}</div>
+    </details>
   </main>;
 }

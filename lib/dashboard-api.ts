@@ -128,6 +128,26 @@ export interface PlanningResearch {
   learned: string[];
   sources: Array<{ label: string; note: string; url?: string }>;
   product_search_channels?: PlanningDiscoveryChannel[];
+  product_selection?: {
+    featured_group: string;
+    solo_product_key: string | null;
+    candidate_total: number;
+    source_total: number;
+    searched_at: string;
+    criteria: string[];
+    candidates: Array<{
+      product_key: string;
+      source_label: string;
+      source_url: string;
+      status: "finalist" | "hold" | "excluded";
+      note: string;
+    }>;
+    finalists: Array<{
+      product_key: string;
+      role: "reference" | "new_discovery" | "challenger";
+      reason: string;
+    }>;
+  };
   video_audit?: {
     evidence_total: number;
     screened_total: number;
