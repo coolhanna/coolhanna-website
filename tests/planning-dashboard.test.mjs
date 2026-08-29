@@ -118,8 +118,8 @@ test("products move out of planning into a separate buy-versus-review desk", () 
   assert.ok(board.includes("제품 탭에서 분리해 보기"));
   assert.ok(!board.includes("function ProductRadar"));
   for (const copy of [
-    "오늘 살 것", "먼저 볼 것", "요즘 유행", "꾸준히 추천", "직접 발굴",
-    "왜 우리 핏", "원재료·영양표", "먹어볼 방법", "구매처 확인",
+    "오늘 살 것", "먼저 볼 것", "SNS 유행 확인", "유행 근거 없음", "새로 발견",
+    "추천 이유", "원재료·영양표", "발견 영상", "먹어볼 방법", "구매처 확인",
   ]) {
     assert.ok(products.includes(copy), `missing product desk copy: ${copy}`);
   }
@@ -167,6 +167,21 @@ test("product recommendations show verified price, review, and discovery source"
   for (const field of ["price", "reviews", "discovered_from"]) {
     assert.ok(api.includes(field), `missing product evidence field: ${field}`);
   }
+});
+
+test("product recommendations show the product appearance, social proof, and categorized reasons", () => {
+  const products = read("app/dashboard/products/ProductBoard.tsx");
+  const api = read("lib/dashboard-api.ts");
+
+  for (const copy of ["제품 사진", "YouTube", "Instagram", "추천 이유", "성분 근거 확인"]) {
+    assert.ok(products.includes(copy), `missing social product evidence copy: ${copy}`);
+  }
+  for (const field of ["product_image", "social_evidence", "recommendation_reasons", "ingredient_evidence"]) {
+    assert.ok(api.includes(field), `missing social product evidence field: ${field}`);
+  }
+  assert.ok(products.includes("product.social_evidence"));
+  assert.ok(products.includes("product.recommendation_reasons"));
+  assert.ok(products.includes("product.product_image"));
 });
 
 test("planning decisions use the authenticated dashboard API", () => {
