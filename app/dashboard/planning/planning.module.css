@@ -378,14 +378,14 @@
   border-bottom: 1px solid var(--border);
 }
 
-.listHeader strong { color: var(--text-main); font-size: var(--fs-lead); font-weight: 600; }
+.listHeader strong { color: var(--text-main); font-size: var(--fs-body); font-weight: 600; }
 .listHeader span { color: var(--text-secondary); font-size: var(--fs-small); }
 
 .ideaList { min-height: 0; overflow: auto; }
 
 .ideaRow {
   width: 100%;
-  padding: 13px 15px;
+  padding: 11px 14px;
   display: grid;
   grid-template-columns: 26px minmax(0, 1fr) auto;
   align-items: start;
@@ -422,7 +422,7 @@
 
 .rowAccount {
   display: block;
-  margin-bottom: 5px;
+  margin-bottom: 4px;
   color: var(--row-accent);
   font-size: var(--fs-label);
   font-weight: 600;
@@ -432,7 +432,7 @@
 .rowBody > strong {
   display: -webkit-box;
   overflow: hidden;
-  font-size: 15px;
+  font-size: 13px;
   font-weight: 600;
   line-height: 1.45;
   letter-spacing: -.01em;
@@ -442,10 +442,10 @@
 
 .rowMeta {
   display: -webkit-box;
-  margin-top: 6px;
+  margin-top: 5px;
   overflow: hidden;
   color: var(--text-secondary);
-  font-size: var(--fs-small);
+  font-size: var(--fs-label);
   line-height: 1.5;
   -webkit-box-orient: vertical;
   -webkit-line-clamp: 2;
@@ -472,7 +472,7 @@
 .score {
   padding-top: 2px;
   color: var(--row-accent);
-  font-size: 15px;
+  font-size: 14px;
   font-weight: 600;
   text-align: right;
   font-variant-numeric: tabular-nums;
@@ -875,8 +875,8 @@
 
 .detailActions .develop:hover { background: var(--accent-dark); border-color: var(--accent-dark); }
 
+/* 오른쪽 아래는 비워 둔다 — 떠 있는 '피드백' 버튼(fixed, right 18px)이 그 자리를 덮는다. */
 .detailActions .currentState {
-  margin-left: auto;
   color: var(--text-secondary);
   font-size: var(--fs-small);
 }
@@ -928,5 +928,5 @@
   .accountTabs { width: 100%; overflow-x: auto; }
   .references div { grid-template-columns: 1fr; gap: 4px; }
   .detailActions button { flex: 1 1 auto; min-width: 92px; }
-  .detailActions .currentState { flex: 1 1 100%; margin-left: 0; }
+  .detailActions .currentState { flex: 1 1 100%; }
 }
