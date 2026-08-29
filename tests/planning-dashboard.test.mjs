@@ -192,14 +192,14 @@ test("product recommendations show the product appearance, social proof, and cat
   assert.ok(products.includes("product.product_image"));
 });
 
-test("product research makes watched-video depth and six-month freshness visible", () => {
+test("product research shows the daily 30-video screen, repeat signals, importance, and freshness", () => {
   const products = read("app/dashboard/products/ProductBoard.tsx");
   const api = read("lib/dashboard-api.ts");
 
-  for (const copy of ["이번 조사에서 실제로 본 영상", "자막·내용 확인", "근거로 연결", "최근 6개월", "6개월 초과"]) {
+  for (const copy of ["매일 영상 30개 확인", "확인한 영상", "반복 발견 제품", "중요 영상", "최근 6개월", "6개월 초과"]) {
     assert.ok(products.includes(copy), `missing video audit copy: ${copy}`);
   }
-  for (const field of ["video_audit", "evidence_total", "content_checked_total", "recent_6m_total", "cutoff_date"]) {
+  for (const field of ["video_audit", "screened_total", "important_total", "repeated_product_total", "recent_6m_total", "cutoff_date", "important", "product_keys"]) {
     assert.ok(api.includes(field), `missing video audit field: ${field}`);
   }
   assert.ok(products.includes("product.signal === \"trend\" && !recentSocial"));
