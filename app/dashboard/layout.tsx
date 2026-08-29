@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import DashboardNav from "./DashboardNav";
+import DashboardFeedbackLoop from "./components/DashboardFeedbackLoop";
 
 export const metadata: Metadata = {
   title: "한나 운영 대시보드",
@@ -72,6 +73,7 @@ export default function DashboardLayout({
         <DashboardNav />
       </div>
       {children}
+      <DashboardFeedbackLoop />
     </>
   );
 }

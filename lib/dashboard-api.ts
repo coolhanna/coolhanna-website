@@ -46,6 +46,8 @@ export const dash = {
     api<PlanningDecisionsResponse>("/api/dashboard/planning-decisions"),
   productFeedback: () =>
     api<PlanningProductFeedbackResponse>("/api/dashboard/planning-product-feedback"),
+  dashboardFeedback: (scope = "") =>
+    api<DashboardFeedbackResponse>(`/api/dashboard/dashboard-feedback${scope ? `?scope=${encodeURIComponent(scope)}` : ""}`),
   // v6 — 일별 카드 통합 (오늘 + 내일)
   scheduleV2: () => api<any>("/api/dashboard/schedule-v2"),
   // 한나 데스크 — 수집기가 보낸 실시간 상태에서 미해결 항목만 조회
@@ -159,6 +161,26 @@ export interface PlanningProductFeedbackResponse {
   items: PlanningProductFeedbackItem[];
   requests: PlanningProductRequest[];
   events?: Array<Record<string, any>>;
+  error?: string;
+}
+
+export interface DashboardFeedbackItem {
+  id: string;
+  scope: string;
+  page_label: string;
+  action: "confirm" | "correct" | "missing" | "more" | "stop";
+  note: string;
+  context: Record<string, string>;
+  status: "pending" | "routed" | "applied" | "rejected";
+  result: string;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface DashboardFeedbackResponse {
+  items: DashboardFeedbackItem[];
+  events: Array<Record<string, unknown>>;
+  counts: Record<DashboardFeedbackItem["status"], number>;
   error?: string;
 }
 
