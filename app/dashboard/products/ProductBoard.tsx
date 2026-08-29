@@ -10,17 +10,36 @@ import type {
 } from "@/lib/dashboard-api";
 import styles from "./products.module.css";
 
-const signalLabel: Record<PlanningProduct["signal"], string> = {
-  trend: "요즘 유행",
-  evergreen: "꾸준히 추천",
-  discovery: "직접 발굴",
+const reasonLabel: Record<NonNullable<PlanningProduct["recommendation_reasons"]>[number]["category"], string> = {
+  trend: "유행",
+  ingredients: "원재료",
+  taste: "맛",
+  value: "돈값",
+  convenience: "간편함",
+  content: "콘텐츠감",
 };
 
 const archiveTags = ["밀키트", "원재료 좋음", "유행", "냉동 간편식", "아이 혼자", "모녀 비교", "한 끼 보완", "재구매 후보"];
 
 function needsMoreChecking(product: PlanningProduct) {
   const note = product.ingredient_check || "";
-  return !product.buy_links?.length || !product.price || !product.reviews || !product.discovered_from || /확인 전|미확인|추가 확인|확인 못|확인 필요/.test(note);
+  const social = product.social_evidence || [];
+  const trendCreators = new Set(social.map((item) => item.creator.trim().toLowerCase()));
+  const ingredientReason = product.recommendation_reasons?.some((item) => item.category === "ingredients");
+  return !product.buy_links?.length || !product.price || !product.reviews || !product.discovered_from
+    || !product.product_image || !social.length || !product.recommendation_reasons?.length
+    || (product.signal === "trend" && trendCreators.size < 2)
+    || (ingredientReason && product.ingredient_evidence?.status !== "verified")
+    || /확인 전|미확인|추가 확인|확인 못|확인 필요/.test(note);
+}
+
+function productSignalLabel(product: PlanningProduct) {
+  const social = product.social_evidence || [];
+  if (product.signal === "trend") {
+    return new Set(social.map((item) => item.creator.trim().toLowerCase())).size >= 2 ? "SNS 유행 확인" : "유행 근거 없음";
+  }
+  if (product.signal === "evergreen") return social.length ? "꾸준히 언급" : "SNS 근거 없음";
+  return "새로 발견";
 }
 
 function checkedLabel(value?: string) {
@@ -66,17 +85,33 @@ function ProductCard({
   const similarPending = requests.some((item) => item.product_id === product.id && item.request_type === "similar" && item.status === "pending");
   const ingredientPending = requests.some((item) => item.product_id === product.id && item.request_type === "better_ingredients" && item.status === "pending");
   const isBusy = busy.startsWith(`${product.id}:`);
+  const socialEvidence = product.social_evidence || [];
+  const recommendationReasons = product.recommendation_reasons || [];
 
   return <article className={`${styles.card} ${ready ? styles.buyCard : styles.reviewCard} ${feedback?.status === "excluded" ? styles.excludedCard : ""}`}>
     <div className={styles.cardTop}>
-      <span className={`${styles.signal} ${styles[product.signal]}`}>{signalLabel[product.signal]}</span>
+      <span className={`${styles.signal} ${styles[product.signal]}`}>{productSignalLabel(product)}</span>
       <span className={styles.score}>{product.score}</span>
     </div>
-    <p className={styles.brand}>{product.brand} · {product.category}</p>
-    <h3>{product.name}</h3>
+    <div className={styles.productIntro}>
+      {product.product_image
+        ? <a className={styles.productImage} href={product.product_image.source_url} target="_blank" rel="noreferrer"><img src={product.product_image.url} alt={product.product_image.alt} loading="lazy" /><small>제품 사진 · {product.product_image.source_label}</small></a>
+        : <div className={`${styles.productImage} ${styles.imageMissing}`}><span>제품 사진</span><small>사진 확인 전</small></div>}
+      <div><p className={styles.brand}>{product.brand} · {product.category}</p><h3>{product.name}</h3></div>
+    </div>
     {feedback && feedback.status !== "active" && <div className={styles.currentState}>{feedback.status === "saved" ? "보관함" : feedback.status === "try" ? "먹어볼 것" : "제외"}{feedback.tags.length ? ` · ${feedback.tags.join(" · ")}` : ""}</div>}
-    <p><b>왜 우리 핏</b><span>{product.why_fit}</span></p>
+    <div className={styles.reasonBox}>
+      <b>추천 이유</b>
+      {recommendationReasons.length
+        ? <div>{recommendationReasons.map((reason, index) => <span key={`${reason.category}-${index}`}><em>{reasonLabel[reason.category]}</em>{reason.summary}</span>)}</div>
+        : <p>추천 이유 분류 확인 전 · 기존 한줄 설명: {product.why_fit}</p>}
+    </div>
+    <div className={styles.socialBox}>
+      <b>발견 영상</b>
+      {socialEvidence.length ? <div>{socialEvidence.map((source) => <a key={source.url} href={source.url} target="_blank" rel="noreferrer"><em>{source.platform === "youtube" ? "YouTube" : "Instagram"}</em><span>{source.creator} · {source.title}</span><small>{source.reason} · 게시 {source.published_at}</small></a>)}</div> : <p>YouTube·Instagram 발견 근거 없음</p>}
+    </div>
     <p><b>원재료·영양표</b><span>{product.ingredient_check}</span></p>
+    <p><b>성분 근거 확인</b><span>{product.ingredient_evidence ? <><a href={product.ingredient_evidence.source_url} target="_blank" rel="noreferrer">{product.ingredient_evidence.status === "verified" ? "공식 표시 확인" : product.ingredient_evidence.status === "partial" ? "일부 확인" : "미확인"} · {product.ingredient_evidence.summary}</a><small>{product.ingredient_evidence.source_label} · {checkedLabel(product.ingredient_evidence.checked_at)}</small></> : "성분 근거 확인 전"}</span></p>
     <p><b>가격</b><span>{product.price ? <>{product.price.display}{product.price.quantity ? ` · ${product.price.quantity}` : ""}{product.price.unit_price ? ` · ${product.price.unit_price}` : ""}<small>{product.price.source_label} · {checkedLabel(product.price.checked_at)}</small></> : "가격 확인 전"}</span></p>
     <p><b>후기</b><span>{product.reviews ? <>{product.reviews.rating != null ? `${product.reviews.rating.toFixed(1)}점 · ` : ""}{product.reviews.count.toLocaleString("ko-KR")}개 · {product.reviews.summary}<small>{product.reviews.source_label} · {checkedLabel(product.reviews.checked_at)}</small></> : "후기 수·평점 확인 전"}</span></p>
     <p><b>발견한 곳</b><span>{product.discovered_from ? <><a href={product.discovered_from.url} target="_blank" rel="noreferrer">{product.discovered_from.label}</a> · {product.discovered_from.reason}<small>{checkedLabel(product.discovered_from.checked_at)}</small></> : "발견 경로 확인 전"}</span></p>
@@ -188,6 +223,13 @@ export default function ProductBoard({ day, feedback: initialFeedback }: { day: 
       <p>{day?.date || "오늘"} · 추천 {products.length}개 · 조사 요청 {pendingCount}</p>
     </header>
 
+    <section className={styles.evidenceRule}>
+      <b>추천이 만들어지는 순서</b>
+      <span>1. YouTube·Instagram에서 실제 제품 발견</span>
+      <span>2. 판매처에서 사진·가격·후기 확인</span>
+      <span>3. 원재료 추천은 공식 표시사항까지 검증</span>
+    </section>
+
     <section className={styles.feedbackShelf}>
       <div className={styles.shelfTop}><div><span>FEEDBACK</span><h2>내 제품 보관함</h2><p>여기서 누른 판단을 다음 새벽 조사 AI가 먼저 읽어.</p></div>{notice && <strong>{notice}</strong>}</div>
       <div className={styles.archiveTabs}>
@@ -211,7 +253,7 @@ export default function ProductBoard({ day, feedback: initialFeedback }: { day: 
     <section className={`${styles.section} ${styles.reviewSection}`}>
       <div className={styles.sectionTitle}>
         <div><span>REVIEW</span><h2>먼저 볼 것</h2></div>
-        <p>유행과 추천 신호는 있지만 성분·가격·구매처를 더 확인할 제품</p>
+        <p>SNS 영상·사진·성분·가격·후기 중 아직 근거를 더 확인할 제품</p>
         <em>{reviewFirst.length}</em>
       </div>
       <div className={styles.cardGrid}>{reviewFirst.map((product) => renderCard(product, false))}{!reviewFirst.length && <p className={styles.empty}>추가 확인이 필요한 제품이 없어.</p>}</div>

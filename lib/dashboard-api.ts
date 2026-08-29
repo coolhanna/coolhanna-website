@@ -130,6 +130,34 @@ export interface PlanningProduct {
   why_now: string;
   why_fit: string;
   ingredient_check: string;
+  ingredient_evidence?: {
+    status: "verified" | "partial" | "unverified";
+    summary: string;
+    source_label: string;
+    source_url: string;
+    checked_at: string;
+  };
+  product_image?: {
+    url: string;
+    alt: string;
+    source_label: string;
+    source_url: string;
+    checked_at: string;
+  };
+  social_evidence?: Array<{
+    platform: "youtube" | "instagram";
+    creator: string;
+    title: string;
+    url: string;
+    published_at: string;
+    checked_at: string;
+    reason: string;
+  }>;
+  recommendation_reasons?: Array<{
+    category: "trend" | "ingredients" | "taste" | "value" | "convenience" | "content";
+    summary: string;
+    evidence_urls: string[];
+  }>;
   price?: {
     amount: number;
     display: string;
