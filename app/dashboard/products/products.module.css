@@ -48,6 +48,7 @@
 .section { width: min(1180px, 100%); margin: 9px auto 0; border: 1px solid var(--border-strong); background: var(--bg-card); }
 .buySection { --section-accent: #A56550; }
 .reviewSection { --section-accent: #667A90; }
+.comparisonSection { --section-accent: #7A5C47; }
 .sectionTitle { min-height: 62px; padding: 10px 13px; display: grid; grid-template-columns: 150px minmax(0, 1fr) auto; align-items: center; gap: 14px; border-bottom: 1px solid var(--border); }
 .sectionTitle > div { border-left: 3px solid var(--section-accent); padding-left: 9px; }
 .sectionTitle span { color: var(--section-accent); font-size: 8px; letter-spacing: .12em; }
@@ -56,6 +57,15 @@
 .sectionTitle em { color: var(--section-accent); font-size: 20px; font-style: normal; font-weight: 500; }
 
 .cardGrid { padding: 10px; display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 9px; }
+.comparisonList { padding: 10px; display: grid; gap: 12px; background: #F7F5F1; }
+.comparisonGroup { border: 1px solid var(--border-strong); background: var(--bg-card); }
+.comparisonGroupHeader { min-height: 54px; padding: 9px 11px; display: grid; grid-template-columns: minmax(180px, 1fr) minmax(140px, auto) auto; align-items: center; gap: 12px; border-bottom: 1px solid var(--border); background: #FBFAF7; }
+.comparisonGroupHeader > div { display: flex; align-items: center; gap: 8px; }
+.comparisonGroupHeader > div span { width: 25px; height: 25px; display: grid; place-items: center; border: 1px solid #B8A08B; color: #7A5C47; font-size: 9px; }
+.comparisonGroupHeader h3 { margin: 0; color: #684A36; font-size: 15px; font-weight: 600; }
+.comparisonGroupHeader p { margin: 0; color: var(--text-secondary); font-size: 9px; text-align: right; }
+.comparisonGroupHeader em { padding: 4px 7px; border: 1px solid #C9B8A8; border-radius: 999px; color: #7A5C47; font-size: 9px; font-style: normal; }
+.comparisonGrid { padding: 9px; display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 8px; }
 .card { --product-accent: #667A90; min-width: 0; padding: 12px 13px; border: 1px solid var(--border); border-left: 3px solid var(--product-accent); background: var(--bg-card); }
 .buyCard { --product-accent: #A56550; }
 .reviewCard { --product-accent: #667A90; }
@@ -115,6 +125,7 @@
   .archiveList { grid-template-columns: repeat(2, minmax(0, 1fr)); }
   .videoAudit { grid-template-columns: repeat(2, minmax(0, 1fr)); }
   .videoAudit > div { grid-column: 1 / -1; }
+  .comparisonGrid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
 }
 
 @media (max-width: 620px) {
@@ -131,4 +142,7 @@
   .actionGrid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
   .videoAudit { grid-template-columns: 1fr; }
   .videoAudit > div { grid-column: auto; }
+  .comparisonGroupHeader { grid-template-columns: 1fr auto; }
+  .comparisonGroupHeader p { grid-column: 1 / -1; grid-row: 2; text-align: left; }
+  .comparisonGrid { grid-template-columns: 1fr; }
 }

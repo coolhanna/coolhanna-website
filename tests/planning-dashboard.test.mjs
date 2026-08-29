@@ -226,6 +226,19 @@ test("product research shows the daily 30-video screen, repeat signals, importan
   assert.ok(products.includes("product.signal === \"trend\" && !recentSocial"));
 });
 
+test("product desk keeps the twelve recommendations in four visible comparison groups", () => {
+  const products = read("app/dashboard/products/ProductBoard.tsx");
+  const api = read("lib/dashboard-api.ts");
+  const styles = read("app/dashboard/products/products.module.css");
+
+  assert.ok(api.includes("comparison_group: string"));
+  assert.ok(products.includes("comparisonGroups"));
+  assert.ok(products.includes("비교 묶음"));
+  assert.ok(products.includes("3개 비교"));
+  assert.ok(styles.includes(".comparisonGroup"));
+  assert.ok(styles.includes(".comparisonGrid"));
+});
+
 test("planning decisions use the authenticated dashboard API", () => {
   const api = read("lib/dashboard-api.ts");
   const board = read("app/dashboard/planning/PlanningBoard.tsx");

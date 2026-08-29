@@ -155,6 +155,7 @@ export interface PlanningProduct {
   brand: string;
   name: string;
   category: string;
+  comparison_group: string;
   signal: "trend" | "evergreen" | "discovery";
   score: number;
   why_now_type: "new_product" | "season" | "price_change" | "new_cooking_method";

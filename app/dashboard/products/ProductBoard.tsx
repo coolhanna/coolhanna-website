@@ -188,6 +188,11 @@ export default function ProductBoard({ day, feedback: initialFeedback }: { day: 
   const activeProducts = products.filter((product) => feedbackByProduct.get(product.id)?.status !== "excluded");
   const readyToBuy = activeProducts.filter((product) => !needsMoreChecking(product, recentCutoff));
   const reviewFirst = activeProducts.filter((product) => needsMoreChecking(product, recentCutoff));
+  const comparisonGroups = Array.from(activeProducts.reduce((groups, product) => {
+    const label = product.comparison_group || "비교 묶음 확인 필요";
+    groups.set(label, [...(groups.get(label) || []), product]);
+    return groups;
+  }, new Map<string, PlanningProduct[]>()).entries());
   const archiveItems = feedback.items.filter((item) => item.status === archiveView && (tagFilter === "전체" || item.tags.includes(tagFilter)));
   const counts = {
     saved: feedback.items.filter((item) => item.status === "saved").length,
@@ -281,22 +286,23 @@ export default function ProductBoard({ day, feedback: initialFeedback }: { day: 
       <div className={styles.archiveList}>{archiveItems.map((item) => <article key={item.product_id}><span>{item.status === "saved" ? "보관" : item.status === "try" ? "먹어볼 것" : "제외"}</span><b>{item.product.brand} · {item.product.name}</b><em>{item.tags.join(" · ") || "분류 없음"}</em></article>)}{!archiveItems.length && <p>이 분류에 저장한 제품이 아직 없어.</p>}</div>
     </section>
 
-    <section className={`${styles.section} ${styles.buySection}`}>
+    <section className={`${styles.section} ${styles.comparisonSection}`}>
       <div className={styles.sectionTitle}>
-        <div><span>ORDER</span><h2>오늘 살 것</h2></div>
-        <p>원재료·영양표와 구매처를 확인한 주문 후보 · 마지막 주문은 한나</p>
-        <em>{readyToBuy.length}</em>
+        <div><span>COMPARE</span><h2>오늘 비교 묶음</h2></div>
+        <p>세 제품씩 바로 비교 · 오늘 살 것 {readyToBuy.length}개 · 성분표를 먼저 볼 것 {reviewFirst.length}개</p>
+        <em>{comparisonGroups.length}</em>
       </div>
-      <div className={styles.cardGrid}>{readyToBuy.map((product) => renderCard(product, true))}{!readyToBuy.length && <p className={styles.empty}>오늘 바로 주문할 만큼 확인된 제품은 아직 없어.</p>}</div>
-    </section>
-
-    <section className={`${styles.section} ${styles.reviewSection}`}>
-      <div className={styles.sectionTitle}>
-        <div><span>REVIEW</span><h2>먼저 볼 것</h2></div>
-        <p>SNS 영상·사진·성분·가격·후기 중 아직 근거를 더 확인할 제품</p>
-        <em>{reviewFirst.length}</em>
-      </div>
-      <div className={styles.cardGrid}>{reviewFirst.map((product) => renderCard(product, false))}{!reviewFirst.length && <p className={styles.empty}>추가 확인이 필요한 제품이 없어.</p>}</div>
+      <div className={styles.comparisonList}>{comparisonGroups.map(([label, groupProducts], index) => {
+        const groupReady = groupProducts.filter((product) => !needsMoreChecking(product, recentCutoff)).length;
+        return <section className={styles.comparisonGroup} key={label}>
+          <div className={styles.comparisonGroupHeader}>
+            <div><span>{String(index + 1).padStart(2, "0")}</span><h3>{label}</h3></div>
+            <p>{groupReady ? `성분·구매 확인 ${groupReady}개` : "전체 성분표 확인 대기"}</p>
+            <em>{groupProducts.length === 3 ? "3개 비교" : `${groupProducts.length}개 비교`}</em>
+          </div>
+          <div className={styles.comparisonGrid}>{groupProducts.map((product) => renderCard(product, !needsMoreChecking(product, recentCutoff)))}</div>
+        </section>;
+      })}{!comparisonGroups.length && <p className={styles.empty}>오늘 비교할 제품이 아직 없어.</p>}</div>
     </section>
   </main>;
 }
