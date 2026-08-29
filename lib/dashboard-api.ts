@@ -118,6 +118,20 @@ export interface PlanningResearch {
   searched: string[];
   learned: string[];
   sources: Array<{ label: string; note: string; url?: string }>;
+  video_audit?: {
+    evidence_total: number;
+    content_checked_total: number;
+    recent_6m_total: number;
+    cutoff_date: string;
+    items: Array<{
+      creator: string;
+      title: string;
+      url: string;
+      published_at: string;
+      content_checked: boolean;
+      scope: "exact_product" | "category_context";
+    }>;
+  };
 }
 
 export interface PlanningProduct {

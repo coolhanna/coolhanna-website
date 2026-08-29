@@ -15,6 +15,15 @@
 .evidenceRule b { margin-right: 3px; color: #445A6C; font-weight: 600; }
 .evidenceRule span { padding-left: 7px; border-left: 1px solid #C9D2D8; }
 
+.videoAudit { width: min(1180px, 100%); margin: 0 auto 10px; padding: 10px 12px; display: grid; grid-template-columns: minmax(220px, 1fr) repeat(3, minmax(120px, .45fr)); align-items: center; gap: 10px; border: 1px solid #C9D2D8; background: #FFF; }
+.videoAudit > div span { color: #667A90; font-size: 8px; letter-spacing: .12em; }
+.videoAudit h2 { margin: 2px 0 0; font-size: 15px; font-weight: 600; }
+.videoAudit p { margin: 0; padding: 7px 10px; display: grid; grid-template-columns: auto 1fr; align-items: center; gap: 8px; border-left: 2px solid #667A90; background: #F7FAFB; }
+.videoAudit p b { color: #445A6C; font-size: 19px; font-weight: 600; }
+.videoAudit p span { color: var(--text-secondary); font-size: 9px; line-height: 1.35; }
+.videoAudit .auditGood { border-left-color: #55734E; background: #F4F8F2; }
+.videoAudit .auditWeak { border-left-color: #A56550; background: #FCF5F2; }
+
 .feedbackShelf { width: min(1180px, 100%); margin: 9px auto 12px; border: 1px solid #C9B8A8; background: #FFFDF8; }
 .shelfTop { padding: 11px 13px; display: flex; align-items: center; justify-content: space-between; gap: 16px; border-bottom: 1px solid var(--border); }
 .shelfTop > div > span { color: #8C624D; font-size: 8px; letter-spacing: .12em; }
@@ -80,6 +89,9 @@
 .socialBox a em { color: var(--product-accent); font-size: 8px; font-style: normal; }
 .socialBox a span { overflow: hidden; font-size: 9px; text-overflow: ellipsis; white-space: nowrap; }
 .socialBox a small { grid-column: 2; color: var(--text-muted-new); font-size: 8px; line-height: 1.35; }
+.socialBox a small i { margin-right: 5px; padding: 1px 4px; border-radius: 2px; font-style: normal; }
+.recentVideo { background: #E8F1E4; color: #44603E; }
+.oldVideo { background: #F2E8E3; color: #8A4E3A; }
 .tagBox { margin-top: 9px; padding-top: 8px; border-top: 1px solid var(--border); }
 .tagBox > span { display: block; margin-bottom: 5px; color: var(--product-accent); font-size: 9px; }
 .tagBox > div { display: flex; flex-wrap: wrap; gap: 4px; }
@@ -100,6 +112,8 @@
   .page { padding: 12px 16px 28px; }
   .cardGrid { grid-template-columns: 1fr; }
   .archiveList { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .videoAudit { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+  .videoAudit > div { grid-column: 1 / -1; }
 }
 
 @media (max-width: 620px) {
@@ -114,4 +128,6 @@
   .shelfTop strong { text-align: left; }
   .archiveList { grid-template-columns: 1fr; }
   .actionGrid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .videoAudit { grid-template-columns: 1fr; }
+  .videoAudit > div { grid-column: auto; }
 }

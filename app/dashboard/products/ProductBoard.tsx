@@ -21,22 +21,30 @@ const reasonLabel: Record<NonNullable<PlanningProduct["recommendation_reasons"]>
 
 const archiveTags = ["밀키트", "원재료 좋음", "유행", "냉동 간편식", "아이 혼자", "모녀 비교", "한 끼 보완", "재구매 후보"];
 
-function needsMoreChecking(product: PlanningProduct) {
+function isRecentVideo(publishedAt: string, cutoffDate: string) {
+  return /^\d{4}-\d{2}-\d{2}$/.test(publishedAt) && publishedAt >= cutoffDate;
+}
+
+function needsMoreChecking(product: PlanningProduct, cutoffDate: string) {
   const note = product.ingredient_check || "";
   const social = product.social_evidence || [];
   const trendCreators = new Set(social.map((item) => item.creator.trim().toLowerCase()));
+  const recentSocial = social.some((item) => isRecentVideo(item.published_at, cutoffDate));
   const ingredientReason = product.recommendation_reasons?.some((item) => item.category === "ingredients");
   return !product.buy_links?.length || !product.price || !product.reviews || !product.discovered_from
     || !product.product_image || !social.length || !product.recommendation_reasons?.length
     || (product.signal === "trend" && trendCreators.size < 2)
+    || (product.signal === "trend" && !recentSocial)
     || (ingredientReason && product.ingredient_evidence?.status !== "verified")
     || /확인 전|미확인|추가 확인|확인 못|확인 필요/.test(note);
 }
 
-function productSignalLabel(product: PlanningProduct) {
+function productSignalLabel(product: PlanningProduct, cutoffDate: string) {
   const social = product.social_evidence || [];
   if (product.signal === "trend") {
-    return new Set(social.map((item) => item.creator.trim().toLowerCase())).size >= 2 ? "SNS 유행 확인" : "유행 근거 없음";
+    const independent = new Set(social.map((item) => item.creator.trim().toLowerCase())).size >= 2;
+    if (!independent) return "유행 근거 없음";
+    return social.some((item) => isRecentVideo(item.published_at, cutoffDate)) ? "최근 유행 확인" : "유행 근거 오래됨";
   }
   if (product.signal === "evergreen") return social.length ? "꾸준히 언급" : "SNS 근거 없음";
   return "새로 발견";
@@ -70,6 +78,7 @@ function ProductCard({
   onToggleTag,
   onFeedback,
   onRequest,
+  recentCutoff,
 }: {
   product: PlanningProduct;
   ready: boolean;
@@ -80,6 +89,7 @@ function ProductCard({
   onToggleTag: (tag: string) => void;
   onFeedback: (action: "save" | "exclude" | "try" | "restore") => void;
   onRequest: (requestType: "similar" | "better_ingredients") => void;
+  recentCutoff: string;
 }) {
   const buy = product.buy_links?.[0];
   const similarPending = requests.some((item) => item.product_id === product.id && item.request_type === "similar" && item.status === "pending");
@@ -90,7 +100,7 @@ function ProductCard({
 
   return <article className={`${styles.card} ${ready ? styles.buyCard : styles.reviewCard} ${feedback?.status === "excluded" ? styles.excludedCard : ""}`}>
     <div className={styles.cardTop}>
-      <span className={`${styles.signal} ${styles[product.signal]}`}>{productSignalLabel(product)}</span>
+      <span className={`${styles.signal} ${styles[product.signal]}`}>{productSignalLabel(product, recentCutoff)}</span>
       <span className={styles.score}>{product.score}</span>
     </div>
     <div className={styles.productIntro}>
@@ -108,7 +118,10 @@ function ProductCard({
     </div>
     <div className={styles.socialBox}>
       <b>발견 영상</b>
-      {socialEvidence.length ? <div>{socialEvidence.map((source) => <a key={source.url} href={source.url} target="_blank" rel="noreferrer"><em>{source.platform === "youtube" ? "YouTube" : "Instagram"}</em><span>{source.creator} · {source.title}</span><small>{source.reason} · 게시 {source.published_at}</small></a>)}</div> : <p>YouTube·Instagram 발견 근거 없음</p>}
+      {socialEvidence.length ? <div>{socialEvidence.map((source) => {
+        const recent = isRecentVideo(source.published_at, recentCutoff);
+        return <a key={source.url} href={source.url} target="_blank" rel="noreferrer"><em>{source.platform === "youtube" ? "YouTube" : "Instagram"}</em><span>{source.creator} · {source.title}</span><small><i className={recent ? styles.recentVideo : styles.oldVideo}>{recent ? "최근 6개월" : "6개월 초과"}</i>{source.reason} · 게시 {source.published_at}</small></a>;
+      })}</div> : <p>YouTube·Instagram 발견 근거 없음</p>}
     </div>
     <p><b>원재료·영양표</b><span>{product.ingredient_check}</span></p>
     <p><b>성분 근거 확인</b><span>{product.ingredient_evidence ? <><a href={product.ingredient_evidence.source_url} target="_blank" rel="noreferrer">{product.ingredient_evidence.status === "verified" ? "공식 표시 확인" : product.ingredient_evidence.status === "partial" ? "일부 확인" : "미확인"} · {product.ingredient_evidence.summary}</a><small>{product.ingredient_evidence.source_label} · {checkedLabel(product.ingredient_evidence.checked_at)}</small></> : "성분 근거 확인 전"}</span></p>
@@ -143,6 +156,8 @@ function ProductCard({
 
 export default function ProductBoard({ day, feedback: initialFeedback }: { day: PlanningDay | null; feedback: PlanningProductFeedbackResponse }) {
   const products = day?.product_radar || [];
+  const videoAudit = day?.research?.video_audit;
+  const recentCutoff = videoAudit?.cutoff_date || "9999-12-31";
   const [feedback, setFeedback] = useState<PlanningProductFeedbackResponse>(initialFeedback);
   const [archiveView, setArchiveView] = useState<ArchiveView>("saved");
   const [tagFilter, setTagFilter] = useState("전체");
@@ -155,8 +170,8 @@ export default function ProductBoard({ day, feedback: initialFeedback }: { day: 
 
   const feedbackByProduct = useMemo(() => new Map(feedback.items.map((item) => [item.product_id, item])), [feedback.items]);
   const activeProducts = products.filter((product) => feedbackByProduct.get(product.id)?.status !== "excluded");
-  const readyToBuy = activeProducts.filter((product) => !needsMoreChecking(product));
-  const reviewFirst = activeProducts.filter(needsMoreChecking);
+  const readyToBuy = activeProducts.filter((product) => !needsMoreChecking(product, recentCutoff));
+  const reviewFirst = activeProducts.filter((product) => needsMoreChecking(product, recentCutoff));
   const archiveItems = feedback.items.filter((item) => item.status === archiveView && (tagFilter === "전체" || item.tags.includes(tagFilter)));
   const counts = {
     saved: feedback.items.filter((item) => item.status === "saved").length,
@@ -213,7 +228,7 @@ export default function ProductBoard({ day, feedback: initialFeedback }: { day: 
       key={product.id} product={product} ready={ready} feedback={feedbackByProduct.get(product.id)}
       selectedTags={tagDrafts[product.id] || []} requests={feedback.requests} busy={busy}
       onToggleTag={(tag) => toggleTag(product, tag)} onFeedback={(action) => saveFeedback(product, action)}
-      onRequest={(requestType) => requestMore(product, requestType)}
+      onRequest={(requestType) => requestMore(product, requestType)} recentCutoff={recentCutoff}
     />;
   }
 
@@ -228,6 +243,13 @@ export default function ProductBoard({ day, feedback: initialFeedback }: { day: 
       <span>1. YouTube·Instagram에서 실제 제품 발견</span>
       <span>2. 판매처에서 사진·가격·후기 확인</span>
       <span>3. 원재료 추천은 공식 표시사항까지 검증</span>
+    </section>
+
+    <section className={styles.videoAudit}>
+      <div><span>VIDEO CHECK</span><h2>이번 조사에서 실제로 본 영상</h2></div>
+      <p><b>{videoAudit?.content_checked_total ?? 0}</b><span>자막·내용 확인</span></p>
+      <p><b>{videoAudit?.evidence_total ?? 0}</b><span>근거로 연결</span></p>
+      <p className={(videoAudit?.recent_6m_total || 0) >= 6 ? styles.auditGood : styles.auditWeak}><b>{videoAudit?.recent_6m_total ?? 0}</b><span>최근 6개월 · 기준 {videoAudit?.cutoff_date || "기록 없음"}</span></p>
     </section>
 
     <section className={styles.feedbackShelf}>
