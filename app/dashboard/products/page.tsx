@@ -10,7 +10,11 @@ export const metadata: Metadata = {
 };
 
 export default async function ProductsPage() {
-  const feed = await dash.planningFeed();
+  const [feed, productFeedback] = await Promise.all([
+    dash.planningFeed(),
+    dash.productFeedback(),
+  ]);
   const day = "current" in feed ? feed.current : null;
-  return <ProductBoard day={day} />;
+  const feedback = "items" in productFeedback ? productFeedback : { items: [], requests: [] };
+  return <ProductBoard day={day} feedback={feedback} />;
 }

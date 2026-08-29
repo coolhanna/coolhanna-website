@@ -11,6 +11,26 @@
 .header h1 { margin: 3px 0 0; font-size: 21px; font-weight: 600; letter-spacing: -.02em; }
 .header p { margin: 0; color: var(--text-secondary); font-size: 10px; }
 
+.feedbackShelf { width: min(1180px, 100%); margin: 9px auto 12px; border: 1px solid #C9B8A8; background: #FFFDF8; }
+.shelfTop { padding: 11px 13px; display: flex; align-items: center; justify-content: space-between; gap: 16px; border-bottom: 1px solid var(--border); }
+.shelfTop > div > span { color: #8C624D; font-size: 8px; letter-spacing: .12em; }
+.shelfTop h2 { margin: 1px 0 2px; color: #7A4E3A; font-size: 16px; font-weight: 600; }
+.shelfTop p { margin: 0; color: var(--text-secondary); font-size: 10px; }
+.shelfTop strong { color: #55734E; font-size: 10px; font-weight: 500; text-align: right; }
+.archiveTabs { padding: 8px 10px 0; display: flex; gap: 6px; }
+.archiveTabs button, .archiveFilters button { border: 1px solid var(--border-strong); border-radius: 999px; background: var(--bg-card); color: var(--text-secondary); cursor: pointer; font-size: 9px; }
+.archiveTabs button { padding: 5px 10px; }
+.archiveTabs .activeArchive { border-color: #8C624D; background: #F5E9DF; color: #734630; }
+.archiveFilters { padding: 7px 10px; display: flex; flex-wrap: wrap; gap: 5px; }
+.archiveFilters button { padding: 3px 7px; }
+.archiveFilters .activeFilter { border-color: #667A90; background: #EDF1F4; color: #445A6C; }
+.archiveList { padding: 0 10px 10px; display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 7px; }
+.archiveList article { padding: 8px 9px; display: grid; gap: 2px; border: 1px solid var(--border); background: var(--bg-card); }
+.archiveList article span { color: #8C624D; font-size: 8px; }
+.archiveList article b { overflow: hidden; color: var(--text-main); font-size: 10px; font-weight: 600; text-overflow: ellipsis; white-space: nowrap; }
+.archiveList article em { color: var(--text-muted-new); font-size: 9px; font-style: normal; }
+.archiveList > p { grid-column: 1 / -1; margin: 0; padding: 12px; color: var(--text-secondary); font-size: 10px; text-align: center; }
+
 .section { width: min(1180px, 100%); margin: 9px auto 0; border: 1px solid var(--border-strong); background: var(--bg-card); }
 .buySection { --section-accent: #A56550; }
 .reviewSection { --section-accent: #667A90; }
@@ -25,6 +45,7 @@
 .card { --product-accent: #667A90; min-width: 0; padding: 12px 13px; border: 1px solid var(--border); border-left: 3px solid var(--product-accent); background: var(--bg-card); }
 .buyCard { --product-accent: #A56550; }
 .reviewCard { --product-accent: #667A90; }
+.excludedCard { opacity: .64; }
 .cardTop { display: flex; align-items: center; justify-content: space-between; gap: 8px; }
 .signal { padding: 2px 5px; border: 1px solid currentColor; border-radius: 3px; font-size: 9px; font-weight: 500; }
 .trend { color: #9A604B; }
@@ -33,8 +54,20 @@
 .score { color: var(--product-accent); font-size: 14px; font-weight: 500; }
 .brand { margin: 8px 0 1px !important; color: var(--text-muted-new) !important; font-size: 9px !important; }
 .card h3 { margin: 0 0 8px; font-size: 14px; font-weight: 600; line-height: 1.35; }
+.currentState { margin: -2px 0 8px; color: #8C624D; font-size: 9px; }
 .card p { margin: 5px 0; display: grid; grid-template-columns: 86px minmax(0, 1fr); gap: 8px; color: var(--text-secondary); font-size: 10px; line-height: 1.48; }
 .card p b { color: var(--product-accent); font-weight: 500; }
+.tagBox { margin-top: 9px; padding-top: 8px; border-top: 1px solid var(--border); }
+.tagBox > span { display: block; margin-bottom: 5px; color: var(--product-accent); font-size: 9px; }
+.tagBox > div { display: flex; flex-wrap: wrap; gap: 4px; }
+.tagBox button { padding: 3px 6px; border: 1px solid var(--border-strong); border-radius: 999px; background: var(--bg-card); color: var(--text-secondary); cursor: pointer; font-size: 8px; }
+.tagBox .selectedTag { border-color: var(--product-accent); background: color-mix(in srgb, var(--product-accent) 10%, white); color: var(--product-accent); }
+.actionGrid { margin-top: 8px; display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 5px; }
+.actionGrid button { min-height: 29px; padding: 5px 6px; border: 1px solid var(--border-strong); background: var(--bg-card); color: var(--text-secondary); cursor: pointer; font-size: 9px; line-height: 1.25; }
+.actionGrid button:disabled { cursor: default; opacity: .55; }
+.actionGrid .saveAction { border-color: #A56550; color: #8A4E3A; }
+.actionGrid .tryAction { border-color: #55734E; color: #44603E; }
+.actionGrid .excludeAction { border-color: #A9A9A9; color: #696969; }
 .card footer { margin-top: 9px; padding-top: 7px; display: flex; align-items: center; justify-content: space-between; gap: 10px; border-top: 1px solid var(--border); color: var(--text-muted-new); font-size: 9px; line-height: 1.4; }
 .card footer a { flex: 0 0 auto; color: var(--product-accent); font-weight: 500; text-underline-offset: 2px; }
 .card footer em { font-style: normal; }
@@ -43,6 +76,7 @@
 @media (max-width: 900px) {
   .page { padding: 12px 16px 28px; }
   .cardGrid { grid-template-columns: 1fr; }
+  .archiveList { grid-template-columns: repeat(2, minmax(0, 1fr)); }
 }
 
 @media (max-width: 620px) {
@@ -50,4 +84,8 @@
   .sectionTitle { grid-template-columns: 1fr auto; }
   .sectionTitle p { grid-column: 1 / -1; }
   .card p { grid-template-columns: 1fr; gap: 2px; }
+  .shelfTop { align-items: flex-start; flex-direction: column; }
+  .shelfTop strong { text-align: left; }
+  .archiveList { grid-template-columns: 1fr; }
+  .actionGrid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
 }

@@ -44,6 +44,8 @@ export const dash = {
     api<PlanningFeedResponse>(`/api/dashboard/planning-feed${date ? `?date=${encodeURIComponent(date)}` : ""}`),
   planningDecisions: () =>
     api<PlanningDecisionsResponse>("/api/dashboard/planning-decisions"),
+  productFeedback: () =>
+    api<PlanningProductFeedbackResponse>("/api/dashboard/planning-product-feedback"),
   // v6 — 일별 카드 통합 (오늘 + 내일)
   scheduleV2: () => api<any>("/api/dashboard/schedule-v2"),
   // 한나 데스크 — 수집기가 보낸 실시간 상태에서 미해결 항목만 조회
@@ -131,6 +133,33 @@ export interface PlanningProduct {
   caution?: string;
   evidence?: Array<{ label: string; note: string; url?: string }>;
   buy_links?: Array<{ label: string; url: string; checked_at?: string }>;
+}
+
+export interface PlanningProductFeedbackItem {
+  product_id: string;
+  status: "active" | "saved" | "try" | "excluded";
+  tags: string[];
+  note: string;
+  product: PlanningProduct & { source_date?: string };
+  updated_at: string;
+}
+
+export interface PlanningProductRequest {
+  id: string;
+  product_id: string;
+  request_type: "similar" | "better_ingredients";
+  instruction: string;
+  status: "pending" | "complete";
+  requested_at: string;
+  product: PlanningProduct & { source_date?: string };
+  result_ids?: string[];
+}
+
+export interface PlanningProductFeedbackResponse {
+  items: PlanningProductFeedbackItem[];
+  requests: PlanningProductRequest[];
+  events?: Array<Record<string, any>>;
+  error?: string;
 }
 
 export interface PlanningDay {
