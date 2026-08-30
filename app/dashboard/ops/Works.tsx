@@ -26,8 +26,8 @@ import { useRouter } from "next/navigation";
 import type { OpsGraph } from "./FlowGraphView";
 import { TILE, hashOf } from "./office/sprites";
 import {
-  BrewStation, ForgeStation, GatherStation, LAND, LoomStation, PostStation,
-  Rock, Tree,
+  BrewStation, Bush, Flowers, ForgeStation, GatherStation, LAND, Log, LoomStation,
+  PostStation, Rock, Signpost, Tree,
 } from "./office/world";
 import { Building, Fence, Foreground } from "./office/buildings";
 import { BELT_KEYFRAMES } from "./office/belt";
@@ -371,7 +371,8 @@ export default function Works({
     return {
       zones, idle, idleTop,
       width: widest,
-      height: idleTop + TILE * 3 + Math.ceil(idle.length / 5) * (TILE * 3.4) + TILE * 2,
+      // 사람을 안 그리니 마당은 집 한 채 높이면 된다
+      height: idleTop + TILE * 7.5,
     };
   }, [people]);
 
@@ -389,15 +390,9 @@ export default function Works({
       });
     });
     // 창고 — 집 앞마당에 옹기종기. 줄 세우지 않는다, 쉬는 사람들이니까.
-    // 창고 앞마당 — 간격이 좁으면 상자와 사람이 겹쳐 뒤죽박죽으로 보인다.
-    const per = 5;
-    layout.idle.forEach((p, i) => {
-      const j = hashOf(p.id + "rest");
-      map.set(p.id, {
-        x: PAD + TILE * 11 + (i % per) * (TILE * 4.4) + ((j % 11) - 5),
-        y: layout.idleTop + TILE * 2.2 + Math.floor(i / per) * (TILE * 3.4) + (((j >> 5) % 9) - 4),
-      });
-    });
+    // 꺼둔 것은 창고 '안'에 있다 — 자리를 안 준다.
+    // 마당에 앉혀 두면 아직 뭘 하는 것처럼 보인다 (한나 2026-08-30 "안 보이게").
+    // 명단은 옆 패널과 창고 문패 숫자로 본다.
     return map;
   }, [layout]);
 
@@ -602,6 +597,8 @@ export default function Works({
             <button className="wk-btn" onClick={() => { setZoom(fitZoom()); setPicked(null); }}>
               한눈에
             </button>
+            {/* 45초마다 저절로 새로 오지만, 지금 당장 보고 싶을 때가 있다 */}
+            <button className="wk-btn" onClick={() => router.refresh()}>새로고침</button>
             <span className="wk-cap" style={{ color: "#6B7A88" }}>×{(zoom || 1).toFixed(2)}</span>
           </div>
         </div>
@@ -666,9 +663,17 @@ export default function Works({
                 const v = hashOf(`seam${d.key}${k}`);
                 const gy = box.y + TILE * 3 + ((v >> 4) % Math.max(1, Math.floor(box.height - TILE * 5)));
                 const gx = mid - TILE * 0.6 + ((v % 9) - 4);
+                // 여섯 가지를 돌려 심는다. 나무만 세우면 경계마저 반복이 된다
+                // (한나 2026-08-30 "나무 말고 다른 것도 만들어줘").
+                const kind = v % 6;
                 return (
                   <g key={`seam-${d.key}-${k}`} transform={`translate(${gx},${gy})`}>
-                    {v % 3 === 0 ? <Rock seed={v} /> : <Tree seed={v} />}
+                    {kind === 0 ? <Tree seed={v} />
+                      : kind === 1 ? <Bush seed={v} />
+                      : kind === 2 ? <Log seed={v} />
+                      : kind === 3 ? <Rock seed={v} />
+                      : kind === 4 ? <Flowers seed={v} />
+                      : <Signpost seed={v} />}
                   </g>
                 );
               });
@@ -692,7 +697,7 @@ export default function Works({
                 <g transform={`translate(${box.x + box.width - TILE * 7},${box.y + TILE * 0.3})`}>
                   <Building kind={d.kind} w={TILE * 6} h={TILE * 3}
                             alive={!nightfall && members.some((p) => p.status === "돌음")}
-                            label={d.name} />
+                            label={`${d.name} ${members.length}`} />
                 </g>
 
                 {/* 바닥 잡초·돌 — 단색 바닥은 잔디밭이 아니라 색종이로 보인다 */}
@@ -716,24 +721,25 @@ export default function Works({
                   );
                 })}
 
-                {d.craft === "gatherer"
-                  ? <g transform={`translate(${box.x + 4},${box.y + box.height - TILE * 3})`}>
-                      <Tree seed={hashOf(d.key)} /></g>
-                  : <g transform={`translate(${box.x + 6},${box.y + box.height - TILE * 1.8})`}>
-                      <Rock seed={hashOf(d.key)} /></g>}
+                {(() => {
+                  const v = hashOf(d.key + "corner");
+                  const at = `translate(${box.x + 6},${box.y + box.height - TILE * 2.6})`;
+                  return (
+                    <g transform={at}>
+                      {v % 4 === 0 ? <Tree seed={v} />
+                        : v % 4 === 1 ? <Bush seed={v} />
+                        : v % 4 === 2 ? <Flowers seed={v} />
+                        : <Log seed={v} />}
+                    </g>
+                  );
+                })()}
 
-                {/* 이름표 — 바탕 칩을 깔아야 사람·건물 위에서도 읽힌다 */}
-                <g transform={`translate(${box.x + 4},${box.y + 5})`}>
-                  <rect width={TILE * 8.6} height={TILE * 2.1} rx={3}
-                        fill="#1F2A22" opacity={0.62} />
-                  <text x={7} y={14} fontSize={11} className="wk-cap"
-                        fill="#F2E8CE" fontWeight={700}>
-                    {d.name} · {members.length}
-                  </text>
-                  <text x={7} y={26} fontSize={9.5} fill="#C9D4BC" opacity={0.9}>
-                    {d.hint}
-                  </text>
-                </g>
+                {/* 이름패는 없앴다 — 건물 간판에 이미 이름이 있어 중복이었다
+                    (한나 2026-08-30). 숫자와 하는 일은 간판 아래 한 줄로. */}
+                <text x={box.x + box.width - TILE * 4} y={box.y + TILE * 3.9}
+                      fontSize={9.5} textAnchor="middle" fill="#2E3A2C" opacity={0.8}>
+                  {members.length}명 · {d.hint}
+                </text>
               </g>
             ))}
 
@@ -767,17 +773,18 @@ export default function Works({
             <g transform={`translate(0,${layout.idleTop})`}>
               <Fence w={W} seed={3} />
             </g>
-            <g transform={`translate(${PAD},${layout.idleTop + TILE * 0.6})`}>
-              <Building kind="barn" w={TILE * 7} h={TILE * 4.6} alive={false} label="창고" />
+            <g transform={`translate(${PAD},${layout.idleTop + TILE * 1.2})`}>
+              <Building kind="barn" w={TILE * 7} h={TILE * 4.2} alive={false}
+                        label={`창고 ${layout.idle.length}`} />
             </g>
             <g transform={`translate(${PAD + TILE * 8},${layout.idleTop + TILE * 0.7})`}>
               <rect width={TILE * 17} height={TILE * 2.1} rx={3} fill="#1F2A22" opacity={0.6} />
               <text x={8} y={15} fontSize={11.5} className="wk-cap"
                     fill="#F2E8CE" fontWeight={700}>
-                창고 · 꺼둔 것 {layout.idle.length}
+                꺼둔 것 {layout.idle.length} — 문 닫고 안에 있다
               </text>
               <text x={8} y={27} fontSize={9.5} fill="#C9D4BC" opacity={0.9}>
-                지금은 아무 일도 안 한다. 다시 켜면 자기 갈래로 돌아간다.
+                다시 켜면 자기 갈래로 돌아간다. 명단은 옆 '창고 · 꺼둔 것'에서 본다.
               </text>
             </g>
 
@@ -861,7 +868,10 @@ export default function Works({
                       </g>
                     )}
 
-                    {p.trouble !== "none" && p.trouble !== "rookie" && (
+                    {/* ✋는 마을에 안 띄운다 — 고장이 아닌데 말풍선 넷이 화면을 덮었다.
+                        옆 '네 손이 필요한 자리' 칸이 그 역할을 한다. */}
+                    {p.trouble !== "none" && p.trouble !== "rookie"
+                      && p.trouble !== "calling" && (
                       <g transform={`translate(${TILE * 1.6},${TILE * -1.9})`} className="wk-alert">
                         <rect x={2} y={3} width={86} height={19} rx={3} fill="#000" opacity={0.22} />
                         <rect width={86} height={19} rx={3} fill="#FFF8E6"

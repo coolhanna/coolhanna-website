@@ -261,6 +261,73 @@ export function Rock({ seed }: { seed: number }) {
   );
 }
 
+/** 수풀 — 나무보다 낮아 시야를 안 막으면서 경계를 만든다. */
+export function Bush({ seed }: { seed: number }) {
+  const berries = seed % 3 === 0;
+  return (
+    <g shapeRendering="crispEdges">
+      <ellipse cx={TILE * 0.8} cy={TILE * 1.15} rx={TILE * 0.8} ry={3} fill={LAND.ink} opacity={0.16} />
+      <rect x={TILE * 0.1} y={TILE * 0.45} width={TILE * 1.4} height={TILE * 0.65} fill="#43704A" />
+      <rect x={TILE * 0.3} y={TILE * 0.2} width={TILE} height={TILE * 0.5} fill="#54885A" />
+      <rect x={TILE * 0.55} y={TILE * 0.05} width={TILE * 0.5} height={TILE * 0.3} fill="#65A06A" />
+      {berries && (
+        <>
+          <rect x={TILE * 0.45} y={TILE * 0.5} width={3} height={3} fill="#C2412B" />
+          <rect x={TILE * 0.95} y={TILE * 0.7} width={3} height={3} fill="#C2412B" />
+        </>
+      )}
+    </g>
+  );
+}
+
+/** 통나무 — 베어 눕힌 나무. 앉기도 하고 길을 막기도 한다. */
+export function Log({ seed }: { seed: number }) {
+  const long = seed % 2 === 0;
+  const w = long ? TILE * 2 : TILE * 1.4;
+  return (
+    <g shapeRendering="crispEdges">
+      <ellipse cx={w / 2} cy={TILE * 0.85} rx={w / 2} ry={3} fill={LAND.ink} opacity={0.18} />
+      <rect x={0} y={TILE * 0.3} width={w} height={TILE * 0.5} fill="#7A5836" />
+      <rect x={0} y={TILE * 0.3} width={w} height={4} fill="#966E45" />
+      <rect x={w - 5} y={TILE * 0.3} width={5} height={TILE * 0.5} fill="#B08652" />
+      <rect x={w - 4} y={TILE * 0.45} width={3} height={3} fill="#8A6440" />
+    </g>
+  );
+}
+
+/** 들꽃 — 아무 기능 없다. 마을이 살아 있어 보이려고 있다. */
+export function Flowers({ seed }: { seed: number }) {
+  const hue = ["#E0C34A", "#D9718A", "#C7A2D8"][seed % 3];
+  return (
+    <g shapeRendering="crispEdges">
+      {[0, 1, 2].map((i) => {
+        const dx = i * 7 + (seed >> (i * 2)) % 4;
+        const dy = ((seed >> (i * 3)) % 5) + TILE * 0.4;
+        return (
+          <g key={i}>
+            <rect x={dx + 1} y={dy} width={2} height={7} fill="#4E7A46" />
+            <rect x={dx} y={dy - 3} width={4} height={4} fill={hue} />
+          </g>
+        );
+      })}
+    </g>
+  );
+}
+
+/** 표지판 — 갈림길에 선다. 글자는 없다, 여기서 갈린다는 것만 말한다. */
+export function Signpost({ seed }: { seed: number }) {
+  return (
+    <g shapeRendering="crispEdges">
+      <ellipse cx={TILE * 0.5} cy={TILE * 1.9} rx={7} ry={3} fill={LAND.ink} opacity={0.18} />
+      <rect x={TILE * 0.4} y={TILE * 0.3} width={4} height={TILE * 1.6} fill="#6B4A2A" />
+      <rect x={seed % 2 ? TILE * 0.5 : -TILE * 0.3} y={TILE * 0.35}
+            width={TILE * 1.1} height={TILE * 0.45} fill="#A8794C" />
+      <rect x={seed % 2 ? TILE * 0.5 : -TILE * 0.3} y={TILE * 0.35}
+            width={TILE * 1.1} height={3} fill="#C09468" />
+    </g>
+  );
+}
+
 /** 아치문 — 구역 사이 통로. 벽 대신 문이라야 오갈 수 있어 보인다. */
 export function Archway({ h }: { h: number }) {
   return (
