@@ -438,7 +438,6 @@ export default function Works({
   // 같이 세면 진짜 고장이 파묻힌다 — 한나 스크린샷에서 6건 중 4건이 그거였다.
   const troubled = people.filter(
     (p) => p.trouble !== "none" && p.trouble !== "rookie" && p.trouble !== "calling");
-  const needsHand = people.filter((p) => p.trouble === "calling");
   const rookies = people.filter((p) => p.trouble === "rookie");
   const nightfall = working === 0 || sky.dim <= 0.7;
 
@@ -885,7 +884,8 @@ export default function Works({
                     {/* 말풍선 대신 이모티콘 하나. 글자를 붙이면 폭이 86px이라
                         옆 사람을 덮었다 (한나 2026-08-30 "이모티콘만 표시해줘").
                         뜻은 마우스를 올리면 나온다. */}
-                    {p.trouble !== "none" && p.trouble !== "rookie" && (
+                    {p.trouble !== "none" && p.trouble !== "rookie"
+                      && p.trouble !== "calling" && (
                       <g transform={`translate(${TILE * 1.55},${TILE * -1.0})`}
                          className="wk-alert">
                         <circle r={9} fill="#FFF8E6"
@@ -909,7 +909,6 @@ export default function Works({
                         <text x={6} y={10.5} fontSize={9.5} fontWeight={800} fill="#2E2822">
                           {p.short.length > 8 ? p.short.slice(0, 8) + "…" : p.short}
                         </text>
-                        {p.manual && <text x={TILE * (small ? 3.9 : 4.5)} y={10.5} fontSize={9}>✋</text>}
                         <text x={6} y={21} fontSize={7.5} fill="#7A6E58">
                           {p.name} · {p.grade}{p.xp ? ` · ${p.xp}회` : ""}
                         </text>
@@ -963,7 +962,7 @@ export default function Works({
         <div className="mt-2 flex flex-wrap gap-x-4 gap-y-1 text-[11px]"
              style={{ color: "var(--text-muted-new)" }}>
           <span>발밑에 금빛 물결 = 방금 그 자동화가 일했다</span>
-          <span>❗ 쓰러짐 · 💤 일 없음 · ✋ 네 손이 필요</span>
+          <span>❗ 쓰러짐 · 💤 일 없음</span>
           <span>초록 점 = 지도에 연결이 안 적힌 잡</span>
           <span>이름은 평소 숨김 — 올리거나 켜서 본다</span>
         </div>
@@ -982,27 +981,6 @@ export default function Works({
                   <button onClick={() => focus(p.id)} className="text-left text-[11.5px] leading-snug">
                     <span className="font-bold">{TROUBLE_MARK[p.trouble].mark} {p.short}</span>
                     <span style={{ color: "#8A2E1A" }}> — {TROUBLE_MARK[p.trouble].say}</span>
-                  </button>
-                </li>
-              ))}
-            </ul>
-          </div>
-        )}
-
-        {needsHand.length > 0 && (
-          <div className="wk-console p-3" style={{ background: "#F6EEDC" }}>
-            <div className="wk-cap mb-1" style={{ color: "#7A5A1A", fontWeight: 700 }}>
-              네 손이 필요한 자리 · {needsHand.length}
-            </div>
-            <p className="text-[11.5px] leading-snug mb-1.5" style={{ color: "#4A4030" }}>
-              고장이 아니다. 원래 네가 해야 도는 자리다 — 안 하면 그날 사슬이 거기서 끊긴다.
-            </p>
-            <ul className="flex flex-col gap-0.5">
-              {needsHand.map((h) => (
-                <li key={h.id}>
-                  <button onClick={() => focus(h.id)} className="text-left text-[12px] leading-snug">
-                    <span className="font-bold">✋ {h.short}</span>
-                    <span style={{ color: "#7A6A4A" }}> — {h.note || h.label}</span>
                   </button>
                 </li>
               ))}
@@ -1058,7 +1036,7 @@ export default function Works({
                               style={{ width: 6, height: 6,
                                        background: DOT[p.status] ?? "#7A8B6A" }} />
                         <span className="font-semibold whitespace-nowrap">{p.short}</span>
-                        {p.manual && <span aria-hidden>✋</span>}
+
                         {p.trouble !== "none" && p.trouble !== "rookie" && (
                           <span aria-hidden>{TROUBLE_MARK[p.trouble].mark}</span>
                         )}
@@ -1073,7 +1051,7 @@ export default function Works({
             );
           })}
           <p className="text-[10.5px] mt-1" style={{ color: "#6B7A88" }}>
-            눌러서 마을에서 찾는다 · <b>G</b> = 코덱스 · ✋ = 네 손이 필요 · 점 색 = 돌음/조용/멈춤
+            눌러서 마을에서 찾는다 · <b>G</b> = 코덱스 · 점 색 = 돌음/조용/멈춤
           </p>
         </div>
 
