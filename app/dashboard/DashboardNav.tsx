@@ -20,6 +20,7 @@ const TABS = [
   { label: "먹은 것", href: "/dashboard/meals" },
   { label: "생각", href: "/dashboard/thoughts" },
   { label: "건강", href: "/dashboard/health" },
+  { label: "관제탑", href: "/dashboard/ops" },
 ];
 
 export default function DashboardNav() {
