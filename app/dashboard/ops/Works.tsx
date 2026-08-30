@@ -124,6 +124,66 @@ const BUS_ALIAS: Record<string, string> = {
 const PULSE_MS = 12_000;      // 반짝이는 시간. 짐꾼이 길을 다 건널 만큼.
 const REFRESH_MS = 45_000;    // 새 소식을 가지러 가는 주기.
 
+
+const BLOCK = TILE * 1.5;          // 지형 타일. 작을수록 곱지만 도형이 많아진다
+const BASE_GROUND = "#6F8A57";     // 마을 전체를 덮는 잔디
+
+/** 타일 격자에 그린 유기적 얼룩 — 매끈한 타원 대신 들쭉날쭉한 픽셀 가장자리. */
+function Patch({ x, y, w, h, color, seed, opacity = 1 }: {
+  x: number; y: number; w: number; h: number;
+  color: string; seed: string; opacity?: number;
+}) {
+  const cols = Math.ceil(w / BLOCK) + 4;
+  const rows = Math.ceil(h / BLOCK) + 4;
+  const ox = x - BLOCK * 2;
+  const oy = y - BLOCK * 2;
+  const cx = (cols - 1) / 2;
+  const cy = (rows - 1) / 2;
+  const tiles: Array<[number, number]> = [];
+  for (let r = 0; r < rows; r += 1) {
+    for (let c = 0; c < cols; c += 1) {
+      const nx = (c - cx) / (cols / 2);
+      const ny = (r - cy) / (rows / 2);
+      // 해시 잡음으로 반지름을 흔든다 — 매끈한 타원이 아니라 손으로 뜯은 가장자리
+      const noise = ((hashOf(`${seed}:${r}:${c}`) % 100) / 100 - 0.5) * 0.34;
+      if (Math.hypot(nx, ny) + noise < 0.92) tiles.push([c, r]);
+    }
+  }
+  return (
+    <g opacity={opacity} shapeRendering="crispEdges">
+      {tiles.map(([c, r], i) => (
+        <rect key={i} x={ox + c * BLOCK} y={oy + r * BLOCK}
+              width={BLOCK + 0.5} height={BLOCK + 0.5} fill={color} />
+      ))}
+    </g>
+  );
+}
+
+/** 흙길 — 구역과 구역 사이를 지난다. 길이 곧 경계다. */
+function Trail({ from, to, seed }: {
+  from: { x: number; y: number }; to: { x: number; y: number }; seed: string;
+}) {
+  const steps = Math.max(4, Math.round(Math.hypot(to.x - from.x, to.y - from.y) / BLOCK));
+  const tiles: Array<[number, number]> = [];
+  for (let i = 0; i <= steps; i += 1) {
+    const t = i / steps;
+    const wobble = ((hashOf(`${seed}w${i}`) % 5) - 2) * BLOCK * 0.5;
+    const px = from.x + (to.x - from.x) * t;
+    const py = from.y + (to.y - from.y) * t + wobble;
+    tiles.push([Math.round(px / BLOCK) * BLOCK, Math.round(py / BLOCK) * BLOCK]);
+    if (hashOf(`${seed}b${i}`) % 3 === 0) {
+      tiles.push([Math.round(px / BLOCK) * BLOCK, Math.round(py / BLOCK) * BLOCK + BLOCK]);
+    }
+  }
+  return (
+    <g shapeRendering="crispEdges" opacity={0.55}>
+      {tiles.map(([px, py], i) => (
+        <rect key={i} x={px} y={py} width={BLOCK + 0.5} height={BLOCK + 0.5} fill="#9A8A6E" />
+      ))}
+    </g>
+  );
+}
+
 export default function Works({
   graph, feed, codex = [], chains = [], growth,
 }: {
@@ -285,17 +345,27 @@ export default function Works({
 
     const zones: Array<{ d: typeof DISTRICTS[number]; members: Worker[]; cols: number;
                          box: { x: number; y: number; width: number; height: number } }> = [];
-    let widest = 0;
-    for (const band of bands) {
+
+    // 줄마다 자연 폭이 다르면 짧은 줄 끝에 검은 여백이 남는다 (한나 스크린샷).
+    // 제일 긴 줄에 맞추고, 남는 폭은 구역 사이 간격으로 나눠 준다 —
+    // 칸을 늘리는 대신 사이를 벌리면 '떨어져 있는 마을'이 된다.
+    const natural = bands.map((b) =>
+      b.items.reduce((sum, c) => sum + c.cols * CELL_W + PAD * 2, 0));
+    const widest = Math.max(...natural.map((n, i) => n + (bands[i].items.length - 1) * TILE))
+      + PAD * 2;
+
+    bands.forEach((band, bi) => {
+      const gaps = Math.max(1, band.items.length - 1);
+      const spare = widest - PAD * 2 - natural[bi];
+      const gap = Math.max(TILE, spare / gaps);
       let x = PAD;
       for (const c of band.items) {
         const width = c.cols * CELL_W + PAD * 2;
         zones.push({ d: c.d, members: c.members, cols: c.cols,
                      box: { x, y: band.top, width, height: band.height } });
-        x += width + TILE;
+        x += width + gap;
       }
-      widest = Math.max(widest, x);
-    }
+    });
 
     const idleTop = top + TILE * 2.2;
     return {
@@ -567,15 +637,55 @@ export default function Works({
               {sky.name}
             </text>
             <rect x={0} y={SKY_H - 5} width={W} height={5} fill={LAND.wood} />
+
+            {/* 땅은 한 장이다. 구역은 그 위에 번진 얼룩으로만 나뉜다. */}
+            <rect x={0} y={SKY_H} width={W} height={H - SKY_H}
+                  fill={BASE_GROUND} opacity={sky.dim} shapeRendering="crispEdges" />
+            {/* 잔디결 — 단색은 잔디밭이 아니라 색종이다 */}
+            {Array.from({ length: 260 }).map((_, i) => {
+              const v = hashOf(`turf${i}`);
+              return <rect key={i} x={v % Math.max(1, Math.floor(W))}
+                           y={SKY_H + ((v >> 8) % Math.max(1, Math.floor(H - SKY_H)))}
+                           width={3} height={2} fill="#7E9A62" opacity={0.5}
+                           shapeRendering="crispEdges" />;
+            })}
+            {layout.zones.map(({ d, box }) => (
+              <Patch key={`p-${d.key}`} x={box.x} y={box.y + TILE}
+                     w={box.width} h={box.height - TILE * 1.5}
+                     color={d.ground} seed={d.key} opacity={nightfall ? 0.62 : 0.92} />
+            ))}
+            {/* 길 — 구역 사이를 지난다. 선을 긋지 않아도 여기가 경계라는 게 보인다. */}
+            {/* 구역 사이 틈의 나무·바위 — 담장을 안 쳐도 여기가 경계라는 게 보인다 */}
+            {layout.zones.slice(0, -1).flatMap(({ d, box }, i) => {
+              const next = layout.zones[i + 1];
+              if (!next || next.box.y !== box.y) return [];
+              const gapW = next.box.x - (box.x + box.width);
+              if (gapW < TILE * 1.5) return [];
+              const mid = box.x + box.width + gapW / 2;
+              return Array.from({ length: 3 }).map((_, k) => {
+                const v = hashOf(`seam${d.key}${k}`);
+                const gy = box.y + TILE * 3 + ((v >> 4) % Math.max(1, Math.floor(box.height - TILE * 5)));
+                const gx = mid - TILE * 0.6 + ((v % 9) - 4);
+                return (
+                  <g key={`seam-${d.key}-${k}`} transform={`translate(${gx},${gy})`}>
+                    {v % 3 === 0 ? <Rock seed={v} /> : <Tree seed={v} />}
+                  </g>
+                );
+              });
+            })}
+
+            {layout.zones.slice(0, -1).map(({ d, box }, i) => {
+              const next = layout.zones[i + 1];
+              // 같은 줄 안에서만 잇는다. 줄을 건너뛰면 대각선 길이 마을을 가로지른다.
+              if (!next || next.box.y !== box.y) return null;
+              return (
+                <Trail key={`t-${d.key}`} seed={d.key}
+                       from={{ x: box.x + box.width - TILE, y: box.y + box.height * 0.62 }}
+                       to={{ x: next.box.x + TILE, y: next.box.y + next.box.height * 0.62 }} />
+              );
+            })}
             {layout.zones.map(({ d, members, box }) => (
               <g key={d.key}>
-                <rect x={box.x - PAD / 2} y={box.y} width={box.width + PAD / 2}
-                      height={box.height} fill={d.ground}
-                      opacity={nightfall ? 0.72 : 1} shapeRendering="crispEdges" />
-                {/* 구역 테두리 — 갈래가 여덟이면 색만으론 경계가 안 읽힌다 */}
-                <rect x={box.x - PAD / 2} y={box.y} width={box.width + PAD / 2}
-                      height={box.height} fill="none" stroke="#4A4034"
-                      strokeWidth={1.5} opacity={0.35} shapeRendering="crispEdges" />
 
                 {/* 건물은 구역 안에 앉힌다. 밖으로 걸치면 윗줄 건물이 아랫줄 제목을 덮는다
                     (한나 스크린샷: 우편소·도서관·약방 이름이 가려졌다). */}
@@ -586,11 +696,11 @@ export default function Works({
                 </g>
 
                 {/* 바닥 잡초·돌 — 단색 바닥은 잔디밭이 아니라 색종이로 보인다 */}
-                {Array.from({ length: 18 }).map((_, i) => {
+                {Array.from({ length: 14 }).map((_, i) => {
                   const v = hashOf(`${d.key}sp${i}`);
-                  const gx = box.x + 6 + (v % Math.max(1, Math.floor(box.width - 14)));
-                  const gy = box.y + TILE * 1.2
-                    + ((v >> 7) % Math.max(1, Math.floor(box.height - TILE * 2)));
+                  const gx = box.x + 16 + (v % Math.max(1, Math.floor(box.width - 32)));
+                  const gy = box.y + TILE * 2.4
+                    + ((v >> 7) % Math.max(1, Math.floor(box.height - TILE * 4)));
                   if (d.craft === "gatherer") {
                     return (
                       <g key={i} shapeRendering="crispEdges">
@@ -629,8 +739,23 @@ export default function Works({
 
             {/* 창고 — 꺼둔 것을 한 채에 모은다 (한나 2026-08-30 "집 같은 곳에 모두 넣어두고").
                 줄 세워 늘어놓으면 '아직 뭔가 하는 줄' 같아 보인다. 문 닫힌 집 앞이 맞다. */}
-            <rect x={0} y={layout.idleTop} width={W} height={H - layout.idleTop}
+            <rect x={0} y={layout.idleTop + BLOCK} width={W} height={H - layout.idleTop - BLOCK}
                   fill="#8E8578" opacity={sky.dim} shapeRendering="crispEdges" />
+            {/* 마당 가장자리를 흩뜨린다 — 자로 그은 선은 마을에 없다 */}
+            {Array.from({ length: Math.ceil(W / BLOCK) }).map((_, c) => {
+              const v = hashOf(`yardedge${c}`);
+              return (
+                <g key={c} shapeRendering="crispEdges">
+                  <rect x={c * BLOCK} y={layout.idleTop + (v % 2 ? 0 : BLOCK * 0.5)}
+                        width={BLOCK + 0.5} height={BLOCK} fill="#8E8578" opacity={sky.dim} />
+                  {v % 3 === 0 && (
+                    <rect x={c * BLOCK} y={layout.idleTop - BLOCK * 0.5}
+                          width={BLOCK + 0.5} height={BLOCK * 0.5} fill="#8E8578"
+                          opacity={sky.dim * 0.8} />
+                  )}
+                </g>
+              );
+            })}
             {Array.from({ length: Math.ceil(W / (TILE * 2)) }).map((_, c) => {
               const v = hashOf(`rest${c}`);
               if (v % 3) return null;
