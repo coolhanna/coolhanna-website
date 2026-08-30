@@ -47,8 +47,10 @@ export interface CodexJob {
 export interface ChainLite { name: string; steps: Array<{ id: string }> }
 
 // ── 공간 ────────────────────────────────────────────────────────
-const CELL_W = TILE * 7;
-const CELL_H = TILE * 7;
+// 칸을 좁힌다. 넓게 잡으면 마을이 4000px이 되고, 폭에 맞추느라 ×0.42로 줄어
+// 사람이 13px짜리 점이 된다 (한나 2026-08-30 "너무 작아서 보이지도 않아").
+const CELL_W = TILE * 4.4;
+const CELL_H = TILE * 4.8;
 const SKY_H = TILE * 5.5;
 const PAD = TILE * 1.5;
 
@@ -263,7 +265,8 @@ export default function Works({
     const cells = DISTRICTS.map((d) => {
       const members = live.filter((p) => p.district === d.key);
       // 사람 수에 맞춰 열을 잡는다. 고정하면 적은 구역이 옆으로도 텅 빈다.
-      const cols = Math.max(2, Math.min(4, Math.ceil(Math.sqrt(members.length || 1))));
+      // 최대 3열. 넷을 넘기면 구역 하나가 화면을 다 먹는다.
+      const cols = Math.max(2, Math.min(3, Math.ceil(Math.sqrt(members.length || 1))));
       return { d, members, cols, rows: Math.max(1, Math.ceil(members.length / cols)) };
     });
 
@@ -275,7 +278,7 @@ export default function Works({
       // 제일 큰 구역에 맞추되 상한을 둔다 — 7명짜리 옆에 14명짜리가 오면
       // 작은 구역이 세로로 텅 빈다 (한나 스크린샷에서 그랬다).
       const need = Math.max(...items.map((c) => c.rows));
-      const height = Math.min(need, 4) * CELL_H + TILE * 5.4;
+      const height = need * CELL_H + TILE * 5.4;
       bands.push({ items, height, top });
       top += height;
     }
@@ -672,7 +675,8 @@ export default function Works({
                 // 방금 버스에 소식을 남긴 사람 — 이때만 진짜로 뭔가 일어난 것이다.
                 const live = isPulsing(p.id);
                 const small = p.tier !== 1;
-                const scale = small ? 0.95 : 1.35;
+                // 칸이 좁아졌으니 사람은 오히려 키운다. 읽히는 게 먼저다.
+                const scale = small ? 1.1 : 1.35;
                 return (
                   <g key={p.id} transform={`translate(${at.x},${at.y})`}
                      opacity={faded ? 0.22 : nightfall ? 0.8 : 1}
@@ -891,25 +895,27 @@ export default function Works({
             return (
               <div key={key} className="mb-2">
                 <div className="wk-cap" style={{ color: "#5A6B7A" }}>{title} {group.length}</div>
-                <ul className="flex flex-col">
+                <ul className="flex flex-wrap gap-1 mt-1">
                   {group.map((p) => (
                     <li key={p.id}>
                       <button onClick={() => focus(p.id)}
-                              className="w-full flex items-start gap-2 py-0.5 px-1 text-left"
+                              title={`${p.grade} · ${p.xp}회${p.byCodex ? " · 코덱스" : ""}`}
+                              className="flex items-center gap-1 px-1.5 py-[3px] text-[12px] leading-none"
                               style={{ opacity: ties && !ties.has(p.id) ? 0.3 : 1,
-                                       background: picked === p.id ? "#C9D8E6" : "transparent" }}>
-                        <span aria-hidden className="inline-block shrink-0 mt-[6px]"
+                                       borderRadius: 3,
+                                       border: "1px solid #B9C7D4",
+                                       background: picked === p.id ? "#C9D8E6" : "#F4F7FA" }}>
+                        <span aria-hidden className="inline-block shrink-0"
                               style={{ width: 6, height: 6,
                                        background: DOT[p.status] ?? "#7A8B6A" }} />
-                        <span className="min-w-0">
-                          <span className="block text-[11.5px] font-semibold truncate">
-                            {p.short}{p.manual && " ✋"}
-                            {p.trouble !== "none" && ` ${TROUBLE_MARK[p.trouble].mark}`}
-                          </span>
-                          <span className="block text-[10px] truncate" style={{ color: "#6B7A88" }}>
-                            {p.grade} · {p.xp}회{p.byCodex ? " · 코덱스" : ""}
-                          </span>
-                        </span>
+                        <span className="font-semibold whitespace-nowrap">{p.short}</span>
+                        {p.manual && <span aria-hidden>✋</span>}
+                        {p.trouble !== "none" && p.trouble !== "rookie" && (
+                          <span aria-hidden>{TROUBLE_MARK[p.trouble].mark}</span>
+                        )}
+                        {p.byCodex && (
+                          <span style={{ color: "#8A96A2", fontSize: 10 }}>G</span>
+                        )}
                       </button>
                     </li>
                   ))}
@@ -917,6 +923,9 @@ export default function Works({
               </div>
             );
           })}
+          <p className="text-[10.5px] mt-1" style={{ color: "#6B7A88" }}>
+            눌러서 마을에서 찾는다 · <b>G</b> = 코덱스 · ✋ = 네 손이 필요 · 점 색 = 돌음/조용/멈춤
+          </p>
         </div>
 
         {picked && byId.get(picked) && (
