@@ -141,16 +141,25 @@ export function Building({
       )}
 
       {/* 간판 */}
-      {label && (
-        <g>
-          <rect x={w / 2 - TILE * 1.9} y={bodyY - TILE * 0.9} width={TILE * 3.8} height={TILE * 0.95}
-                rx={2} fill="#EFE2C4" stroke={ROOF.beam} strokeWidth={1.2} />
-          <text x={w / 2} y={bodyY - TILE * 0.22} fontSize={10} fontWeight={800}
-                textAnchor="middle" fill={LAND.ink}>
-            {label}
-          </text>
-        </g>
-      )}
+      {label && (() => {
+        // 판 크기를 글자 수에 맞춘다. 고정 폭이면 긴 이름이 판을 넘친다
+        // (한나 2026-08-30: "귀 기울이는 곳 7"이 삐져나왔다).
+        // 한글은 한 자가 폰트 크기만큼, 숫자·공백은 절반쯤 먹는다.
+        const units = [...label].reduce(
+          (n, ch) => n + (/[0-9A-Za-z ·]/.test(ch) ? 0.55 : 1), 0);
+        const size = units > 9 ? 9 : 10;
+        const sw = Math.max(TILE * 3.8, units * size + TILE * 0.9);
+        return (
+          <g>
+            <rect x={w / 2 - sw / 2} y={bodyY - TILE * 0.9} width={sw} height={TILE * 0.95}
+                  rx={2} fill="#EFE2C4" stroke={ROOF.beam} strokeWidth={1.2} />
+            <text x={w / 2} y={bodyY - TILE * 0.22} fontSize={size} fontWeight={800}
+                  textAnchor="middle" fill={LAND.ink}>
+              {label}
+            </text>
+          </g>
+        );
+      })()}
     </g>
   );
 }

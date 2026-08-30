@@ -404,7 +404,8 @@ export default function Works({
   const fitZoom = () => {
     const el = scroller.current;
     if (!el || !W) return 1;
-    return Math.max(0.25, Math.min(1, (el.clientWidth - 8) / W));
+    // 소수점 반올림으로 1~2px이 남으면 그게 검은 띠가 된다. 넉넉히 뺀다.
+    return Math.max(0.25, Math.min(1, (el.clientWidth - 14) / W));
   };
   useEffect(() => {
     if (fitted || !W) return;
@@ -603,8 +604,10 @@ export default function Works({
           </div>
         </div>
 
+        {/* 배경을 땅 색으로 둔다 — 배율이 딱 안 떨어질 때 남는 띠가
+            검은 벽처럼 보였다 (한나 2026-08-30 "옆에 선이 남아"). */}
         <div ref={scroller} className="overflow-auto wk-console"
-             style={{ background: nightfall ? "#141A16" : "#1C211D", borderTop: 0,
+             style={{ background: nightfall ? "#2A3327" : BASE_GROUND, borderTop: 0,
                       maxHeight: "78vh" }}>
           <svg viewBox={`0 0 ${W} ${H}`}
                width={W * (zoom || 1)} height={H * (zoom || 1)}
@@ -652,6 +655,24 @@ export default function Works({
                      color={d.ground} seed={d.key} opacity={nightfall ? 0.62 : 0.92} />
             ))}
             {/* 길 — 구역 사이를 지난다. 선을 긋지 않아도 여기가 경계라는 게 보인다. */}
+            {/* 들풀·꽃·돌 — 아무 기능 없다. 이게 있어야 땅이 맨바닥으로 안 보인다.
+                사람보다 먼저 그려서 밟고 선 것처럼 보이게 한다. */}
+            {Array.from({ length: 90 }).map((_, i) => {
+              const v = hashOf(`deco${i}`);
+              const gx = v % Math.max(1, Math.floor(W - TILE * 2));
+              const gy = SKY_H + TILE * 2
+                + ((v >> 9) % Math.max(1, Math.floor(layout.idleTop - SKY_H - TILE * 3)));
+              const kind = v % 10;
+              return (
+                <g key={`deco-${i}`} transform={`translate(${gx},${gy})`} opacity={0.95}>
+                  {kind < 4 ? <Flowers seed={v} />
+                    : kind < 7 ? <Rock seed={v} />
+                    : kind < 9 ? <Bush seed={v} />
+                    : <Log seed={v} />}
+                </g>
+              );
+            })}
+
             {/* 구역 사이 틈의 나무·바위 — 담장을 안 쳐도 여기가 경계라는 게 보인다 */}
             {layout.zones.slice(0, -1).flatMap(({ d, box }, i) => {
               const next = layout.zones[i + 1];
@@ -734,12 +755,8 @@ export default function Works({
                   );
                 })()}
 
-                {/* 이름패는 없앴다 — 건물 간판에 이미 이름이 있어 중복이었다
-                    (한나 2026-08-30). 숫자와 하는 일은 간판 아래 한 줄로. */}
-                <text x={box.x + box.width - TILE * 4} y={box.y + TILE * 3.9}
-                      fontSize={9.5} textAnchor="middle" fill="#2E3A2C" opacity={0.8}>
-                  {members.length}명 · {d.hint}
-                </text>
+                {/* 이름·숫자는 간판에만 둔다. 바닥에 겹쳐 쓴 검은 글자는 안 읽혔다
+                    (한나 2026-08-30 "칸 밑에 검정 글자 삭제"). */}
               </g>
             ))}
 
@@ -778,13 +795,10 @@ export default function Works({
                         label={`창고 ${layout.idle.length}`} />
             </g>
             <g transform={`translate(${PAD + TILE * 8},${layout.idleTop + TILE * 0.7})`}>
-              <rect width={TILE * 17} height={TILE * 2.1} rx={3} fill="#1F2A22" opacity={0.6} />
-              <text x={8} y={15} fontSize={11.5} className="wk-cap"
+              <rect width={TILE * 11} height={TILE * 1.35} rx={3} fill="#1F2A22" opacity={0.6} />
+              <text x={8} y={15} fontSize={10.5} className="wk-cap"
                     fill="#F2E8CE" fontWeight={700}>
-                꺼둔 것 {layout.idle.length} — 문 닫고 안에 있다
-              </text>
-              <text x={8} y={27} fontSize={9.5} fill="#C9D4BC" opacity={0.9}>
-                다시 켜면 자기 갈래로 돌아간다. 명단은 옆 '창고 · 꺼둔 것'에서 본다.
+                꺼둔 것 — 문 닫고 안에 있다
               </text>
             </g>
 
@@ -868,18 +882,18 @@ export default function Works({
                       </g>
                     )}
 
-                    {/* ✋는 마을에 안 띄운다 — 고장이 아닌데 말풍선 넷이 화면을 덮었다.
-                        옆 '네 손이 필요한 자리' 칸이 그 역할을 한다. */}
-                    {p.trouble !== "none" && p.trouble !== "rookie"
-                      && p.trouble !== "calling" && (
-                      <g transform={`translate(${TILE * 1.6},${TILE * -1.9})`} className="wk-alert">
-                        <rect x={2} y={3} width={86} height={19} rx={3} fill="#000" opacity={0.22} />
-                        <rect width={86} height={19} rx={3} fill="#FFF8E6"
-                              stroke={TROUBLE_MARK[p.trouble].color} strokeWidth={1.8} />
-                        <path d="M 28 19 L 38 19 L 32 25 Z" fill="#FFF8E6" />
-                        <text x={6} y={14} fontSize={11}>{TROUBLE_MARK[p.trouble].mark}</text>
-                        <text x={23} y={13.5} fontSize={9.5} fontWeight={800}
-                              fill={TROUBLE_MARK[p.trouble].color}>{TROUBLE_MARK[p.trouble].say}</text>
+                    {/* 말풍선 대신 이모티콘 하나. 글자를 붙이면 폭이 86px이라
+                        옆 사람을 덮었다 (한나 2026-08-30 "이모티콘만 표시해줘").
+                        뜻은 마우스를 올리면 나온다. */}
+                    {p.trouble !== "none" && p.trouble !== "rookie" && (
+                      <g transform={`translate(${TILE * 1.55},${TILE * -1.0})`}
+                         className="wk-alert">
+                        <circle r={9} fill="#FFF8E6"
+                                stroke={TROUBLE_MARK[p.trouble].color} strokeWidth={2} />
+                        <text y={4.5} fontSize={11} textAnchor="middle">
+                          {TROUBLE_MARK[p.trouble].mark}
+                        </text>
+                        <title>{`${p.short} — ${TROUBLE_MARK[p.trouble].say}`}</title>
                       </g>
                     )}
 
