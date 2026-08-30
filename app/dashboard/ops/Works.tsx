@@ -26,8 +26,8 @@ import { useRouter } from "next/navigation";
 import type { OpsGraph } from "./FlowGraphView";
 import { TILE, hashOf } from "./office/sprites";
 import {
-  BrewStation, Bush, Flowers, ForgeStation, GatherStation, LAND, Log, LoomStation,
-  PostStation, Rock, Signpost, Tree,
+  BrewStation, Bush, Flowers, ForgeStation, GatherStation, LAND, Lantern, Log,
+  LoomStation, PostStation, Rock, Signpost, Tree,
 } from "./office/world";
 import { Building, Fence, Foreground } from "./office/buildings";
 import { BELT_KEYFRAMES } from "./office/belt";
@@ -439,7 +439,9 @@ export default function Works({
   const troubled = people.filter(
     (p) => p.trouble !== "none" && p.trouble !== "rookie" && p.trouble !== "calling");
   const rookies = people.filter((p) => p.trouble === "rookie");
-  const nightfall = working === 0 || sky.dim <= 0.7;
+  // 어둠은 하늘·땅 색만 바꾼다. 일손을 놓게 하지 않는다 —
+  // 자동화 마을은 새벽 3~6시가 제일 바쁘다 (한나 2026-08-30 선택 A).
+  const dark = sky.dim <= 0.7;
 
   const ties = useMemo(() => {
     if (!picked) return null;
@@ -606,7 +608,7 @@ export default function Works({
         {/* 배경을 땅 색으로 둔다 — 배율이 딱 안 떨어질 때 남는 띠가
             검은 벽처럼 보였다 (한나 2026-08-30 "옆에 선이 남아"). */}
         <div ref={scroller} className="overflow-auto wk-console"
-             style={{ background: nightfall ? "#2A3327" : BASE_GROUND, borderTop: 0,
+             style={{ background: dark ? "#2A3327" : BASE_GROUND, borderTop: 0,
                       maxHeight: "78vh" }}>
           <svg viewBox={`0 0 ${W} ${H}`}
                width={W * (zoom || 1)} height={H * (zoom || 1)}
@@ -651,7 +653,7 @@ export default function Works({
             {layout.zones.map(({ d, box }) => (
               <Patch key={`p-${d.key}`} x={box.x} y={box.y + TILE}
                      w={box.width} h={box.height - TILE * 1.5}
-                     color={d.ground} seed={d.key} opacity={nightfall ? 0.62 : 0.92} />
+                     color={d.ground} seed={d.key} opacity={dark ? 0.62 : 0.92} />
             ))}
             {/* 길 — 구역 사이를 지난다. 선을 긋지 않아도 여기가 경계라는 게 보인다. */}
             {/* 들풀·꽃·돌 — 아무 기능 없다. 이게 있어야 땅이 맨바닥으로 안 보인다.
@@ -716,7 +718,8 @@ export default function Works({
                     (한나 스크린샷: 우편소·도서관·약방 이름이 가려졌다). */}
                 <g transform={`translate(${box.x + box.width - TILE * 7},${box.y + TILE * 0.3})`}>
                   <Building kind={d.kind} w={TILE * 6} h={TILE * 3}
-                            alive={!nightfall && members.some((p) => p.status === "돌음")}
+                            // 밤에도 돌고 있으면 창에 불이 켜져 있어야 맞다
+                            alive={members.some((p) => p.status === "돌음")}
                             label={`${d.name} ${members.length}`} />
                 </g>
 
@@ -738,6 +741,18 @@ export default function Works({
                     <rect key={i} x={gx} y={gy} width={5 + (v % 6)} height={3}
                           fill={d.craft === "artisan" ? "#77736A" : "#948D82"} opacity={0.7}
                           shapeRendering="crispEdges" />
+                  );
+                })}
+
+                {/* 등불 — 어두워지면 켜진다. 밤이라고 일손을 놓게 하는 대신
+                    이걸로 밤인 걸 보여준다 (한나 2026-08-30 선택 A). */}
+                {dark && [0, 1].map((k) => {
+                  const v = hashOf(`${d.key}lamp${k}`);
+                  return (
+                    <g key={`lamp-${d.key}-${k}`}
+                       transform={`translate(${box.x + TILE + (v % Math.max(1, Math.floor(box.width - TILE * 3)))},${box.y + TILE * 4 + ((v >> 6) % Math.max(1, Math.floor(box.height - TILE * 6)))})`}>
+                      <Lantern lit />
+                    </g>
                   );
                 })}
 
@@ -816,7 +831,7 @@ export default function Works({
                 if (!at) return null;
                 const on = picked === p.id;
                 const faded = ties && !ties.has(p.id);
-                const busy = p.mood === "working" && p.trouble === "none" && !nightfall;
+                const busy = p.mood === "working" && p.trouble === "none";
                 // 방금 버스에 소식을 남긴 사람 — 이때만 진짜로 뭔가 일어난 것이다.
                 const live = isPulsing(p.id);
                 const small = p.tier !== 1;
@@ -824,7 +839,7 @@ export default function Works({
                 const scale = small ? 1.1 : 1.35;
                 return (
                   <g key={p.id} transform={`translate(${at.x},${at.y})`}
-                     opacity={faded ? 0.22 : nightfall ? 0.8 : 1}
+                     opacity={faded ? 0.22 : dark ? 0.88 : 1}
                      style={{ cursor: "pointer" }}
                      onClick={() => focus(on ? "" : p.id)}
                      onMouseEnter={() => setHovered(p.id)}
@@ -869,7 +884,7 @@ export default function Works({
                       {p.trouble === "down" ? <Fallen id={p.id} />
                         : p.trouble === "tired" ? <Weary id={p.id} />
                         : p.trouble === "asleep" ? <Dozing id={p.id} />
-                        : <Folk id={p.id} craft={p.craft} mood={nightfall ? "resting" : p.mood} />}
+                        : <Folk id={p.id} craft={p.craft} mood={p.mood} />}
                     </g>
 
                     {/* 주의 — 이름표와 무관하게 항상 뜬다 */}
