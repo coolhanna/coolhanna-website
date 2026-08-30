@@ -231,7 +231,13 @@ export default function Works({
 
     const fromCodex = codex.map((c) => ({
       id: `codex:${c.id}`,
-      short: c.name.replace(/\s*텔레그램\s*체크\s*/, " ").trim().slice(0, 10),
+      // 10글자에서 자르면 뜻이 사라진다 ("instagram-", "T7 video f").
+      // 앞의 군더더기만 걷어내고 길면 말줄임표를 붙인다.
+      short: (() => {
+        const t = c.name.replace(/\s*텔레그램\s*체크\s*/, " ")
+          .replace(/\s*Codex\s*/i, " ").replace(/every 2 days/i, "").trim();
+        return t.length > 16 ? t.slice(0, 15) + "…" : t;
+      })(),
       label: c.name, note: `${c.schedule} · 코덱스`,
       tier: (c.verdict === "stopped" ? 3 : 2) as 1 | 2 | 3,
       district: districtOf(c.field), status: c.verdict === "ok" ? "돌음"
@@ -359,7 +365,11 @@ export default function Works({
   const nightish = sky.dim < 0.9;
   // 신입은 고장이 아니다 — 실재하는데 지도에 안 적힌 것뿐이다.
   // 경보에 섞으면 진짜 고장이 27건에 파묻힌다 (한나 2026-08-30).
-  const troubled = people.filter((p) => p.trouble !== "none" && p.trouble !== "rookie");
+  // '네 손이 필요해'는 고장이 아니라 원래 사람이 하는 자리다.
+  // 같이 세면 진짜 고장이 파묻힌다 — 한나 스크린샷에서 6건 중 4건이 그거였다.
+  const troubled = people.filter(
+    (p) => p.trouble !== "none" && p.trouble !== "rookie" && p.trouble !== "calling");
+  const needsHand = people.filter((p) => p.trouble === "calling");
   const rookies = people.filter((p) => p.trouble === "rookie");
   const nightfall = working === 0 || sky.dim <= 0.7;
 
@@ -799,9 +809,9 @@ export default function Works({
 
         <div className="mt-2 flex flex-wrap gap-x-4 gap-y-1 text-[11px]"
              style={{ color: "var(--text-muted-new)" }}>
-          <span>운반로에 물건이 흐르면 = 자료가 지금 넘어가는 중</span>
-          <span>끝에 쌓여 있으면 = 받는 쪽이 멈췄다</span>
-          <span>텅 비었으면 = 보내는 쪽이 안 만든다</span>
+          <span>발밑에 금빛 물결 = 방금 그 자동화가 일했다</span>
+          <span>❗ 쓰러짐 · 💤 일 없음 · ✋ 네 손이 필요</span>
+          <span>초록 점 = 지도에 연결이 안 적힌 잡</span>
           <span>이름은 평소 숨김 — 올리거나 켜서 본다</span>
         </div>
       </div>
@@ -819,6 +829,27 @@ export default function Works({
                   <button onClick={() => focus(p.id)} className="text-left text-[11.5px] leading-snug">
                     <span className="font-bold">{TROUBLE_MARK[p.trouble].mark} {p.short}</span>
                     <span style={{ color: "#8A2E1A" }}> — {TROUBLE_MARK[p.trouble].say}</span>
+                  </button>
+                </li>
+              ))}
+            </ul>
+          </div>
+        )}
+
+        {needsHand.length > 0 && (
+          <div className="wk-console p-3" style={{ background: "#F6EEDC" }}>
+            <div className="wk-cap mb-1" style={{ color: "#7A5A1A", fontWeight: 700 }}>
+              네 손이 필요한 자리 · {needsHand.length}
+            </div>
+            <p className="text-[11.5px] leading-snug mb-1.5" style={{ color: "#4A4030" }}>
+              고장이 아니다. 원래 네가 해야 도는 자리다 — 안 하면 그날 사슬이 거기서 끊긴다.
+            </p>
+            <ul className="flex flex-col gap-0.5">
+              {needsHand.map((h) => (
+                <li key={h.id}>
+                  <button onClick={() => focus(h.id)} className="text-left text-[12px] leading-snug">
+                    <span className="font-bold">✋ {h.short}</span>
+                    <span style={{ color: "#7A6A4A" }}> — {h.note || h.label}</span>
                   </button>
                 </li>
               ))}
