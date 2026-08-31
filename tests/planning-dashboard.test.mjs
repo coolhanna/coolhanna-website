@@ -47,16 +47,21 @@ test("planning makes the nightly research loop, history, and follow-up actions v
   }
 });
 
-test("planning exposes the situation, conflict, value, and final judgment before development", () => {
+test("planning shows a broad question and answer flow before detailed scenes", () => {
   const board = read("app/dashboard/planning/PlanningBoard.tsx");
   const data = read("app/dashboard/planning/planning-data.ts");
 
-  for (const field of ["situation", "conflict", "valueLine", "judgment"]) {
+  for (const field of ["topicLevel", "topicArea", "situation", "conflict", "valueLine", "judgment"]) {
     assert.ok(data.includes(`${field}: string`), `missing candidate field: ${field}`);
   }
-  for (const copy of ["첫 장면", "충돌", "지키는 가치", "마지막 판정"]) {
+  assert.ok(data.includes("answerFlow: string[]"));
+  for (const copy of ["큰 질문", "답변이 이어질 흐름", "선택한 뒤 펼칠 구체 자료", "연결된 조사 사례", "첫 장면", "충돌", "지키는 가치", "마지막 판정"]) {
     assert.ok(board.includes(copy), `missing visible candidate axis: ${copy}`);
   }
+  assert.ok(board.includes("idea.answerFlow.map"));
+  assert.ok(board.includes("idea.topicArea"));
+  assert.ok(board.includes("idea.evidenceCases?.map"));
+  assert.ok(!board.includes('<span className={styles.rowMeta}>{idea.situation}</span>'));
   assert.ok(board.includes("idea.situation"));
   assert.ok(board.includes("idea.conflict"));
   assert.ok(board.includes("idea.valueLine"));

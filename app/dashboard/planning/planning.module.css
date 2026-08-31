@@ -1,10 +1,10 @@
 /*
  * 콘텐츠 기획 데스크
- * 목적: 한나가 하루 6개 후보를 "읽고 → 판정"하는 화면.
+ * 목적: 한나가 큰 질문 20개를 "읽고 → 흐름 보고 → 판정"하는 화면.
  * 원칙
  *  1. 본문 최소 13px, 라벨 최소 12px. 8~10px 정보밀도형 조판을 쓰지 않는다.
  *  2. 후보에 닿기까지 지나야 하는 가로띠는 2개까지(헤더 + 상태줄).
- *  3. 상세는 ①어디서 왔나 ②무슨 충돌인가 ③어떻게 찍나 순서로 세로로 읽는다.
+ *  3. 상세는 ①큰 질문 ②답변 흐름 ③선택 뒤 구체 사례 순서로 세로로 읽는다.
  *  4. 판정 버튼은 항상 화면에 붙어 있다(하단 고정).
  */
 
@@ -580,6 +580,84 @@
   line-height: 1.6;
 }
 
+.verdict span {
+  display: block;
+  margin-bottom: 3px;
+  color: var(--accent-dark);
+  font-size: var(--fs-label);
+  font-weight: 600;
+}
+
+.answerFlow {
+  max-width: var(--measure);
+  margin: 0 0 12px;
+  padding: 15px 17px;
+  border: 1px solid #d6c5bb;
+  border-radius: 9px;
+  background: #fbf6f2;
+}
+
+.answerFlowHead {
+  display: flex;
+  align-items: baseline;
+  gap: 9px;
+  flex-wrap: wrap;
+}
+
+.answerFlowHead span { color: #8d4e3d; font-size: var(--fs-body); font-weight: 600; }
+.answerFlowHead small { color: var(--text-secondary); font-size: var(--fs-label); }
+
+.answerFlow ol {
+  margin: 12px 0 0;
+  padding: 0;
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 8px;
+  list-style: none;
+}
+
+.answerFlow li {
+  min-width: 0;
+  padding: 9px 11px;
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
+  border: 1px solid #eadbd2;
+  border-radius: 7px;
+  background: var(--bg-card);
+}
+
+.answerFlow li > span {
+  width: 21px;
+  height: 21px;
+  flex: 0 0 21px;
+  display: grid;
+  place-items: center;
+  border-radius: 50%;
+  background: #96543f;
+  color: #fff;
+  font-size: var(--fs-label);
+  font-weight: 600;
+}
+
+.answerFlow p { margin: 0; color: var(--text-main); font-size: var(--fs-small); line-height: 1.55; }
+
+.originLine {
+  max-width: var(--measure);
+  margin: 0 0 12px;
+  padding: 11px 14px;
+  display: grid;
+  grid-template-columns: auto auto minmax(0, 1fr);
+  align-items: baseline;
+  gap: 8px;
+  border-left: 3px solid #7e8f98;
+  background: var(--bg-card);
+}
+
+.originLine span { color: var(--text-secondary); font-size: var(--fs-label); }
+.originLine strong { color: #4a6470; font-size: var(--fs-small); font-weight: 600; }
+.originLine p { margin: 0; color: var(--text-secondary); font-size: var(--fs-small); line-height: 1.5; }
+
 .readSteps {
   max-width: var(--measure);
   margin: 0 0 18px;
@@ -671,6 +749,32 @@
 .moreBox > summary::before { content: "▸ "; color: var(--text-secondary); }
 .moreBox[open] > summary::before { content: "▾ "; }
 .moreBox[open] > summary { border-bottom: 1px solid var(--border); }
+
+.moreBox .readSteps { margin: 12px 16px 16px; }
+
+.evidenceCases {
+  margin: 0 16px 16px;
+  padding-top: 12px;
+  border-top: 1px solid var(--border);
+}
+
+.evidenceCases h2 {
+  margin: 0 0 8px;
+  color: var(--text-secondary);
+  font-size: var(--fs-label);
+  font-weight: 600;
+}
+
+.evidenceCases article {
+  padding: 9px 11px;
+  border-left: 3px solid #a9b8c2;
+  background: var(--bg-card-soft);
+}
+
+.evidenceCases article + article { margin-top: 7px; }
+.evidenceCases span { display: block; color: #4a6470; font-size: var(--fs-label); }
+.evidenceCases strong { display: block; margin-top: 2px; color: var(--text-main); font-size: var(--fs-small); font-weight: 600; }
+.evidenceCases p { margin: 4px 0 0; color: var(--text-secondary); font-size: var(--fs-small); line-height: 1.5; }
 
 .expansionStrip {
   padding: 4px 16px 12px;
@@ -957,6 +1061,8 @@
   .headerActions select { flex: 1 1 auto; }
   .accountTabs { width: 100%; overflow-x: auto; }
   .references div { grid-template-columns: 1fr; gap: 4px; }
+  .answerFlow ol { grid-template-columns: 1fr; }
+  .originLine { grid-template-columns: 1fr; gap: 3px; }
   .detailActions button { flex: 1 1 auto; min-width: 92px; }
   .detailActions .currentState { flex: 1 1 100%; }
 }

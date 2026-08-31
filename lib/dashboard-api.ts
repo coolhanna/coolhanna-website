@@ -299,6 +299,7 @@ export interface PlanningDay {
   generated_at: string;
   next_run_at?: string;
   batch_label?: string;
+  topic_level?: "broad_question";
   cycle_days?: number;
   target_account?: string;
   status: string;

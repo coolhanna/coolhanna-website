@@ -13,6 +13,9 @@ export interface PlanningIdea {
   formatLabel: string;
   role: string;
   title: string;
+  topicLevel: string;
+  topicArea: string;
+  answerFlow: string[];
   verdict: string;
   situation: string;
   conflict: string;
@@ -25,16 +28,23 @@ export interface PlanningIdea {
   why: [string, string];
   ab: Array<[string, string]>;
   references: Array<[string, string]>;
+  evidenceCases?: Array<{ id?: string; title: string; sourceLabel?: string; situation?: string; references?: Array<[string, string]>; risk?: string }>;
   risk: string;
   variant?: "A형" | "B형";
 }
 
-type PlanningIdeaSeed = Omit<PlanningIdea, "situation" | "conflict" | "valueLine" | "judgment"> & Partial<Pick<PlanningIdea, "situation" | "conflict" | "valueLine" | "judgment">>;
+type NormalizedPlanningFields = "topicLevel" | "topicArea" | "answerFlow" | "situation" | "conflict" | "valueLine" | "judgment";
+type PlanningIdeaSeed = Omit<PlanningIdea, NormalizedPlanningFields> & Partial<Pick<PlanningIdea, NormalizedPlanningFields>>;
 
 function normalizePlanningIdea(item: PlanningIdeaSeed | Record<string, any>): PlanningIdea {
   const verdict = String(item.verdict || "한나 확인이 필요한 후보");
   return {
     ...item,
+    topicLevel: String(item.topicLevel || "specific_scene"),
+    topicArea: String(item.topicArea || item.series || "주제 분류 전"),
+    answerFlow: Array.isArray(item.answerFlow) && item.answerFlow.length
+      ? item.answerFlow.map(String)
+      : ["문제를 먼저 본다", "서로 다른 이유를 나눈다", "한나의 경험을 확인한다", "우리 집 기준을 정한다"],
     situation: String(item.situation || item.primary?.[1] || "첫 장면 확인 필요"),
     conflict: String(item.conflict || "이 장면에서 맞부딪히는 두 기준을 확인해야 한다."),
     valueLine: String(item.valueLine || verdict),

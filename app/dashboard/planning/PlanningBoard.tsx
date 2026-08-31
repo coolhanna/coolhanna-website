@@ -120,7 +120,7 @@ export default function PlanningBoard({ initialFeed, initialDecisions }: { initi
 
   async function openGpt() {
     const prompt = selected
-      ? `이건 ${selected.accountLabel} 계정의 콘텐츠 후보야. 완성 대본을 쓰지 말고, 먼저 이 계정 주인공의 실제 경험과 판단을 끌어내는 대화를 이어가줘.\n\n계정: ${selected.accountLabel}\n역할: ${selected.role}\n주제: ${selected.title}\n어디서 온 문제: ${selected.references[0]?.[0] || "출처 확인 필요"} · ${selected.references[0]?.[1] || ""}\n첫 장면: ${selected.situation}\n충돌: ${selected.conflict}\n현재 관점: ${selected.valueLine}\n현재 판정: ${selected.judgment}\n릴스로 푸는 법: ${selected.primary[1]}\n한나 의견: ${drafts[selected.id] || requestText || "아직 없음"}\n\n1) 실제로 한나나 혜린에게 있었던 일인지, 2) 주인공이 책임지고 말할 결론은 무엇인지, 3) 화면으로 보여줄 장면이 있는지를 최대 3개 질문으로 먼저 확인해줘. 답을 받은 뒤에만 릴스와 게시물 중 맞는 형식을 제안해줘.`
+      ? `이건 ${selected.accountLabel} 계정의 큰 질문 단계 콘텐츠 후보야. 완성 대본을 쓰지 말고, 아래 답변 흐름을 따라 한나의 실제 경험과 판단을 끌어내는 대화를 이어가줘.\n\n계정: ${selected.accountLabel}\n주제 영역: ${selected.topicArea}\n큰 질문: ${selected.title}\n답변 흐름: ${selected.answerFlow.join(" → ")}\n조사 출발점: ${selected.references[0]?.[0] || "출처 확인 필요"} · ${selected.references[0]?.[1] || ""}\n선택 후 살펴볼 구체 사례: ${selected.situation}\n현재 충돌 가설: ${selected.conflict}\n한나 의견: ${drafts[selected.id] || requestText || "아직 없음"}\n\n먼저 1) 한나에게 실제로 있었던 일, 2) 지금 지키고 싶은 기준, 3) 화면으로 보여줄 장면을 최대 3개 질문으로 확인해줘. 답을 받은 뒤에만 구체 상황과 릴스·게시물 형식을 제안하고, 구조를 고르기 전에는 문장 대본을 쓰지 마.`
       : `한나의 세 계정 운영 기준으로 새 콘텐츠 후보를 찾아줘. 완성 대본보다 계정과 유입·호감·신뢰 역할을 먼저 붙여줘. 추가 요청: ${requestText || "새로운 문제와 욕구를 찾아줘."}`;
     window.open("https://chatgpt.com/", "_blank", "noopener,noreferrer");
     try { await navigator.clipboard.writeText(prompt); setNotice("후보 맥락을 복사했어 · 열린 GPT 창에 붙여넣으면 돼"); }
@@ -175,9 +175,9 @@ export default function PlanningBoard({ initialFeed, initialDecisions }: { initi
           return <button key={idea.id} type="button" className={`${styles.ideaRow} ${accountRowClass[idea.account]} ${idea.id === effectiveSelectedId ? styles.selectedRow : ""} ${decision ? styles.decidedRow : ""}`} onClick={() => setSelectedId(idea.id)}>
             <span className={styles.rank}>{String(currentPage * pageSize + index + 1).padStart(2, "0")}</span>
             <span className={styles.rowBody}>
-              <span className={styles.rowAccount}>{idea.accountLabel}{idea.variant ? ` · ${idea.variant}` : ""}</span>
+              <span className={styles.rowAccount}>{idea.topicArea} · 큰 질문{idea.variant ? ` · ${idea.variant}` : ""}</span>
               <strong>{idea.title}</strong>
-              <span className={styles.rowMeta}>{idea.situation}</span>
+              <span className={styles.rowMeta}>{idea.answerFlow.slice(0, 3).join(" → ")}</span>
               {decision && <span className={`${styles.rowState} ${decision === "발전" ? styles.rowStateDevelop : ""}`}>{decision === "버림" ? "제외" : decision}</span>}
             </span>
             <span className={styles.score}><small>적합</small>{idea.score}</span>
@@ -216,30 +216,43 @@ function IdeaDetail({ idea, feedback, decision, saving, notice, requestType, req
   return <div className={styles.detailInner}>
     <div className={styles.detailScroll}>
     <div className={styles.detailTop}>
-      <span className={styles.pills}><Pill className={accountClass[idea.account]}>{idea.accountLabel}</Pill>{idea.sources.map((source) => <Pill key={source} className={sourceClass[source]}>{sourceFilters.find(([value]) => value === source)?.[1]}</Pill>)}<Pill>{idea.formatLabel}</Pill><Pill>{idea.role}</Pill></span>
+      <span className={styles.pills}><Pill className={accountClass[idea.account]}>{idea.accountLabel}</Pill><Pill>{idea.topicArea}</Pill><Pill>큰 질문</Pill>{idea.sources.map((source) => <Pill key={source} className={sourceClass[source]}>{sourceFilters.find(([value]) => value === source)?.[1]}</Pill>)}</span>
       <span>AI 적합도 {idea.score}/100</span>
     </div>
     <h1>{idea.title}</h1>
-    <p className={styles.verdict}>{idea.verdict}</p>
+    <p className={styles.verdict}><span>이 질문에서 확인할 것</span>{idea.verdict}</p>
 
-    <ol className={styles.readSteps}>
-      <li className={styles.originCard}>
-        <span className={styles.stepHead}><span className={styles.stepNo}>1</span><small>어디서 온 문제</small></span>
-        <strong>{idea.references[0]?.[0] || "출처 확인 필요"}</strong>
-        <p>{idea.references[0]?.[1] || "실제 출처를 더 확인한 뒤 발전한다."}</p>
-      </li>
-      <li className={styles.angleCard}>
-        <span className={styles.stepHead}><span className={styles.stepNo}>2</span><small>한나의 관점</small></span>
-        <strong>충돌</strong><p>{idea.conflict}</p>
-        <strong>지키는 가치</strong><p>{idea.valueLine}</p>
-        <strong>마지막 판정</strong><p>{idea.judgment}</p>
-      </li>
-      <li className={styles.sceneCard}>
-        <span className={styles.stepHead}><span className={styles.stepNo}>3</span><small>릴스로 푸는 법</small></span>
-        <strong>첫 장면</strong><p>{idea.situation}</p>
-        <strong>{idea.primary[0]}</strong><p>{idea.primary[1]}</p>
-      </li>
-    </ol>
+    <section className={styles.answerFlow}>
+      <div className={styles.answerFlowHead}><span>답변이 이어질 흐름</span><small>아직 대본이 아니라, 한나의 답을 찾는 순서</small></div>
+      <ol>{idea.answerFlow.map((step, index) => <li key={`${idea.id}-flow-${index}`}><span>{index + 1}</span><p>{step}</p></li>)}</ol>
+    </section>
+
+    <div className={styles.originLine}><span>어디서 온 문제</span><strong>{idea.references[0]?.[0] || "출처 확인 필요"}</strong><p>{idea.references[0]?.[1] || "실제 출처를 더 확인한 뒤 발전한다."}</p></div>
+
+    <details className={styles.moreBox}>
+      <summary>선택한 뒤 펼칠 구체 자료 · 사례·관점·첫 장면</summary>
+      <ol className={styles.readSteps}>
+        <li className={styles.angleCard}>
+          <span className={styles.stepHead}><span className={styles.stepNo}>1</span><small>한나의 관점 가설</small></span>
+          <strong>충돌</strong><p>{idea.conflict}</p>
+          <strong>지키는 가치</strong><p>{idea.valueLine}</p>
+          <strong>마지막 판정</strong><p>{idea.judgment}</p>
+        </li>
+        <li className={styles.sceneCard}>
+          <span className={styles.stepHead}><span className={styles.stepNo}>2</span><small>릴스로 푸는 법</small></span>
+          <strong>첫 장면</strong><p>{idea.situation}</p>
+          <strong>{idea.primary[0]}</strong><p>{idea.primary[1]}</p>
+        </li>
+      </ol>
+      {!!idea.evidenceCases?.length && <section className={styles.evidenceCases}>
+        <h2>연결된 조사 사례</h2>
+        {idea.evidenceCases?.map((item, index) => <article key={item.id || `${idea.id}-case-${index}`}>
+          <span>{item.sourceLabel || "기존 조사"}</span>
+          <strong>{item.title}</strong>
+          {item.situation && <p>{item.situation}</p>}
+        </article>)}
+      </section>}
+    </details>
 
     <details className={styles.moreBox}>
       <summary>더 넓히기 · 주의 · 참고한 자료 {idea.references.length}개</summary>
