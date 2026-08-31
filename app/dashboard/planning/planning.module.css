@@ -769,6 +769,36 @@
 
 .feedbackBox textarea:focus { border-color: var(--accent); box-shadow: 0 0 0 3px var(--accent-soft); }
 
+.feedbackReasons {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  flex-wrap: wrap;
+  margin-top: 9px;
+}
+
+.feedbackReasons span {
+  margin-left: 4px;
+  color: var(--text-secondary);
+  font-size: var(--fs-label);
+}
+
+.feedbackReasons span:first-child { margin-left: 0; }
+
+.feedbackReasons button {
+  padding: 5px 8px;
+  border: 1px solid var(--border);
+  border-radius: 999px;
+  background: var(--bg-card-soft);
+  color: var(--text-secondary);
+  font-size: var(--fs-label);
+}
+
+.feedbackReasons button:hover {
+  border-color: var(--accent);
+  color: var(--accent-text);
+}
+
 .followUp { margin-top: 14px; padding-top: 14px; border-top: 1px solid var(--border); }
 
 .followUp > label {

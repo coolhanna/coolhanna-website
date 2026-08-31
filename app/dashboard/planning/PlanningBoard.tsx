@@ -12,8 +12,10 @@ type RequestType = "new" | "deeper" | "similar";
 const accountFilters: Array<[FilterState["account"], string]> = [["all", "전체"], ["main", "본계정"], ["hyerin", "혜린"], ["food", "먹거리"]];
 const sourceFilters: Array<[FilterState["source"], string]> = [["all", "모두"], ["value", "가치관"], ["concern", "실제 고민"], ["trend", "유행·시의성"], ["season", "제품·계절"]];
 const formatFilters: Array<[FilterState["format"], string]> = [["all", "모두"], ["skit", "상황극"], ["thought", "생각 설명"], ["vlog", "브이로그"], ["review", "비교·리뷰"], ["experiment", "생활실험"]];
-// 매일 조사 → 6개 후보 → 한나 판단 → 선택 후보 발전 → 성과 확인 → 다음 조사 반영
-const loopSteps = ["매일 조사", "6개 후보", "한나 판단", "선택 후보 발전", "성과 확인", "다음 조사 반영"];
+// 새 조사는 넓게, 그 사이 날은 한나의 선택을 더 깊게 처리한다.
+const loopSteps = ["이틀마다 새 조사", "20개 탐색", "한나 피드백", "다음날 깊이 보기", "AI 인계", "다음 조사 반영"];
+const positiveFeedbackReasons = ["주제 맞음", "관점 맞음", "장면 좋음", "내 이야기 있음"];
+const negativeFeedbackReasons = ["뻔함", "내 이야기 아님", "상황 없음", "이미 한 주제", "계정 안 맞음"];
 const accountClass: Record<Account, string> = { main: styles.mainAccount, hyerin: styles.hyerinAccount, food: styles.foodAccount };
 const accountRowClass: Record<Account, string> = { main: styles.mainRow, hyerin: styles.hyerinRow, food: styles.foodRow };
 const sourceClass: Record<Source, string> = { value: styles.valueSource, concern: styles.concernSource, trend: styles.trendSource, season: styles.seasonSource };
@@ -118,7 +120,7 @@ export default function PlanningBoard({ initialFeed, initialDecisions }: { initi
 
   async function openGpt() {
     const prompt = selected
-      ? `이건 한나 본계정의 청소년 실제 문제 주제 후보야. 완성 대본을 쓰지 말고, 먼저 한나의 실제 경험과 판단을 끌어내는 대화를 이어가줘.\n\n주제: ${selected.title}\n어디서 온 문제: ${selected.references[0]?.[0] || "출처 확인 필요"} · ${selected.references[0]?.[1] || ""}\n첫 장면: ${selected.situation}\n충돌: ${selected.conflict}\n한나의 관점: ${selected.valueLine}\n현재 판정: ${selected.judgment}\n릴스로 푸는 법: ${selected.primary[1]}\n한나 의견: ${drafts[selected.id] || requestText || "아직 없음"}\n\n1) 실제로 한나나 혜린에게 있었던 일인지, 2) 한나가 책임지고 말할 결론은 무엇인지, 3) 화면으로 보여줄 장면이 있는지를 최대 3개 질문으로 먼저 확인해줘. 답을 받은 뒤에만 릴스와 캐러셀 중 맞는 형식을 제안해줘.`
+      ? `이건 ${selected.accountLabel} 계정의 콘텐츠 후보야. 완성 대본을 쓰지 말고, 먼저 이 계정 주인공의 실제 경험과 판단을 끌어내는 대화를 이어가줘.\n\n계정: ${selected.accountLabel}\n역할: ${selected.role}\n주제: ${selected.title}\n어디서 온 문제: ${selected.references[0]?.[0] || "출처 확인 필요"} · ${selected.references[0]?.[1] || ""}\n첫 장면: ${selected.situation}\n충돌: ${selected.conflict}\n현재 관점: ${selected.valueLine}\n현재 판정: ${selected.judgment}\n릴스로 푸는 법: ${selected.primary[1]}\n한나 의견: ${drafts[selected.id] || requestText || "아직 없음"}\n\n1) 실제로 한나나 혜린에게 있었던 일인지, 2) 주인공이 책임지고 말할 결론은 무엇인지, 3) 화면으로 보여줄 장면이 있는지를 최대 3개 질문으로 먼저 확인해줘. 답을 받은 뒤에만 릴스와 게시물 중 맞는 형식을 제안해줘.`
       : `한나의 세 계정 운영 기준으로 새 콘텐츠 후보를 찾아줘. 완성 대본보다 계정과 유입·호감·신뢰 역할을 먼저 붙여줘. 추가 요청: ${requestText || "새로운 문제와 욕구를 찾아줘."}`;
     window.open("https://chatgpt.com/", "_blank", "noopener,noreferrer");
     try { await navigator.clipboard.writeText(prompt); setNotice("후보 맥락을 복사했어 · 열린 GPT 창에 붙여넣으면 돼"); }
@@ -167,7 +169,7 @@ export default function PlanningBoard({ initialFeed, initialDecisions }: { initi
 
     <div className={styles.workspace}>
       <section className={styles.listPane} aria-label="기획 후보">
-        <div className={styles.listHeader}><strong>청소년 실제 문제</strong><span>{visible.length}개 · {currentPage + 1}/{pageCount}쪽</span></div>
+        <div className={styles.listHeader}><strong>{feed.current?.batch_label || "오늘 조사 후보"}</strong><span>{visible.length}개 · {currentPage + 1}/{pageCount}쪽</span></div>
         <div className={styles.ideaList}>{pagedVisible.map((idea, index) => {
           const decision = decisions.get(idea.id)?.decision;
           return <button key={idea.id} type="button" className={`${styles.ideaRow} ${accountRowClass[idea.account]} ${idea.id === effectiveSelectedId ? styles.selectedRow : ""} ${decision ? styles.decidedRow : ""}`} onClick={() => setSelectedId(idea.id)}>
@@ -200,7 +202,7 @@ function MetaBar({ research, open, onToggle, productCount, nextRun, loop }: { re
       <button type="button" className={styles.researchToggle} aria-expanded={open} onClick={onToggle}>밤 조사 기록 <span>{open ? "접기" : "펼치기"}</span></button>
       <span className={styles.researchLead}>{learned[0]}</span>
       <Link className={styles.productShortcut} href="/dashboard/products"><span>제품 후보 {productCount}</span><em>제품 탭에서 분리해 보기</em><b>→</b></Link>
-      <span className={styles.nextRun}><b>다음 조사</b>{nextRun} · 매일 6개</span>
+      <span className={styles.nextRun}><b>매일 자료 도착</b>{nextRun} · 새 조사는 이틀마다</span>
     </section>
     {open && <div className={styles.researchDetails}>
       <section><h2>무엇을 찾았나</h2>{searched.map((item) => <p key={item}>· {item}</p>)}</section>
@@ -254,6 +256,12 @@ function IdeaDetail({ idea, feedback, decision, saving, notice, requestType, req
     <div className={styles.feedbackBox}>
       <label htmlFor="planning-feedback">한나 의견</label>
       <textarea id="planning-feedback" value={feedback} onChange={(event) => onFeedback(event.target.value)} placeholder="예: 주제는 맞는데 상황극보다 내 생각을 말하는 게 맞아." />
+      <div className={styles.feedbackReasons} aria-label="빠른 피드백 이유">
+        <span>맞는 이유</span>
+        {positiveFeedbackReasons.map((reason) => <button key={reason} type="button" onClick={() => onFeedback(feedback.includes(reason) ? feedback : `${feedback}${feedback ? " · " : ""}${reason}`)}>{reason}</button>)}
+        <span>아닌 이유</span>
+        {negativeFeedbackReasons.map((reason) => <button key={reason} type="button" onClick={() => onFeedback(feedback.includes(reason) ? feedback : `${feedback}${feedback ? " · " : ""}${reason}`)}>{reason}</button>)}
+      </div>
       <div className={styles.followUp}>
         <div className={styles.followButtons}>
           <button type="button" className={requestType === "deeper" ? styles.activeRequest : ""} onClick={() => onRequestType("deeper")}>이 주제 더 깊게</button>
