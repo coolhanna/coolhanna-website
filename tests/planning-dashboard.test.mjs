@@ -39,7 +39,7 @@ test("planning makes the nightly research loop, history, and follow-up actions v
 
   assert.ok(page.includes("planningFeed"));
   for (const copy of [
-    "매일 조사", "6개 후보", "한나 판단", "선택 후보 발전", "성과 확인", "다음 조사 반영",
+    "이틀마다 새 조사", "20개 탐색", "한나 피드백", "다음날 깊이 보기", "AI 인계", "다음 조사 반영",
     "지난 후보", "다음 조사", "무엇을 찾았나", "무엇을 알게 됐나", "적합",
     "이 주제 더 깊게", "유사 주제 찾기", "새 주제 더 받기", "AI 인계문 복사",
   ]) {
@@ -263,7 +263,8 @@ test("planning treats each two-day teen batch as a research-to-AI handoff desk",
     assert.ok(api.includes(field), `missing planning batch metadata: ${field}`);
   }
   for (const copy of [
-    "매일 6개",
+    "매일 자료 도착",
+    "새 조사는 이틀마다",
     "어디서 온 문제",
     "한나의 관점",
     "릴스로 푸는 법",
@@ -280,4 +281,19 @@ test("planning treats each two-day teen batch as a research-to-AI handoff desk",
   assert.ok(board.includes("idea.primary[1]"));
   assert.ok(board.includes("research?.sources"));
   assert.ok(board.includes("item.url"));
+});
+
+test("planning uses the live batch scope and captures quick reasons before the next search", () => {
+  const board = read("app/dashboard/planning/PlanningBoard.tsx");
+
+  assert.ok(board.includes("feed.current?.batch_label"));
+  assert.ok(!board.includes('<div className={styles.listHeader}><strong>청소년 실제 문제</strong>'));
+  for (const copy of [
+    "주제 맞음", "관점 맞음", "장면 좋음", "내 이야기 있음",
+    "뻔함", "내 이야기 아님", "상황 없음", "이미 한 주제", "계정 안 맞음",
+  ]) {
+    assert.ok(board.includes(copy), `missing quick feedback reason: ${copy}`);
+  }
+  assert.ok(board.includes("selected.accountLabel"));
+  assert.ok(!board.includes("이건 한나 본계정의 청소년 실제 문제 주제 후보야"));
 });
