@@ -122,6 +122,7 @@ export default function BriefingClient({ data }: { data: BriefingResponse }) {
   }
   const open = data.open || [];
   const answered = data.answered_recent || [];
+  const [showAnswered, setShowAnswered] = useState(false);
   const [answers, setAnswers] = useState<Record<string, string>>({});
   const [saveState, setSaveState] = useState<"idle" | "saving" | "error">("idle");
   const setAnswer = (id: string, text: string) => setAnswers((cur) => ({ ...cur, [id]: text }));
@@ -200,13 +201,23 @@ export default function BriefingClient({ data }: { data: BriefingResponse }) {
         <MdLite md={data.content || ""} />
       </section>
 
-      {/* 답한 질문 아카이브 */}
+      {/* 답한 질문 — 답하면 화면에서 치운다. 기록은 남기되 접어둔다.
+          (2026-09-02 한나: "답변을 남겼으면 사라져야 되는데 밑으로 계속 쌓여") */}
       {answered.length > 0 && (
         <section className="mt-5">
-          <h2 className="text-[13px] font-bold mb-2" style={{ color: "var(--text-secondary)" }}>답한 질문 (최근 {answered.length}개)</h2>
-          <div className="flex flex-col gap-2">
-            {answered.map((q) => <QuestionCard key={q.id} q={q} />)}
-          </div>
+          <button
+            type="button"
+            onClick={() => setShowAnswered((v) => !v)}
+            className="text-[12px] px-3 py-1.5 rounded-lg"
+            style={{ border: "1px solid var(--border)", color: "var(--text-secondary)" }}
+          >
+            답한 질문 {answered.length}개 {showAnswered ? "접기 ↑" : "보기 ↓"}
+          </button>
+          {showAnswered && (
+            <div className="flex flex-col gap-2 mt-2">
+              {answered.map((q) => <QuestionCard key={q.id} q={q} />)}
+            </div>
+          )}
         </section>
       )}
       </div>
