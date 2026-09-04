@@ -11,6 +11,12 @@
 .header h1 { margin: 3px 0 0; font-size: 21px; font-weight: 600; letter-spacing: -.02em; }
 .header p { margin: 0; color: var(--text-secondary); font-size: 10px; }
 
+.researchState { width: min(1180px, 100%); margin: 0 auto 10px; padding: 11px 13px; display: flex; align-items: center; justify-content: space-between; gap: 18px; border: 1px solid #CDAA8F; background: #FFF8F2; }
+.researchState > div { display: grid; gap: 2px; }
+.researchState span { color: #9A604B; font-size: 8px; letter-spacing: .12em; }
+.researchState b { color: #7B4A36; font-size: 13px; font-weight: 600; }
+.researchState p { margin: 0; color: var(--text-secondary); font-size: 10px; line-height: 1.45; }
+
 .evidenceRule { width: min(1180px, 100%); margin: 0 auto 10px; padding: 8px 11px; display: flex; flex-wrap: wrap; align-items: center; gap: 7px; border: 1px solid #C9D2D8; background: #F7FAFB; color: #566F7F; font-size: 9px; }
 .evidenceRule b { margin-right: 3px; color: #445A6C; font-weight: 600; }
 .evidenceRule span { padding-left: 7px; border-left: 1px solid #C9D2D8; }
@@ -133,6 +139,7 @@
 
 @media (max-width: 620px) {
   .header { align-items: flex-start; flex-direction: column; }
+  .researchState { align-items: flex-start; flex-direction: column; gap: 5px; }
   .sectionTitle { grid-template-columns: 1fr auto; }
   .sectionTitle p { grid-column: 1 / -1; }
   .card p { grid-template-columns: 1fr; gap: 2px; }

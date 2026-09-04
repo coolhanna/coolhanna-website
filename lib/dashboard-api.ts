@@ -303,6 +303,7 @@ export interface PlanningDay {
   cycle_days?: number;
   target_account?: string;
   status: string;
+  product_status?: "ready" | "researching" | "blocked" | string;
   research: PlanningResearch;
   product_radar?: PlanningProduct[];
   candidates: Array<Record<string, any>>;

@@ -20,6 +20,12 @@ const TABS = [
   { label: "먹은 것", href: "/dashboard/meals" },
   { label: "생각", href: "/dashboard/thoughts" },
   { label: "건강", href: "/dashboard/health" },
+  { label: "콘텐츠 진행", href: "/dashboard/pipeline" },
+  { label: "혜린", href: "/dashboard/hyerin" },
+  { label: "광고", href: "/dashboard/ads" },
+  { label: "공구", href: "/dashboard/gongu" },
+  { label: "매출", href: "/dashboard/revenue" },
+  { label: "인사이트", href: "/dashboard/insights" },
   { label: "관제탑", href: "/dashboard/ops" },
 ];
 

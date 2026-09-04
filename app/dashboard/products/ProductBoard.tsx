@@ -179,6 +179,7 @@ function ProductCard({
 
 export default function ProductBoard({ day, feedback: initialFeedback }: { day: PlanningDay | null; feedback: PlanningProductFeedbackResponse }) {
   const products = day?.product_radar || [];
+  const researchPending = products.length === 0 && day?.product_status === "researching";
   const videoAudit = day?.research?.video_audit;
   const recentCutoff = videoAudit?.cutoff_date || "9999-12-31";
   const screenedTotal = videoAudit?.screened_total ?? videoAudit?.evidence_total ?? 0;
@@ -272,6 +273,11 @@ export default function ProductBoard({ day, feedback: initialFeedback }: { day: 
       <p>{day?.date || "오늘"} · 추천 {products.length}개 · 조사 요청 {pendingCount}</p>
     </header>
 
+    {researchPending && <section className={styles.researchState} role="status">
+      <div><span>RESEARCHING</span><b>제품 조사가 아직 끝나지 않았어.</b></div>
+      <p>지금 보이는 0개는 추천 결과가 아니라 조사 진행 상태야. 다음 완료 자료가 도착하면 자동으로 바뀌어.</p>
+    </section>}
+
     <section className={styles.evidenceRule}>
       <b>추천이 만들어지는 순서</b>
       <span>1. 7개 발굴 채널 중 서로 다른 4종 이상 확인</span>
@@ -306,7 +312,7 @@ export default function ProductBoard({ day, feedback: initialFeedback }: { day: 
         <em>{visibleProducts.length}</em>
       </div>
       <div className={styles.angleFilters}>{(["all", "taste", "ingredients", "value", "trend"] as AngleFilter[]).map((angle) => <button key={angle} type="button" className={angleFilter === angle ? styles.activeAngle : ""} onClick={() => setAngleFilter(angle)}>{angle === "all" ? `전체 ${activeProducts.length}` : `${primaryAngleLabel[angle]} ${angleCounts[angle]}`}</button>)}</div>
-      <div className={styles.discoveryGrid}>{visibleProducts.map((product) => renderCard(product, !needsMoreChecking(product, recentCutoff)))}{!visibleProducts.length && <p className={styles.empty}>이 기준으로 새로 찾은 제품이 아직 없어.</p>}</div>
+      <div className={styles.discoveryGrid}>{visibleProducts.map((product) => renderCard(product, !needsMoreChecking(product, recentCutoff)))}{!visibleProducts.length && <p className={styles.empty}>{researchPending ? "조사 완료 전이야. 0개를 추천 완료로 처리하지 않았어." : "이 기준으로 새로 찾은 제품이 아직 없어."}</p>}</div>
     </section>
   </main>;
 }

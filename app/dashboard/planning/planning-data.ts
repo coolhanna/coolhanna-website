@@ -36,10 +36,48 @@ export interface PlanningIdea {
 type NormalizedPlanningFields = "topicLevel" | "topicArea" | "answerFlow" | "situation" | "conflict" | "valueLine" | "judgment";
 type PlanningIdeaSeed = Omit<PlanningIdea, NormalizedPlanningFields> & Partial<Pick<PlanningIdea, NormalizedPlanningFields>>;
 
+const sourceAliases: Record<string, Source> = {
+  value: "value",
+  library: "value",
+  official: "value",
+  concern: "concern",
+  daily_voice: "concern",
+  feedback: "concern",
+  trend: "trend",
+  performance: "trend",
+  season: "season",
+};
+
+const validFormats = new Set<Format>(["skit", "thought", "vlog", "review", "experiment"]);
+
+function pair(value: unknown, fallback: [string, string]): [string, string] {
+  return Array.isArray(value) && value.length >= 2
+    ? [String(value[0]), String(value[1])]
+    : fallback;
+}
+
 function normalizePlanningIdea(item: PlanningIdeaSeed | Record<string, any>): PlanningIdea {
   const verdict = String(item.verdict || "한나 확인이 필요한 후보");
+  const evidence = Array.isArray(item.evidenceCases) ? item.evidenceCases[0] : null;
+  const sources = Array.isArray(item.sources)
+    ? [...new Set(item.sources.map((source: unknown) => sourceAliases[String(source)]).filter(Boolean))]
+    : [];
+  const formats = Array.isArray(item.formats)
+    ? item.formats.map(String).filter((format: string): format is Format => validFormats.has(format as Format))
+    : [];
+  const references = Array.isArray(item.references)
+    ? item.references.filter((reference: unknown) => Array.isArray(reference) && reference.length >= 2).map((reference: unknown[]) => [String(reference[0]), String(reference[1])] as [string, string])
+    : [];
   return {
     ...item,
+    account: (["main", "hyerin", "food"] as string[]).includes(String(item.account)) ? item.account : "main",
+    accountLabel: String(item.accountLabel || (item.account === "hyerin" ? "혜린" : item.account === "food" ? "먹거리" : "본계정")),
+    score: Number(item.score || 0),
+    sources: sources.length ? sources : ["value"],
+    sourceLabel: String(item.sourceLabel || "실제 자료"),
+    formats: formats.length ? formats : ["thought"],
+    formatLabel: String(item.formatLabel || "선택 후 형식 확정"),
+    role: String(item.role || "신뢰"),
     topicLevel: String(item.topicLevel || "specific_scene"),
     topicArea: String(item.topicArea || item.series || "주제 분류 전"),
     answerFlow: Array.isArray(item.answerFlow) && item.answerFlow.length
@@ -49,6 +87,14 @@ function normalizePlanningIdea(item: PlanningIdeaSeed | Record<string, any>): Pl
     conflict: String(item.conflict || "이 장면에서 맞부딪히는 두 기준을 확인해야 한다."),
     valueLine: String(item.valueLine || verdict),
     judgment: String(item.judgment || verdict),
+    series: String(item.series || item.topicArea || "주제 탐색"),
+    primary: pair(item.primary, ["선택 후 형식", String(evidence?.format || "한나의 답을 받은 뒤 맞는 형식을 정한다.")]),
+    post: pair(item.post, ["선택 후 깊이 보기", "구체 사례와 근거를 연결해 더 깊게 살펴본다."]),
+    story: pair(item.story, ["반응 수집", "실제 경험과 다른 의견을 확인한다."]),
+    why: pair(item.why, ["실제 근거", String(item.valueLine || verdict)]),
+    ab: Array.isArray(item.ab) ? item.ab : [],
+    references: references.length ? references : [["출처 확인 필요", "선택 후 실제 근거를 연결한다."]],
+    risk: String(item.risk || evidence?.risk || "실제 경험을 확인한 뒤 대본으로 발전한다."),
   } as PlanningIdea;
 }
 

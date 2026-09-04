@@ -205,7 +205,11 @@ export default function CurationBoard() {
   return (
     <main className="dashboard-root min-h-screen bg-paper text-ink">
       <div className="max-w-3xl mx-auto px-5 pt-3 pb-8">
-        <div className="flex justify-end mb-2">
+        <div className="flex items-start justify-between gap-4 mb-3">
+          <div>
+            <h1 className="text-xl font-semibold tracking-tight">큐레이션</h1>
+            <p className="text-[12px] text-muted mt-0.5">저장한 영상·글·메모를 한곳에서 판단해.</p>
+          </div>
           <button
             onClick={refresh}
             aria-label="새로고침"
@@ -282,7 +286,12 @@ export default function CurationBoard() {
           ))}
         </div>
 
-        {loading && <p className="text-[13px] text-muted text-center py-10">불러오는 중…</p>}
+        {loading && <section className="rounded-2xl p-4" aria-label="큐레이션 자료 로딩 중" style={{ border: "1px solid var(--border)", backgroundColor: "var(--bg-card)" }}>
+          <p className="text-[13px] text-muted mb-3">자료를 가져오는 중이에요.</p>
+          <div className="grid gap-2 animate-pulse" aria-hidden="true">
+            {[0, 1, 2].map((item) => <div key={item} className="h-12 rounded-lg" style={{ backgroundColor: "var(--bg-card-soft)" }} />)}
+          </div>
+        </section>}
         {error && !loading && (
           <p className="text-[13px] text-center py-10" style={{ color: "var(--danger)" }}>
             {error}

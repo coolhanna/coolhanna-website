@@ -132,7 +132,13 @@ export default function ThoughtsBoard() {
           </button>
         </div>
 
-        {loading && <p className="text-[13px] text-muted text-center py-10">불러오는 중…</p>}
+        {loading && <section className="rounded-2xl p-4" aria-label="생각 자료 로딩 중" style={{ border: "1px solid var(--border)", backgroundColor: "var(--bg-card)" }}>
+          <p className="text-[13px] text-muted mb-3">자료를 가져오는 중이에요.</p>
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 animate-pulse" aria-hidden="true">
+            <div className="h-28 rounded-xl" style={{ backgroundColor: "var(--bg-card-soft)" }} />
+            <div className="h-28 rounded-xl" style={{ backgroundColor: "var(--bg-card-soft)" }} />
+          </div>
+        </section>}
         {error && !loading && (
           <p className="text-[13px] text-center py-10" style={{ color: "var(--danger)" }}>{error}</p>
         )}
