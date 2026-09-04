@@ -299,7 +299,7 @@ export function rankOf(outDegree: number, isSink: boolean): Rank {
 
 /** id로 고정된 이름. 새로고침해도 같은 사람은 같은 이름이어야 한다. */
 export function nameOf(id: string, taken: Set<string>): string {
-  let i = hashOf(id) % GIVEN_NAMES.length;
+  const i = hashOf(id) % GIVEN_NAMES.length;
   for (let step = 0; step < GIVEN_NAMES.length; step += 1) {
     const pick = GIVEN_NAMES[(i + step) % GIVEN_NAMES.length];
     if (!taken.has(pick)) {

@@ -68,3 +68,14 @@ test("the default test command includes both TypeScript and module tests", () =>
   const pkg = JSON.parse(read("package.json"));
   assert.equal(pkg.scripts.test, "node --test tests/*.test.*");
 });
+
+test("the lint command uses the supported ESLint CLI", () => {
+  const pkg = JSON.parse(read("package.json"));
+  assert.equal(pkg.scripts.lint, "eslint .");
+});
+
+test("briefing hooks are declared before an error-state return", () => {
+  const briefing = read("app/dashboard/briefing/BriefingClient.tsx");
+  const component = briefing.slice(briefing.indexOf("export default function BriefingClient"));
+  assert.ok(component.indexOf("useState(false)") < component.indexOf("if (data.error"));
+});

@@ -117,14 +117,14 @@ function QuestionCard({
 }
 
 export default function BriefingClient({ data }: { data: BriefingResponse }) {
+  const [showAnswered, setShowAnswered] = useState(false);
+  const [answers, setAnswers] = useState<Record<string, string>>({});
+  const [saveState, setSaveState] = useState<"idle" | "saving" | "error">("idle");
   if (data.error || !data.dates) {
     return <main className="max-w-page mx-auto px-5 sm:px-8 py-8 text-[13px]" style={{ color: "var(--danger, #b3261e)" }}>{data.error || "브리핑 없음"}</main>;
   }
   const open = data.open || [];
   const answered = data.answered_recent || [];
-  const [showAnswered, setShowAnswered] = useState(false);
-  const [answers, setAnswers] = useState<Record<string, string>>({});
-  const [saveState, setSaveState] = useState<"idle" | "saving" | "error">("idle");
   const setAnswer = (id: string, text: string) => setAnswers((cur) => ({ ...cur, [id]: text }));
 
   async function saveAll() {
