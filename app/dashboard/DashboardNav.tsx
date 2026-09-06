@@ -7,7 +7,7 @@ import { usePathname } from "next/navigation";
 const TABS = [
   { label: "주간 다이어리", href: "/dashboard/diary" },
   { label: "한나 데스크", href: "/dashboard/desk" },
-  { label: "운영", href: "/dashboard" },
+  { label: "운영", href: "/dashboard/operations" },
   { label: "브리핑", href: "/dashboard/briefing" },
   { label: "하루", href: "/dashboard/day" },
   { label: "큐레이션", href: "/dashboard/curation" },
@@ -40,10 +40,7 @@ export default function DashboardNav() {
   return (
     <nav className="max-w-page mx-auto px-2 sm:px-5 pt-3 pb-2 flex flex-wrap items-center gap-x-0.5 gap-y-1 text-[11px] sm:text-[12px] whitespace-nowrap">
       {primary.map((t) => {
-        const active =
-          t.href === "/dashboard"
-            ? path === "/dashboard"
-            : path === t.href || path.startsWith(t.href + "/");
+        const active = path === t.href || path.startsWith(t.href + "/");
         return (
           <Link
             key={t.href}
