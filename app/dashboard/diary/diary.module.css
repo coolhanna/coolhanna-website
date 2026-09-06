@@ -29,7 +29,12 @@
 .header { display: flex; align-items: center; justify-content: space-between; gap: 24px; padding-bottom: 15px; border-bottom: 1px solid var(--line); }
 .eyebrow { font-size: 11px; color: var(--muted); letter-spacing: .055em; }
 .header h1 { font-weight: 500; font-size: clamp(25px, 3vw, 33px); letter-spacing: -.055em; line-height: 1.5; margin-top: 5px; }
-.headerDescription { display: none; }
+.headerDescription { color: var(--muted); font-size: 12px; margin-top: 5px !important; }
+.pageLinks { display: flex; flex-wrap: wrap; gap: 6px 20px; padding-top: 13px; color: var(--green); font-size: 12px; }
+.pageLinks a { text-underline-offset: 4px; padding: 3px 0; }
+.pageLinks a:focus-visible { outline: 2px solid var(--green); outline-offset: 3px; }
+.reflectionAnchor, .diarySection { scroll-margin-top: 20px; }
+.reflectionAnchor { margin: 14px 0 30px; }
 .todayMark { display: flex; flex-direction: column; align-items: center; color: var(--green); min-width: 65px; }
 .todayMark span { font-size: 11px; }
 .todayMark strong { font-family: "Iowan Old Style", Georgia, serif; font-size: 44px; line-height: 1.05; font-weight: 400; }

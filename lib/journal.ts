@@ -1,5 +1,30 @@
 import { isoKst } from "./kst-date.ts";
 
+export type JournalReviewState = "unreviewed" | "considering" | "dismissed";
+export type JournalReplyType = "answer" | "correction";
+
+export interface JournalReflectionEvidence {
+  label: string;
+  role: "context" | "evidence" | "inspiration";
+  detail: string;
+  url?: string;
+}
+
+export interface JournalReflection {
+  title: string;
+  understanding: string;
+  why_now: string;
+  question: string;
+  evidence: JournalReflectionEvidence[];
+  basis: Array<{ entry_id: string; version: number }>;
+}
+
+export interface JournalReply {
+  reflection_id: string;
+  reflection_version: number;
+  type: JournalReplyType;
+}
+
 export interface JournalEntry {
   id: string;
   original_text: string;
@@ -14,6 +39,23 @@ export interface JournalEntry {
   version: number;
   created_at: string;
   updated_at: string;
+  reflection?: JournalReflection;
+  reply?: JournalReply;
+  review_state?: JournalReviewState;
+}
+
+export interface JournalReflectionItem {
+  entry: JournalEntry;
+  replies: JournalEntry[];
+  freshness: {
+    status: "current" | "needs_review";
+    reasons: Array<"new_answer" | "correction" | "source_changed">;
+  };
+}
+
+export interface JournalReflectionsResponse {
+  reflections: JournalReflectionItem[];
+  revision: number;
 }
 
 export interface JournalResponse {

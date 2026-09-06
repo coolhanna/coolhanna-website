@@ -8,6 +8,7 @@ import {
 } from "@/lib/journal";
 import type { JournalEntry, JournalMutationResponse, JournalResponse } from "@/lib/journal";
 import styles from "./diary.module.css";
+import ReflectionPanel from "./ReflectionPanel";
 
 type Kind = "memo" | "task";
 type Editor = {
@@ -33,6 +34,7 @@ function errorMessage(error: unknown, saving = false): string {
 
 function authorLabel(entry: JournalEntry): string {
   if (entry.author === "ai") return entry.confirmation === "proposed" ? "AI 제안" : "AI · 한나 확인";
+  if (entry.reply) return entry.reply.type === "correction" ? "한나 · 뜻 고치기" : "한나 · 질문에 답변";
   return "한나";
 }
 
@@ -61,6 +63,7 @@ export default function DiaryBoard({ today: initialToday }: { today: string }) {
   const [loadedRange, setLoadedRange] = useState("");
   const [saving, setSaving] = useState(false);
   const [notice, setNotice] = useState("");
+  const [reflectionRefresh, setReflectionRefresh] = useState(0);
   const [actionError, setActionError] = useState("");
   const [quickText, setQuickText] = useState("");
   const [quickDate, setQuickDate] = useState(today);
@@ -79,7 +82,7 @@ export default function DiaryBoard({ today: initialToday }: { today: string }) {
   const dates = useMemo(() => mode === "week" ? weekDates(anchor) : monthDates(anchor), [anchor, mode]);
   const range = `${dates[0]}:${dates[dates.length - 1]}`;
   const ready = !loading && !loadError && loadedRange === range;
-  const activeEntries = useMemo(() => entries.filter(entry => entry.status !== "archived"), [entries]);
+  const activeEntries = useMemo(() => entries.filter(entry => entry.status !== "archived" && !entry.reflection), [entries]);
   const undated = useMemo(() => sortEntries(activeEntries.filter(entry => !entry.date)), [activeEntries]);
   const dayEntries = useCallback((date: string) => sortEntries(activeEntries.filter(entry => entry.date === date)), [activeEntries]);
   const recentMemos = useMemo(() => activeEntries.filter(entry => entry.kind === "memo")
@@ -164,6 +167,7 @@ export default function DiaryBoard({ today: initialToday }: { today: string }) {
   }
 
   function acceptSaved(entry: JournalEntry) {
+    setReflectionRefresh(value => value + 1);
     ++requestSequence.current;
     setEntries(current => [...current.filter(item => item.id !== entry.id), entry]);
     setNotice("서버에 저장했어요.");
@@ -297,9 +301,11 @@ export default function DiaryBoard({ today: initialToday }: { today: string }) {
     <div className={styles.page}>
       <div className={styles.shell}>
         <header className={styles.header}>
-          <div><p className={styles.eyebrow}>한나의 하루 · 함께 쓰는 기록</p><h1>생각도 일정도, 이곳에.</h1><p className={styles.headerDescription}>한 줄씩 남기고, 날짜를 옮기고, 함께 다음을 준비해요.</p></div>
+          <div><p className={styles.eyebrow}>한나의 하루 · 함께 생각하고 기록하는 곳</p><h1>오늘을 적고, 다음을 함께 생각해요.</h1><p className={styles.headerDescription}>한나의 메모와 일정 위에, 근거 있는 질문과 방향을 더해요.</p></div>
           <div className={styles.todayMark}><span>{today.slice(5, 7)}월</span><strong>{Number(today.slice(8))}</strong><span>오늘</span></div>
         </header>
+
+        <nav className={styles.pageLinks} aria-label="이 페이지에서 바로 가기"><a href="#diary-quick-title">메모 남기기</a><a href="#diary-reflections">함께 생각할 것</a><a href="#diary-calendar">주간·월간 다이어리</a></nav>
 
         <section className={styles.quickSection} aria-labelledby="diary-quick-title">
           <form onSubmit={saveQuick}>
@@ -321,7 +327,9 @@ export default function DiaryBoard({ today: initialToday }: { today: string }) {
         <div className={styles.saveStatus} role="status">{notice || (saving ? "서버에 저장하고 있어요…" : "")}</div>
         {actionError && <div className={styles.errorBanner} role="alert"><span>{actionError}</span>{failedAction && <button type="button" disabled={saving} onClick={() => { const entry = entries.find(item => item.id === failedAction.id); if (entry) void changeEntry(entry, failedAction.patch); }}>다시 시도</button>}</div>}
 
-        <section className={styles.diarySection} aria-labelledby="diary-period-title">
+        <div id="diary-reflections" className={styles.reflectionAnchor}><ReflectionPanel onJournalChange={load} refreshKey={reflectionRefresh} /></div>
+
+        <section id="diary-calendar" className={styles.diarySection} aria-labelledby="diary-period-title">
           <div className={styles.diaryToolbar}>
             <div><p className={styles.eyebrow}>{mode === "week" ? `${dates[0].slice(0, 4)}년 · 월요일부터 일요일까지` : "한 달을 함께 보기"}</p><h2 id="diary-period-title">{mode === "week" ? `${formatDay(dates[0])} — ${formatDay(dates[6])}` : monthTitle(anchor)}</h2></div>
             <div className={styles.viewToggle} aria-label="다이어리 보기"><button type="button" aria-pressed={mode === "week"} onClick={() => setMode("week")}>주간</button><button type="button" aria-pressed={mode === "month"} onClick={() => setMode("month")}>월간</button></div>
@@ -347,7 +355,7 @@ export default function DiaryBoard({ today: initialToday }: { today: string }) {
         {editor && <form onSubmit={saveEditor}>
           <div className={styles.editorHeading}><div><p className={styles.eyebrow}>{editor.entry ? authorLabel(editor.entry) : "한나의 기록"}</p><h2 id="diary-editor-title">{editor.entry ? "기록 이어 쓰기" : editor.date ? `${formatDay(editor.date)}에 쓰기` : "날짜 없이 남기기"}</h2></div><button type="button" className={styles.textButton} disabled={saving} onClick={closeEditor}>닫기</button></div>
           <label className={styles.editorTextLabel}>내용<textarea autoFocus rows={7} maxLength={10000} value={editor.text} disabled={saving} onChange={event => updateEditor({ text: event.target.value })} placeholder="오늘의 생각이나 할 일을 편하게 적어 주세요." /></label>
-          <div className={styles.editorFields}><label>날짜<input type="date" value={editor.date} disabled={saving} onChange={event => updateEditor({ date: event.target.value, time: event.target.value ? editor.time : "" })} /></label><label>시간 · 선택<input type="time" value={editor.time} disabled={saving || !editor.date} onChange={event => updateEditor({ time: event.target.value })} /></label><label>종류<select value={editor.kind} disabled={saving} onChange={event => updateEditor({ kind: event.target.value as Kind })}><option value="task">할 일</option><option value="memo">메모</option></select></label></div>
+          <div className={styles.editorFields}><label>날짜<input type="date" value={editor.date} disabled={saving} onChange={event => updateEditor({ date: event.target.value, time: event.target.value ? editor.time : "" })} /></label><label>시간 · 선택<input type="time" value={editor.time} disabled={saving || !editor.date} onChange={event => updateEditor({ time: event.target.value })} /></label><label>종류<select value={editor.kind} disabled={saving || Boolean(editor.entry?.reply)} onChange={event => updateEditor({ kind: event.target.value as Kind })}><option value="task">할 일</option><option value="memo">메모</option></select></label></div>
           <button type="button" className={styles.textButton} disabled={saving || !editor.date} onClick={() => updateEditor({ date: "", time: "" })}>날짜 정하지 않기</button>
           {editor.entry && <details className={styles.original}><summary>처음 남긴 원문과 출처</summary><p>{editor.entry.original_text}</p><small>{authorLabel(editor.entry)} · {editor.entry.source || "출처 기록 없음"}</small></details>}
           {editor.error && <p className={styles.errorText} role="alert">{editor.error}</p>}
