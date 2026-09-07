@@ -131,6 +131,7 @@ function IntakeJobCard({ job, onUpdated, onReload }: { job: IntakeJob; onUpdated
   return <article className={styles.job}>
     <div className={styles.jobHeading}><span className={styles.status} data-state={job.status}>{statusLabels[job.status]}</span><span>{new Date(job.created_at).toLocaleString("ko-KR", { timeZone: "Asia/Seoul", month: "numeric", day: "numeric", hour: "2-digit", minute: "2-digit" })}</span></div>
     {job.summary && <p className={styles.summary}>{job.summary}</p>}
+    {job.interpretation && job.interpretation !== job.summary && <details className={styles.original}><summary>처음 메모를 이렇게 이해했어요</summary><p>{job.interpretation}</p></details>}
     <details className={styles.original}><summary>처음 남긴 원문</summary><p>{job.text}</p></details>
     {job.status === "superseded" && <p className={styles.muted}>이전 원문을 기준으로 한 결과예요. 최신 기록의 처리 결과를 확인해 주세요.</p>}
     {job.error && <p className={styles.error} role="alert">{job.error}</p>}

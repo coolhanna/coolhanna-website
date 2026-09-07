@@ -24,6 +24,7 @@ export interface IntakeJob {
   created_at: string;
   updated_at: string;
   summary: string;
+  interpretation?: string;
   error: string | null;
   retryable: boolean;
   undoable: boolean;
@@ -54,6 +55,7 @@ export function isIntakeJob(value: unknown): value is IntakeJob {
   return id(value.id) && id(value.source_entry_id) && version(value.source_version) && version(value.version)
     && ["queued", "interpreting", "applying", "needs_input", "completed", "partial", "failed", "superseded", "undone"].includes(String(value.status))
     && string(value.text) && string(value.summary) && nullableString(value.error)
+    && (value.interpretation === undefined || (string(value.interpretation) && value.interpretation.length <= 600))
     && timestamp(value.created_at) && timestamp(value.updated_at)
     && typeof value.retryable === "boolean" && typeof value.undoable === "boolean"
     && Array.isArray(value.actions) && value.actions.every(action => object(action) && id(action.id)

@@ -34,6 +34,9 @@ test("partial receipt retains independently applied and processing actions", () 
   assert.equal(isIntakeJobsResponse({ ...response, worker: { status: "invented", last_heartbeat: null } }), false);
   assert.equal(isIntakeJob({ ...job, actions: [{ ...job.actions[0], target: {} }] }), false);
   assert.equal(isIntakeJob({ ...job, source_version: 0 }), false);
+  assert.ok(isIntakeJob({ ...job, interpretation: "스타벅스 리뷰는 아직 생각 중이에요." }));
+  assert.equal(isIntakeJob({ ...job, interpretation: { text: "잘못된 응답" } }), false);
+  assert.equal(isIntakeJob({ ...job, interpretation: "a".repeat(601) }), false);
 });
 
 test("receipt destinations are limited to dashboard routes", () => {
