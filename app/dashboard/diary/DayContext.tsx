@@ -55,8 +55,8 @@ export default function DayContext({ context, loading, error, today, evening, re
       {context?.open_tasks.status === "available" ? tasks.length ? <>
         <div className={styles.openTasks}>{visibleTasks.map(entry => <div key={entry.id} className={styles.openTaskRow}><span className={styles.taskDate}>{entry.date ? entry.date === today ? "오늘" : formatDay(entry.date) : "날짜 미정"}</span>{renderEntry(entry)}</div>)}</div>
         {tasks.length > 5 && <button type="button" className={styles.textButton} onClick={() => setShowAllTasks(value => !value)}>{showAllTasks ? "다섯 개만 보기 ↑" : `남은 ${tasks.length - 5}개 더 보기 ↓`}</button>}
-      </> : <p className={styles.emptyState}>확정한 할 일이 아직 없어요. 꼭 챙길 일만 메모의 ‘할 일로 남기기’로 적어두면 돼요.</p> : !loading && <p className={styles.emptyState}>남아 있는 일을 확인하지 못했어요. 기록이 없다는 뜻은 아니에요.</p>}
-      <p className={styles.sectionFootnote}>직접 할 일로 남기거나 확인한 항목만 보여요. 보관한 기획은 여기 쌓이지 않아요.</p>
+      </> : <p className={styles.emptyState}>확정한 할 일이 아직 없어요. 위 메모에 해야 할 일과 날짜를 함께 적으면 여기에 연결해요.</p> : !loading && <p className={styles.emptyState}>남아 있는 일을 확인하지 못했어요. 기록이 없다는 뜻은 아니에요.</p>}
+      <p className={styles.sectionFootnote}>하겠다고 정한 일만 보여요. 날짜나 뜻이 애매하면 먼저 물어보고, 보관한 기획은 여기 쌓지 않아요.</p>
     </section>
 
     {!evening && question && <section className={styles.questionSection} aria-labelledby="briefing-question-title">
