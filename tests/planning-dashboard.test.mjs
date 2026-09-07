@@ -11,8 +11,8 @@ function read(relativePath) {
 
 test("the shared dashboard navigation includes the planning desk", () => {
   const nav = read("app/dashboard/DashboardNav.tsx");
-  assert.ok(nav.includes('{ label: "기획", href: "/dashboard/planning" }'));
-  assert.ok(nav.includes('{ label: "제품", href: "/dashboard/products" }'));
+  assert.ok(nav.includes('href: "/dashboard/planning"'));
+  assert.ok(nav.includes('href: "/dashboard/products"'));
 });
 
 test("planning is a real dashboard route with the dense decision desk", () => {
@@ -72,8 +72,8 @@ test("planning adapts the candidate list to the installed dashboard window", () 
   const board = read("app/dashboard/planning/PlanningBoard.tsx");
   const styles = read("app/dashboard/planning/planning.module.css");
 
-  assert.ok(board.includes("오늘 할 일"));
-  assert.ok(board.includes("한나 판단 중"));
+  assert.ok(board.includes("보관하기"));
+  assert.ok(board.includes("주제 목록"));
   assert.ok(board.includes(`className={styles.quickFilters}`));
   assert.ok(board.includes(`className={styles.detailActions}`));
   assert.ok(!board.includes(`<aside className={styles.filters}>`));
@@ -90,7 +90,7 @@ test("planning keeps candidate hierarchy readable: color, not tiny dense type", 
   const board = read("app/dashboard/planning/PlanningBoard.tsx");
   const styles = read("app/dashboard/planning/planning.module.css");
 
-  assert.ok(board.includes("{ideas.length}개 중 발전할 것만 고르기"));
+  assert.ok(!board.includes("{ideas.length}개 중 발전할 것만 고르기"));
   assert.ok(!board.includes("6개 중 최대 2개만 발전"));
 
   // 바닥값만 강제한다. 정확한 눈금은 한나가 화면 보고 조절하는 취향이라 고정하지 않는다.

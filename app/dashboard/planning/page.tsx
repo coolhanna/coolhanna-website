@@ -9,11 +9,14 @@ export const metadata: Metadata = {
   robots: { index: false, follow: false },
 };
 
-export default async function PlanningPage() {
-  const [feed, decisions] = await Promise.all([
+export default async function PlanningPage({ searchParams }: { searchParams: Promise<{ view?: string }> }) {
+  const [feed, decisions, saved, params] = await Promise.all([
     dash.planningFeed(),
     dash.planningDecisions(),
+    dash.planningSaved(),
+    searchParams,
   ]);
 
-  return <PlanningBoard initialFeed={feed} initialDecisions={decisions} />;
+  const view = params.view === "saved" ? "saved" : "feed";
+  return <PlanningBoard key={view} initialFeed={feed} initialDecisions={decisions} initialSaved={saved} initialView={view} />;
 }

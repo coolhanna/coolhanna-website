@@ -102,9 +102,7 @@ export function planningIdeasForDay(raw: Array<Record<string, any>> | undefined)
   if (!raw?.length) return [];
   const input: Array<Record<string, any>> = raw;
   return input.flatMap((item) => {
-    const seed = seedIdeas.find((idea) => idea.id === item.id);
-    if (seed) return [normalizePlanningIdea({ ...seed, ...item })];
-    if (!item.title || !item.account || !item.score) return [];
+    if (!item.id || !item.title || !item.account) return [];
     return [normalizePlanningIdea(item)];
   }).sort((a, b) => b.score - a.score);
 }

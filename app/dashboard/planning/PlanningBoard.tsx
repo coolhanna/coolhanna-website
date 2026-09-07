@@ -1,8 +1,8 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useMemo, useRef, useState } from "react";
 import Link from "next/link";
-import type { PlanningDecision, PlanningFeedResponse, PlanningResearch } from "@/lib/dashboard-api";
+import type { PlanningDecision, PlanningDecisionsResponse, PlanningFeedResponse, PlanningResearch, PlanningSavedResponse } from "@/lib/dashboard-api";
 import { planningIdeasForDay, type Account, type Format, type PlanningIdea, type Source } from "./planning-data";
 import styles from "./planning.module.css";
 
@@ -35,12 +35,20 @@ function Pill({ children, className = "" }: { children: React.ReactNode; classNa
   return <span className={`${styles.pill} ${className}`}>{children}</span>;
 }
 
-export default function PlanningBoard({ initialFeed, initialDecisions }: { initialFeed: any; initialDecisions: any }) {
-  const [feed, setFeed] = useState<PlanningFeedResponse>(() => initialFeed || { current: null, dates: [], requests: [], status: "missing" });
-  const ideas = useMemo(() => planningIdeasForDay(feed.current?.candidates), [feed.current]);
+type ApiFailure = { error: string };
+type PlanningView = "feed" | "saved";
+
+export default function PlanningBoard({ initialFeed, initialDecisions, initialSaved, initialView = "feed" }: { initialFeed: PlanningFeedResponse | ApiFailure; initialDecisions: PlanningDecisionsResponse | ApiFailure; initialSaved: PlanningSavedResponse | ApiFailure; initialView?: PlanningView }) {
+  const [feed, setFeed] = useState<PlanningFeedResponse>(() => "current" in initialFeed ? initialFeed : { current: null, dates: [], requests: [], status: "missing" });
+  const [savedRecords, setSavedRecords] = useState<PlanningDecision[]>(() => "items" in initialSaved ? initialSaved.items : []);
+  const savedView = initialView === "saved";
+  const currentCandidates = feed.current?.candidates;
+  const ideas = useMemo(() => savedView
+    ? planningIdeasForDay(savedRecords.flatMap((item) => item.saved && item.candidate ? [item.candidate] : []))
+    : planningIdeasForDay(currentCandidates), [currentCandidates, savedRecords, savedView]);
   const initialDecisionMap = useMemo(() => {
     const map = new Map<string, PlanningDecision>();
-    for (const item of initialDecisions?.decisions || []) map.set(item.candidate_id, item);
+    for (const item of "decisions" in initialDecisions ? initialDecisions.decisions : []) map.set(item.candidate_id, item);
     return map;
   }, [initialDecisions]);
   const [filters, setFilters] = useState<FilterState>({ account: "all", source: "all", format: "all" });
@@ -51,12 +59,16 @@ export default function PlanningBoard({ initialFeed, initialDecisions }: { initi
   const [decisions, setDecisions] = useState(initialDecisionMap);
   const [drafts, setDrafts] = useState<Record<string, string>>(() => Object.fromEntries([...initialDecisionMap].map(([id, item]) => [id, item.feedback || ""])));
   const [saving, setSaving] = useState(false);
+  const savingRef = useRef(false);
+  const [failedSave, setFailedSave] = useState<{ idea: PlanningIdea; decision: PlanningDecision["decision"]; batchDate: string; feedback: string } | null>(null);
   const [loadingDay, setLoadingDay] = useState(false);
   const [notice, setNotice] = useState("");
   const [researchOpen, setResearchOpen] = useState(false);
   const [requestType, setRequestType] = useState<RequestType>("deeper");
   const [requestText, setRequestText] = useState("");
   const [requesting, setRequesting] = useState(false);
+  const [detailOpen, setDetailOpen] = useState(false);
+  const [newRequestOpen, setNewRequestOpen] = useState(false);
 
   const visible = useMemo(() => ideas.filter((idea) => {
     if (progressOnly && decisions.get(idea.id)?.decision !== "발전") return false;
@@ -71,7 +83,7 @@ export default function PlanningBoard({ initialFeed, initialDecisions }: { initi
   const effectiveSelectedId = pagedVisible.some((idea) => idea.id === selectedId) ? selectedId : pagedVisible[0]?.id || "";
   const selected = ideas.find((idea) => idea.id === effectiveSelectedId) || null;
   const progressCount = ideas.filter((idea) => decisions.get(idea.id)?.decision === "발전").length;
-  const decidedCount = ideas.filter((idea) => decisions.has(idea.id)).length;
+  const savedCount = savedRecords.filter((item) => item.saved).length;
   const pendingCount = feed.requests.filter((item) => item.status === "pending").length;
   const filtered = filters.account !== "all" || filters.source !== "all" || filters.format !== "all" || progressOnly;
 
@@ -90,30 +102,38 @@ export default function PlanningBoard({ initialFeed, initialDecisions }: { initi
       const response = await fetch(`/api/dashboard/proxy/planning-feed?date=${encodeURIComponent(date)}`);
       const payload = await response.json();
       if (!response.ok || !payload.current) throw new Error(payload?.detail || "해당 날짜 후보 없음");
-      setFeed(payload); setSelectedId("");
+      setFeed(payload); setSelectedId(""); setCandidatePage(0); setDetailOpen(false);
     } catch (error) { setNotice(`불러오지 못했어 · ${(error as Error).message}`); }
     finally { setLoadingDay(false); }
   }
 
-  async function saveDecision(idea: PlanningIdea, decision: PlanningDecision["decision"]) {
-    setSaving(true); setNotice("");
+  async function saveDecision(idea: PlanningIdea, decision: PlanningDecision["decision"], retry?: { batchDate: string; feedback: string }) {
+    if (savingRef.current) return;
+    savingRef.current = true;
+    setSaving(true); setNotice(""); setFailedSave(null);
+    const batchDate = retry?.batchDate ?? (savedView ? decisions.get(idea.id)?.batch_date || "" : feed.current?.date || "");
+    const feedback = retry?.feedback ?? drafts[idea.id] ?? "";
     try {
-      const response = await fetch("/api/dashboard/proxy/planning-decision", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ candidate_id: idea.id, decision, feedback: drafts[idea.id] || "" }) });
+      const response = await fetch("/api/dashboard/proxy/planning-decision", { method: "POST", headers: { "Content-Type": "application/json" }, signal: AbortSignal.timeout(20_000), body: JSON.stringify({ candidate_id: idea.id, decision, batch_date: batchDate, feedback }) });
       const payload = await response.json();
       if (!response.ok) throw new Error(payload?.detail || payload?.error || `저장 실패 ${response.status}`);
-      setDecisions((current) => new Map(current).set(idea.id, payload)); setNotice(`${decision} 저장됨 · 다음 조사에 반영`);
-    } catch (error) { setNotice(`저장하지 못했어 · ${(error as Error).message}`); }
-    finally { setSaving(false); }
+      if (payload.ok !== true || payload.candidate_id !== idea.id || typeof payload.decision !== "string" || typeof payload.feedback !== "string" || typeof payload.decided_at !== "string" || (decision === "보관" && (payload.saved !== true || payload.candidate?.id !== idea.id)) || (decision === "보관 해제" && payload.saved !== false)) throw new Error("저장 결과를 확인하지 못했어");
+      const record: PlanningDecision = payload;
+      setDecisions((current) => new Map(current).set(idea.id, record));
+      setSavedRecords((current) => [...current.filter((item) => item.candidate_id !== idea.id), ...(record.saved ? [record] : [])]);
+      setNotice(decision === "보관" ? "보관했어. 쓰고 싶을 때 다시 꺼내면 돼." : decision === "보관 해제" ? "보관함에서 꺼냈어. 원래 후보와 의견은 남아 있어." : `${decision} 의견을 저장했어.`);
+    } catch (error) { setNotice(`저장 결과를 확인하지 못했어. 다시 시도해 줘. ${error instanceof Error && error.name !== "TimeoutError" ? error.message : "연결 시간이 초과됐어."}`); setFailedSave({ idea, decision, batchDate, feedback }); }
+    finally { savingRef.current = false; setSaving(false); }
   }
 
-  async function saveRequest() {
+  async function saveRequest(type: RequestType = requestType) {
     setRequesting(true); setNotice("");
     try {
-      const response = await fetch("/api/dashboard/proxy/planning-request", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ request_type: requestType, candidate_id: requestType === "new" ? "" : selected?.id || "", batch_date: feed.current?.date || "", instruction: requestText }) });
+      const response = await fetch("/api/dashboard/proxy/planning-request", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ request_type: type, candidate_id: type === "new" ? "" : selected?.id || "", batch_date: savedView && selected ? decisions.get(selected.id)?.batch_date || "" : feed.current?.date || "", instruction: requestText }) });
       const payload = await response.json();
       if (!response.ok) throw new Error(payload?.detail || payload?.error || `요청 실패 ${response.status}`);
       setFeed((current) => ({ ...current, requests: [...current.requests, payload] })); setRequestText("");
-      setNotice("AI 조사 요청 저장됨 · 다음 밤 조사에서 먼저 확인해");
+      setNotice("AI 조사 요청 저장됨 · 처리 대기 중");
     } catch (error) { setNotice(`요청하지 못했어 · ${(error as Error).message}`); }
     finally { setRequesting(false); }
   }
@@ -131,26 +151,29 @@ export default function PlanningBoard({ initialFeed, initialDecisions }: { initi
     <header className={styles.header}>
       <div className={styles.headerTitle}>
         <span className={styles.eyebrow}>콘텐츠 기획</span>
-        <strong>{feed.current?.batch_label || displayDay(feed.current?.date)}</strong>
-        <em className={styles.todayTask}><span>오늘 할 일</span><b>한나 판단 중</b><span>{ideas.length}개 중 발전할 것만 고르기</span></em>
+        <strong>{savedView ? "다시 꺼내 쓸 주제" : feed.current?.batch_label || displayDay(feed.current?.date)}</strong>
+        <em className={styles.todayTask}>{savedView ? "마감 없이 남겨둔 재료. 오늘 쓰지 않아도 괜찮아." : "괜찮은 주제는 보관해두고, 오늘 쓸 것은 바로 시작해."}</em>
       </div>
       <div className={styles.headerActions}>
-        <span className={styles.doneCount}>판정 {decidedCount}/{ideas.length}</span>
-        <button type="button" className={progressOnly ? styles.activeProgress : ""} onClick={toggleProgress}>발전 중 {progressCount}</button>
-        <label>지난 후보 <select value={feed.current?.date || ""} disabled={loadingDay} onChange={(event) => loadDay(event.target.value)}>{feed.dates.map((item) => <option key={item.date} value={item.date}>{item.date} · {item.candidate_count || 6}개</option>)}</select></label>
+        <nav className={styles.viewTabs} aria-label="기획 보기"><Link prefetch={false} href="/dashboard/planning" aria-current={!savedView ? "page" : undefined}>추천 후보</Link><Link prefetch={false} href="/dashboard/planning?view=saved" aria-current={savedView ? "page" : undefined}>보관함 {"error" in initialSaved ? "" : savedCount}</Link></nav>
+        {progressCount > 0 && <button type="button" className={progressOnly ? styles.activeProgress : ""} onClick={toggleProgress}>발전 의견 {progressCount}</button>}
+        {!savedView && <label>지난 후보 <select value={feed.current?.date || ""} disabled={loadingDay} onChange={(event) => loadDay(event.target.value)}>{feed.dates.map((item) => <option key={item.date} value={item.date}>{item.date} · {item.candidate_count ?? 0}개</option>)}</select></label>}
       </div>
     </header>
 
-    {!feed.current && <section className={styles.failedRun} role="status"><b>오늘 조사가 완료되지 않았어</b><span>예전 추천으로 채우지 않았어. 새 조사와 검증이 끝나면 여기에 오늘 후보만 보여줄게.</span></section>}
+    {("error" in initialDecisions || "error" in initialSaved || (!savedView && "error" in initialFeed)) && <section className={styles.failedRun} role="alert"><b>기획 기록 일부를 불러오지 못했어</b><span>비어 있는 것으로 판단하지 않고, 다시 확인해야 해.</span><button type="button" onClick={() => window.location.reload()}>다시 불러오기</button></section>}
+    {!savedView && !feed.current && !("error" in initialFeed) && <section className={styles.failedRun} role="status"><b>오늘 조사가 완료되지 않았어</b><span>지난 후보와 보관함은 계속 볼 수 있어. 완료된 조사만 추천 후보로 보여줘.</span></section>}
+    {savedView && "unavailable" in initialSaved && initialSaved.unavailable.length > 0 && <section className={styles.failedRun} role="alert"><b>보관한 주제 {initialSaved.unavailable.length}개의 원문을 확인해야 해</b><span>기록을 지우지 않고 유지했어.</span></section>}
+    {(notice || saving) && <div className={styles.globalNotice} role={failedSave ? "alert" : "status"}>{saving ? "저장 중…" : notice}{failedSave && <button type="button" disabled={saving} onClick={() => saveDecision(failedSave.idea, failedSave.decision, failedSave)}>다시 저장</button>}</div>}
 
-    <MetaBar
+    {!savedView && <MetaBar
       research={feed.current?.research}
       open={researchOpen}
       onToggle={() => setResearchOpen((value) => !value)}
       productCount={feed.current?.product_radar?.length || 0}
       nextRun={displayTime(feed.current?.next_run_at)}
       loop={loopSteps}
-    />
+    />}
 
     <section className={styles.quickFilters} aria-label="후보 빠른 필터">
       <div className={styles.accountTabs}>{accountFilters.map(([value, label]) => {
@@ -164,30 +187,39 @@ export default function PlanningBoard({ initialFeed, initialDecisions }: { initi
       </>}
       {filtered && <button type="button" className={styles.reset} onClick={resetFilters}>초기화</button>}
       {pendingCount > 0 && <span className={styles.pending}>조사 대기 {pendingCount}</span>}
-      <button type="button" className={styles.moreTopics} onClick={() => setRequestType("new")}>+ 새 주제</button>
+      <button type="button" className={styles.moreTopics} aria-expanded={newRequestOpen} onClick={() => { setRequestType("new"); setNewRequestOpen(value => !value); }}>+ 새 주제</button>
     </section>
 
-    <div className={styles.workspace}>
+    {newRequestOpen && <form className={styles.newTopicRequest} onSubmit={event => { event.preventDefault(); void saveRequest("new"); }}>
+      <label htmlFor="new-topic-direction">다음에는 어떤 주제를 찾아볼까?</label>
+      <div><input id="new-topic-direction" autoFocus value={requestText} disabled={requesting} onChange={event => setRequestText(event.target.value)} placeholder="궁금한 방향을 편하게 적어줘" /><button type="submit" disabled={requesting}>{requesting ? "요청 저장 중…" : "다음 조사에 넣기"}</button></div>
+      <p>요청을 저장하면 다음 조사에서 확인해. 지금 바로 새 후보가 생성되는 것은 아니야.</p>
+    </form>}
+
+    <div className={`${styles.workspace} ${detailOpen && selected ? styles.showDetail : ""}`}>
       <section className={styles.listPane} aria-label="기획 후보">
-        <div className={styles.listHeader}><strong>{feed.current?.batch_label || "오늘 조사 후보"}</strong><span>{visible.length}개 · {currentPage + 1}/{pageCount}쪽</span></div>
+        <div className={styles.listHeader}><strong>{savedView ? "보관한 주제" : feed.current?.batch_label || "오늘 조사 후보"}</strong><span>{visible.length}개 · {currentPage + 1}/{pageCount}쪽</span></div>
         <div className={styles.ideaList}>{pagedVisible.map((idea, index) => {
           const decision = decisions.get(idea.id)?.decision;
-          return <button key={idea.id} type="button" className={`${styles.ideaRow} ${accountRowClass[idea.account]} ${idea.id === effectiveSelectedId ? styles.selectedRow : ""} ${decision ? styles.decidedRow : ""}`} onClick={() => setSelectedId(idea.id)}>
+          const saved = decisions.get(idea.id)?.saved;
+          return <button key={idea.id} type="button" className={`${styles.ideaRow} ${accountRowClass[idea.account]} ${idea.id === effectiveSelectedId ? styles.selectedRow : ""} ${decision ? styles.decidedRow : ""}`} onClick={() => { setSelectedId(idea.id); setDetailOpen(true); }}>
             <span className={styles.rank}>{String(currentPage * pageSize + index + 1).padStart(2, "0")}</span>
             <span className={styles.rowBody}>
               <span className={styles.rowAccount}>{idea.topicArea} · 큰 질문{idea.variant ? ` · ${idea.variant}` : ""}</span>
               <strong>{idea.title}</strong>
               <span className={styles.rowMeta}>{idea.answerFlow.slice(0, 3).join(" → ")}</span>
-              {decision && <span className={`${styles.rowState} ${decision === "발전" ? styles.rowStateDevelop : ""}`}>{decision === "버림" ? "제외" : decision}</span>}
+              {saved && <span className={styles.rowState}>보관됨{savedView && decisions.get(idea.id)?.batch_date ? ` · ${decisions.get(idea.id)?.batch_date} 추천` : ""}</span>}
+              {decision && decision !== "보관" && decision !== "보관 해제" && <span className={`${styles.rowState} ${decision === "발전" ? styles.rowStateDevelop : ""}`}>{decision === "버림" ? "제외" : decision}</span>}
             </span>
             <span className={styles.score}><small>적합</small>{idea.score}</span>
           </button>;
-        })}{!visible.length && <p className={styles.empty}>조건에 맞는 후보가 없어.</p>}</div>
+        })}{!visible.length && <p className={styles.empty}>{savedView && !filtered ? ("error" in initialSaved ? "보관함을 다시 불러와야 해." : "아직 보관한 주제가 없어. 추천 후보에서 마음에 드는 주제를 보관해 줘.") : "조건에 맞는 후보가 없어."}</p>}</div>
         {visible.length > pageSize && <nav className={styles.pagination} aria-label="후보 페이지"><button type="button" disabled={currentPage === 0} onClick={() => changePage(currentPage - 1)}>이전</button>{Array.from({ length: pageCount }, (_, index) => <button key={index} type="button" className={index === currentPage ? styles.currentPage : ""} onClick={() => changePage(index)}>{index + 1}</button>)}<button type="button" disabled={currentPage === pageCount - 1} onClick={() => changePage(currentPage + 1)}>다음</button></nav>}
       </section>
 
       <section className={styles.detailPane} aria-live="polite">
-        {selected ? <IdeaDetail idea={selected} feedback={drafts[selected.id] || ""} decision={decisions.get(selected.id)?.decision} saving={saving} notice={notice} requestType={requestType} requestText={requestText} requesting={requesting} onFeedback={(value) => setDrafts((current) => ({ ...current, [selected.id]: value }))} onDecision={(decision) => saveDecision(selected, decision)} onRequestType={setRequestType} onRequestText={setRequestText} onRequest={saveRequest} onOpenGpt={openGpt} /> : <p className={styles.empty}>왼쪽 조건을 바꾸면 후보를 다시 볼 수 있어.</p>}
+        <button type="button" className={styles.backToList} onClick={() => setDetailOpen(false)}>← 주제 목록</button>
+        {selected ? <IdeaDetail idea={selected} feedback={drafts[selected.id] || ""} decision={decisions.get(selected.id)?.decision} saved={Boolean(decisions.get(selected.id)?.saved)} saving={saving || "error" in initialDecisions || "error" in initialSaved} notice={notice} requestType={requestType} requestText={requestText} requesting={requesting} onFeedback={(value) => setDrafts((current) => ({ ...current, [selected.id]: value }))} onDecision={(decision) => saveDecision(selected, decision)} onRequestType={setRequestType} onRequestText={setRequestText} onRequest={() => void saveRequest()} onOpenGpt={openGpt} /> : <p className={styles.empty}>주제 목록에서 골라줘.</p>}
       </section>
     </div>
   </main>;
@@ -212,7 +244,7 @@ function MetaBar({ research, open, onToggle, productCount, nextRun, loop }: { re
   </>;
 }
 
-function IdeaDetail({ idea, feedback, decision, saving, notice, requestType, requestText, requesting, onFeedback, onDecision, onRequestType, onRequestText, onRequest, onOpenGpt }: { idea: PlanningIdea; feedback: string; decision?: PlanningDecision["decision"]; saving: boolean; notice: string; requestType: RequestType; requestText: string; requesting: boolean; onFeedback: (value: string) => void; onDecision: (decision: PlanningDecision["decision"]) => void; onRequestType: (value: RequestType) => void; onRequestText: (value: string) => void; onRequest: () => void; onOpenGpt: () => void }) {
+function IdeaDetail({ idea, feedback, decision, saved, saving, notice, requestType, requestText, requesting, onFeedback, onDecision, onRequestType, onRequestText, onRequest, onOpenGpt }: { idea: PlanningIdea; feedback: string; decision?: PlanningDecision["decision"]; saved: boolean; saving: boolean; notice: string; requestType: RequestType; requestText: string; requesting: boolean; onFeedback: (value: string) => void; onDecision: (decision: PlanningDecision["decision"]) => void; onRequestType: (value: RequestType) => void; onRequestText: (value: string) => void; onRequest: () => void; onOpenGpt: () => void }) {
   return <div className={styles.detailInner}>
     <div className={styles.detailScroll}>
     <div className={styles.detailTop}>
@@ -274,6 +306,7 @@ function IdeaDetail({ idea, feedback, decision, saving, notice, requestType, req
         {positiveFeedbackReasons.map((reason) => <button key={reason} type="button" onClick={() => onFeedback(feedback.includes(reason) ? feedback : `${feedback}${feedback ? " · " : ""}${reason}`)}>{reason}</button>)}
         <span>아닌 이유</span>
         {negativeFeedbackReasons.map((reason) => <button key={reason} type="button" onClick={() => onFeedback(feedback.includes(reason) ? feedback : `${feedback}${feedback ? " · " : ""}${reason}`)}>{reason}</button>)}
+        {saved && <button type="button" disabled={saving} onClick={() => onDecision("보관")}>보관 이유 저장</button>}
       </div>
       <div className={styles.followUp}>
         <div className={styles.followButtons}>
@@ -291,14 +324,13 @@ function IdeaDetail({ idea, feedback, decision, saving, notice, requestType, req
     </div>
 
     <div className={styles.decisionDock}>
-      <span className={styles.dockLabel}>이 후보, 어떻게 할까?</span>
+      <span className={styles.dockLabel}>{saved ? "보관함에 있어. 쓰고 싶을 때 꺼내면 돼." : "나중에 쓰고 싶은 주제는 보관해 둬."}</span>
       <div className={styles.detailActions}>
-        <button type="button" className={styles.develop} disabled={saving} onClick={() => onDecision("발전")}>발전</button>
-        <button type="button" disabled={saving} onClick={() => onDecision("보류")}>보류</button>
-        <button type="button" disabled={saving} onClick={() => onDecision("버림")}>제외</button>
-        <span className={styles.currentState}>{decision ? `현재: ${decision === "버림" ? "제외" : decision}` : "아직 판정 전"}</span>
+        <button type="button" className={styles.develop} aria-pressed={saved} disabled={saving} onClick={() => onDecision(saved ? "보관 해제" : "보관")}>{saved ? "보관 해제" : "보관하기"}</button>
+        <details className={styles.otherDecisions}><summary>다른 의견 남기기</summary><div><button type="button" disabled={saving} onClick={() => onDecision("발전")}>발전</button><button type="button" disabled={saving} onClick={() => onDecision("보류")}>보류</button><button type="button" disabled={saving} onClick={() => onDecision("버림")}>제외</button></div></details>
+        {decision && decision !== "보관" && decision !== "보관 해제" && <span className={styles.currentState}>남긴 의견: {decision === "버림" ? "제외" : decision}</span>}
       </div>
-      <div className={styles.saveState}>{saving || requesting ? "저장 중…" : notice || (decision ? `${decision} 저장됨` : "")}</div>
+      <div className={styles.saveState}>{saving || requesting ? "저장 대기 중…" : notice || "보관해도 할 일이나 제작 일정이 생기지 않아."}</div>
     </div>
   </div>;
 }

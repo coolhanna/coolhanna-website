@@ -8,7 +8,7 @@ import styles from "./dashboard-feedback-loop.module.css";
 type Action = DashboardFeedbackItem["action"];
 
 const pageLabels: Record<string, string> = {
-  operations: "운영", desk: "한나 데스크", briefing: "브리핑", day: "하루",
+  diary: "함께 쓰는 하루", operations: "운영", desk: "한나 데스크", briefing: "브리핑", day: "하루",
   curation: "큐레이션", planning: "기획", products: "제품", reels: "릴스",
   "reels-benchmark": "벤치마크", youtube: "유튜브", uploads: "업로드",
   purchases: "산 것", meals: "먹은 것", thoughts: "생각", health: "건강",
@@ -37,7 +37,7 @@ const emptyResponse: DashboardFeedbackResponse = {
 
 export default function DashboardFeedbackLoop() {
   const pathname = usePathname();
-  const scope = pathname === "/dashboard" ? "operations" : pathname.split("/")[2] || "operations";
+  const scope = pathname === "/dashboard" ? "diary" : pathname.split("/")[2] || "diary";
   const pageLabel = pageLabels[scope] || scope;
   const [open, setOpen] = useState(false);
   const [action, setAction] = useState<Action>("missing");
@@ -80,7 +80,7 @@ export default function DashboardFeedbackLoop() {
       const payload = await response.json();
       if (!response.ok) throw new Error(payload?.detail || payload?.error || "저장하지 못했어");
       setData(payload); setNote(""); setState("saved");
-      setMessage(action === "confirm" ? "맞다고 기록했어. 같은 판단을 다음 추천에 반영해." : "저장했어. 담당 루프로 전달하고 반영 상태를 여기서 보여줄게.");
+      setMessage("피드백을 저장했어. 처리 결과가 확인되면 아래 상태에서 볼 수 있어.");
     } catch (error) { setState("error"); setMessage((error as Error).message); }
   }
 
@@ -89,12 +89,12 @@ export default function DashboardFeedbackLoop() {
       <span>피드백</span>{unresolved > 0 && <b>{unresolved}</b>}
     </button>
     {open && <aside className={styles.panel} aria-label={`${pageLabel} 피드백`}>
-      <header><div><small>FEEDBACK LOOP</small><h2>{pageLabel}</h2><p>이 판단이 다음 수집·추천·정리에 이어져.</p></div><button type="button" onClick={() => setOpen(false)} aria-label="피드백 닫기">×</button></header>
+      <header><div><small>한나의 피드백</small><h2>{pageLabel}</h2><p>이 화면에서 좋았던 점과 고칠 점을 남겨줘.</p></div><button type="button" onClick={() => setOpen(false)} aria-label="피드백 닫기">×</button></header>
 
       <div className={styles.actions}>{actions.map((item) => <button key={item.value} type="button" className={action === item.value ? styles.selected : ""} onClick={() => setAction(item.value)}><b>{item.label}</b><span>{item.hint}</span></button>)}</div>
 
       <label className={styles.note}><span>{noteRequired ? "무엇을 바꿀까?" : "덧붙일 말 (선택)"}</span><textarea value={note} onChange={(event) => setNote(event.target.value)} placeholder={action === "stop" ? "예: 지난달 완료 항목은 이제 그만 보여줘" : "예: 오늘 완료한 업로드가 빠졌어"} /></label>
-      <button type="button" className={styles.save} disabled={state === "saving"} onClick={save}>{state === "saving" ? "저장 중…" : "다음 루프에 반영"}</button>
+      <button type="button" className={styles.save} disabled={state === "saving"} onClick={save}>{state === "saving" ? "저장 중…" : "피드백 저장"}</button>
       {message && <p className={state === "error" ? styles.error : styles.message} aria-live="polite">{message}</p>}
 
       <section className={styles.history}>

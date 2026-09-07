@@ -44,6 +44,8 @@ export const dash = {
     api<PlanningFeedResponse>(`/api/dashboard/planning-feed${date ? `?date=${encodeURIComponent(date)}` : ""}`),
   planningDecisions: () =>
     api<PlanningDecisionsResponse>("/api/dashboard/planning-decisions"),
+  planningSaved: () =>
+    api<PlanningSavedResponse>("/api/dashboard/planning-saved"),
   productFeedback: () =>
     api<PlanningProductFeedbackResponse>("/api/dashboard/planning-product-feedback"),
   dashboardFeedback: (scope = "") =>
@@ -104,14 +106,23 @@ export interface PlanningCandidateResponse {
 
 export interface PlanningDecision {
   candidate_id: string;
-  decision: "발전" | "형식 변경" | "스토리 먼저" | "보류" | "버림";
+  decision: "발전" | "형식 변경" | "스토리 먼저" | "보류" | "버림" | "보관" | "보관 해제";
   feedback: string;
   decided_at: string;
+  batch_date?: string;
+  saved?: boolean;
+  saved_at?: string;
+  candidate?: Record<string, unknown>;
 }
 
 export interface PlanningDecisionsResponse {
   decisions: PlanningDecision[];
   error?: string;
+}
+
+export interface PlanningSavedResponse {
+  items: PlanningDecision[];
+  unavailable: string[];
 }
 
 export type PlanningDiscoveryChannel =

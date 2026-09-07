@@ -50,8 +50,8 @@ test("product desk explains an unfinished research run instead of presenting zer
 
 test("every live dashboard room has a visible navigation entry", () => {
   const nav = read("app/dashboard/DashboardNav.tsx");
-  for (const label of ["콘텐츠 진행", "혜린", "매출", "인사이트"]) {
-    assert.ok(nav.includes(`label: "${label}"`), `missing dashboard tab: ${label}`);
+  for (const route of ["pipeline", "hyerin", "revenue", "insights"]) {
+    assert.ok(nav.includes(`href: "/dashboard/${route}"`), `missing preserved dashboard route: ${route}`);
   }
 });
 

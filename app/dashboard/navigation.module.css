@@ -1,0 +1,26 @@
+.shell { max-width: 1180px; margin: 0 auto; padding: 22px 32px 0; color: #303e34; }
+.masthead { display: flex; align-items: center; justify-content: space-between; gap: 20px; padding-bottom: 20px; }
+.brand { display: flex; align-items: center; gap: 17px; color: #314737; font-family: Georgia, serif; letter-spacing: .14em; font-size: 22px; }
+.brand span { font-family: inherit; letter-spacing: 0; font-size: 12px; color: #667163; }
+.utilities { display: flex; align-items: center; gap: 17px; font-size: 12px; color: #626d60; }
+.utilities a:hover, .previous summary:hover { color: #283e2f; }
+.utilities [aria-current="page"] { font-weight: 700; color: #283e2f; }
+.previous { position: relative; }
+.previous summary { cursor: pointer; list-style: none; padding: 7px 0; }
+.previous summary::-webkit-details-marker { display: none; }
+.previous summary::after { content: "⌄"; padding-left: 6px; }
+.menu { position: absolute; right: 0; top: 100%; min-width: 196px; background: #fffefa; border: 1px solid #d9ded1; box-shadow: 0 10px 30px #34433216; border-radius: 12px; padding: 7px; z-index: 70; }
+.menu a { display: block; padding: 12px; border-radius: 7px; }
+.menu a:hover { background: #edf0e7; }
+.areas { display: grid; grid-template-columns: repeat(6, minmax(0, 1fr)); border-top: 1px solid #d9ded1; border-bottom: 1px solid #d9ded1; }
+.areas a { position: relative; padding: 15px 2px; text-align: center; font-size: 14px; color: #657060; white-space: nowrap; transition: background .15s; }
+.areas a:hover { background: #e8eddf70; }
+.areas .active { color: #314b37; font-weight: 700; }
+.active::after { content: ""; position: absolute; bottom: -1px; height: 3px; background: #667e53; left: 22%; right: 22%; border-radius: 3px; }
+.tools { display: flex; flex-wrap: wrap; gap: 5px 20px; padding: 12px 0 14px; font-size: 12px; color: #687262; }
+.tools a { padding: 5px 0; }
+.tools [aria-current="page"] { color: #314b37; font-weight: 700; }
+.tools a:hover { text-decoration: underline; text-underline-offset: 4px; }
+.shell a:focus-visible, .shell summary:focus-visible { outline: 2px solid #476544; outline-offset: 4px; border-radius: 3px; }
+@media (max-width: 800px) { .shell { padding: 18px 22px 0; } .brand span { display: none; } .areas a { font-size: 13px; } }
+@media (max-width: 540px) { .shell { padding: 16px 16px 0; } .masthead { padding-bottom: 15px; } .brand { font-size: 20px; } .utilities { font-size: 11px; gap: 12px; } .areas { grid-template-columns: repeat(3, minmax(0, 1fr)); } .areas a { padding: 12px 0; } .tools { gap: 3px 16px; } }
