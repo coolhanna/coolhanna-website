@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import Link from "next/link";
+import IntakeCases from "./IntakeCases";
 import { callApi, fmtWon, fmtMonthDay, CONTACT_CHANNELS } from "@/lib/dashboard-client";
 import {
   cleanFields,
@@ -45,7 +46,7 @@ interface AdsData {
 
 const DEFAULT_STATES = ["제안", "협의", "계약", "제품수령", "콘텐츠", "업로드", "입금완료"];
 
-export default function AdsManager({ initial }: { initial: AdsData }) {
+export default function AdsManager({ initial, selectedCaseId }: { initial: AdsData; selectedCaseId?: string }) {
   const [data, setData] = useState<AdsData>(initial);
   const [showForm, setShowForm] = useState(false);
   const [busy, setBusy] = useState(false);
@@ -100,6 +101,8 @@ export default function AdsManager({ initial }: { initial: AdsData }) {
           </span>
         </div>
       </header>
+
+      <IntakeCases selectedCaseId={selectedCaseId} />
 
       <div className="max-w-page mx-auto px-5 sm:px-8 py-6 space-y-6">
         {error && (

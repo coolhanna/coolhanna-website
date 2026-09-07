@@ -11,7 +11,9 @@ import type { JournalEntry, JournalMutationResponse, JournalResponse } from "@/l
 import styles from "./diary.module.css";
 import ReflectionPanel from "./ReflectionPanel";
 import DayContext from "./DayContext";
-import { EDITOR_DRAFT_KEY, initialHomeView, isJournalMutation, QUICK_DRAFT_KEY, readEditorDrafts, readQuickDraft } from "./home-model";
+import IntakeInbox from "./IntakeInbox";
+import type { SavedIntakeSource } from "./IntakeInbox";
+import { EDITOR_DRAFT_KEY, initialHomeView, isJournalEntry, isJournalMutation, QUICK_DRAFT_KEY, readEditorDrafts, readQuickDraft } from "./home-model";
 import type { HomeView, JournalContext, QuickDraft, SavedEditorDraft } from "./home-model";
 
 type Kind = "memo" | "task";
@@ -37,6 +39,7 @@ function errorMessage(error: unknown, saving = false): string {
 }
 
 function authorLabel(entry: JournalEntry): string {
+  if (entry.derivation && entry.author === "ai" && entry.confirmation === "confirmed") return "메모에서 정리";
   if (entry.author === "ai") return entry.confirmation === "proposed" ? "AI 제안" : "AI · 한나 확인";
   if (entry.reply) return entry.reply.type === "correction" ? "한나 · 뜻 고치기" : "한나 · 질문에 답변";
   return "한나";
@@ -56,7 +59,7 @@ function newRequestKey(previous: RequestKey | null, body: unknown): RequestKey {
     : { fingerprint, id: crypto.randomUUID() };
 }
 
-export default function DiaryBoard({ today: initialToday, initialView = "morning" }: { today: string; initialView?: "morning" | "evening" }) {
+export default function DiaryBoard({ today: initialToday, initialView = "morning", entryId }: { today: string; initialView?: "morning" | "evening"; entryId?: string }) {
   const [today, setToday] = useState(initialToday);
   const [mode, setMode] = useState<HomeView>(initialView);
   const [anchor, setAnchor] = useState(today);
@@ -73,6 +76,8 @@ export default function DiaryBoard({ today: initialToday, initialView = "morning
   const [quickDate, setQuickDate] = useState(today);
   const [quickDateFollowsToday, setQuickDateFollowsToday] = useState(true);
   const [quickKind, setQuickKind] = useState<Kind>("memo");
+  const [processing, setProcessing] = useState<"connect" | "record">("connect");
+  const [savedSource, setSavedSource] = useState<SavedIntakeSource | null>(null);
   const [quickError, setQuickError] = useState("");
   const [draftsReady, setDraftsReady] = useState(false);
   const [draftWarning, setDraftWarning] = useState("");
@@ -110,7 +115,7 @@ export default function DiaryBoard({ today: initialToday, initialView = "morning
     try {
       const data = await callApi<JournalContext>("GET", `journal/context?date=${today}`);
       if (sequence !== contextSequence.current) return;
-      if (data.date !== today || !data.current_focus || !data.briefing || !Array.isArray(data.open_tasks?.entries) || !Array.isArray(data.questions?.items)) throw new Error("Invalid daily context");
+      if (data.date !== today || !data.current_focus || !data.briefing || !Array.isArray(data.open_tasks?.entries) || !data.open_tasks.entries.every(isJournalEntry) || !Array.isArray(data.questions?.items)) throw new Error("Invalid daily context");
       setContext(data);
     } catch (error) {
       if (sequence === contextSequence.current) setContextError(errorMessage(error));
@@ -127,6 +132,7 @@ export default function DiaryBoard({ today: initialToday, initialView = "morning
         if (draft) {
           setQuickText(draft.text); setQuickDate(draft.followsToday ? journalToday() : draft.date);
           setQuickDateFollowsToday(draft.followsToday); setQuickKind(draft.kind); setQuickAttempt(draft.attempt);
+          setProcessing(draft.processing || "connect");
           if (draft.attempt) setQuickError("앞선 저장 결과를 확인하지 못했어요. 같은 기록으로 다시 확인해 주세요.");
           setNotice(draft.attempt ? "앞선 저장 결과를 확인해야 해요. 같은 기록으로 다시 확인하면 중복 저장되지 않아요." : "이 창에서 쓰던 메모를 이어서 불러왔어요.");
           setComposerOptions(Boolean(draft.attempt) || !draft.followsToday || draft.kind === "task");
@@ -142,11 +148,27 @@ export default function DiaryBoard({ today: initialToday, initialView = "morning
     if (!draftsReady) return;
     let active = true;
     try {
-      if (quickText || quickAttempt) localStorage.setItem(QUICK_DRAFT_KEY, JSON.stringify({ text: quickText, date: quickDate, followsToday: quickDateFollowsToday, kind: quickKind, attempt: quickAttempt }));
+      if (quickText || quickAttempt) localStorage.setItem(QUICK_DRAFT_KEY, JSON.stringify({ text: quickText, date: quickDate, followsToday: quickDateFollowsToday, kind: quickKind, attempt: quickAttempt, processing }));
       else localStorage.removeItem(QUICK_DRAFT_KEY);
     } catch { queueMicrotask(() => { if (active) setDraftWarning("이 브라우저에 초안을 보관하지 못했어요. 창을 닫기 전에 저장해 주세요."); }); }
     return () => { active = false; };
-  }, [draftsReady, quickText, quickDate, quickDateFollowsToday, quickKind, quickAttempt]);
+  }, [draftsReady, quickText, quickDate, quickDateFollowsToday, quickKind, quickAttempt, processing]);
+
+  useEffect(() => {
+    if (!entryId || !draftsReady) return;
+    let active = true;
+    void callApi<JournalMutationResponse>("GET", `journal/${encodeURIComponent(entryId)}`).then(result => {
+      if (!active) return;
+      if (!isJournalMutation(result) || result.entry.id !== entryId) throw new Error("Invalid linked journal entry");
+      const entry = result.entry;
+      let draft: SavedEditorDraft | undefined;
+      try { draft = readEditorDrafts(sessionStorage.getItem(EDITOR_DRAFT_KEY))[entryId]; } catch { /* Open the saved entry if this browser has no draft storage. */ }
+      editorKey.current = draft?.request || null;
+      setEditor(draft ? { ...draft, error: "작성하던 수정 초안을 이어서 열었어요.", conflict: null } : { entry, text: entry.text, date: entry.date || "", time: entry.time || "", kind: entry.kind, error: "", conflict: null });
+      if (entry.date) { setMode("week"); setAnchor(entry.date); setSelectedDate(entry.date); }
+    }).catch(error => { if (active) setActionError(errorMessage(error)); });
+    return () => { active = false; };
+  }, [draftsReady, entryId]);
 
   useEffect(() => {
     let active = true;
@@ -177,7 +199,7 @@ export default function DiaryBoard({ today: initialToday, initialView = "morning
     try {
       const data = await callApi<JournalResponse>("GET", `journal?start=${start}&end=${end}&include_undated=true`);
       if (sequence !== requestSequence.current || requestedRange !== currentRange.current) return;
-      if (!Array.isArray(data.entries)) throw new Error("Invalid journal response");
+      if (!Array.isArray(data.entries) || !data.entries.every(isJournalEntry)) throw new Error("Invalid journal response");
       setEntries(data.entries);
       setLoadedRange(requestedRange);
     } catch (error) {
@@ -247,7 +269,7 @@ export default function DiaryBoard({ today: initialToday, initialView = "morning
     setQuickError("");
     const date = quickDateFollowsToday ? journalToday() : quickDate;
     refreshToday();
-    const attempt = quickAttempt || { id: crypto.randomUUID(), body: { text: quickText, date: date || null, time: null, kind: quickKind, author: "hanna", confirmation: "confirmed", source: "한나 다이어리" } } satisfies NonNullable<QuickDraft["attempt"]>;
+    const attempt = quickAttempt || { id: crypto.randomUUID(), body: { text: quickText, date: date || null, time: null, kind: quickKind, author: "hanna", confirmation: "confirmed", source: "한나 다이어리", processing } } satisfies NonNullable<QuickDraft["attempt"]>;
     setQuickAttempt(attempt);
     setQuickDate(attempt.body.date || ""); setQuickDateFollowsToday(false);
     try { localStorage.setItem(QUICK_DRAFT_KEY, JSON.stringify({ text: attempt.body.text, date: attempt.body.date || "", followsToday: false, kind: attempt.body.kind, attempt })); }
@@ -256,9 +278,10 @@ export default function DiaryBoard({ today: initialToday, initialView = "morning
       const result = await callApi<JournalMutationResponse>("POST", "journal", { ...attempt.body, request_id: attempt.id });
       if (!isJournalMutation(result) || result.entry.author !== "hanna" || result.entry.kind !== attempt.body.kind || result.entry.date !== attempt.body.date) throw new Error("Invalid saved journal response");
       acceptSaved(result.entry);
+      setSavedSource({ id: result.entry.id, version: result.entry.version, text: result.entry.text, processing: attempt.body.processing || "connect" });
       setQuickText("");
       setQuickAttempt(null);
-      setQuickDate(journalToday()); setQuickDateFollowsToday(true); setQuickKind("memo");
+      setQuickDate(journalToday()); setQuickDateFollowsToday(true); setQuickKind("memo"); setProcessing("connect");
       try { localStorage.removeItem(QUICK_DRAFT_KEY); } catch { /* The visible result is still confirmed by the server. */ }
       await load();
     } catch (error) {
@@ -316,6 +339,7 @@ export default function DiaryBoard({ today: initialToday, initialView = "morning
 
   async function findLatest(id: string): Promise<JournalEntry | null> {
     const data = await callApi<JournalMutationResponse>("GET", `journal/${encodeURIComponent(id)}`);
+    if (!isJournalMutation(data) || data.entry.id !== id) throw new Error("Invalid journal entry");
     return data.entry;
   }
 
@@ -422,19 +446,21 @@ export default function DiaryBoard({ today: initialToday, initialView = "morning
 
         <section className={styles.quickSection} aria-labelledby="diary-quick-title">
           <form onSubmit={saveQuick}>
-            <div className={styles.sectionHeading}><h2 id="diary-quick-title">지금 남기고 싶은 것</h2><span>한 줄이어도 충분해요.</span></div>
+            <div className={styles.sectionHeading}><h2 id="diary-quick-title">지금 남기고 싶은 것</h2><span>일정, 생각, 링크를 한 번에.</span></div>
             <label className={styles.srOnly} htmlFor="diary-quick-text">메모 내용</label>
-            <textarea id="diary-quick-text" value={quickText} disabled={saving || !draftsReady || Boolean(quickAttempt)} onChange={event => { setQuickText(event.target.value); setQuickError(""); }} rows={3} maxLength={10000} placeholder={mode === "evening" ? "오늘 끝낸 일, 바뀐 계획, 먹은 것, 기억하고 싶은 생각…" : "오늘 꼭 할 일, 컨디션, 방금 든 생각을 편하게 적어두세요."} />
+            <textarea id="diary-quick-text" value={quickText} disabled={saving || !draftsReady || Boolean(quickAttempt)} onChange={event => { setQuickText(event.target.value); setQuickError(""); }} rows={3} maxLength={10000} placeholder={mode === "evening" ? "오늘 끝낸 일, 바뀐 계획, 먹은 것, 기억하고 싶은 생각…" : mode === "week" ? "이번 주 할 일과 정해진 날짜를 여러 줄로 적어 주세요. 생각이나 링크가 섞여 있어도 괜찮아요." : "오늘 꼭 할 일, 컨디션, 방금 든 생각을 편하게 적어 주세요. 링크도 함께 남겨도 돼요."} />
             <div className={styles.quickFooter}>
               <button type="button" className={styles.textButton} aria-expanded={composerOptions} onClick={() => setComposerOptions(value => !value)}>{quickKind === "task" ? "☑ 할 일" : "메모"} · {quickDateFollowsToday ? "오늘" : quickDate ? formatDay(quickDate) : "날짜 없이"} <span aria-hidden="true">{composerOptions ? "⌃" : "⌄"}</span></button>
               <button type="submit" className={styles.primaryButton} disabled={saving || !draftsReady}>{saving ? "저장 중…" : quickAttempt ? "같은 기록으로 저장 확인" : "남기기 ↗"}</button>
             </div>
+            <label className={styles.recordChoice}><input type="checkbox" checked={processing === "record"} disabled={saving || Boolean(quickAttempt)} onChange={event => setProcessing(event.target.checked ? "record" : "connect")} />이 메모는 정리하지 않고 기록만 남기기</label>
             {composerOptions && <div className={styles.composerOptions}><label><span>날짜</span><input aria-label="빠른 메모 날짜" type="date" value={quickDate} disabled={saving || Boolean(quickAttempt)} onChange={event => { setQuickDate(event.target.value); setQuickDateFollowsToday(false); }} /></label><label className={styles.taskChoice}><input type="checkbox" checked={quickKind === "task"} disabled={saving || Boolean(quickAttempt)} onChange={event => setQuickKind(event.target.checked ? "task" : "memo")} />할 일로 남기기</label><button type="button" className={styles.textButton} disabled={saving || Boolean(quickAttempt)} onClick={() => { setQuickDate(journalToday()); setQuickDateFollowsToday(true); }}>오늘</button><button type="button" className={styles.textButton} disabled={saving || Boolean(quickAttempt)} onClick={() => { setQuickDate(""); setQuickDateFollowsToday(false); }}>날짜 없이</button></div>}
             {quickError && <p className={styles.errorText} role="alert">{quickError}</p>}
             {draftWarning && <p className={styles.errorText} role="status">{draftWarning}</p>}
           </form>
         </section>
-        <div className={styles.saveStatus} role="status">{notice || (saving ? "서버에 저장하고 있어요…" : quickText && draftsReady && !draftWarning ? "작성 중인 메모는 이 브라우저에 보관돼요. 남기기를 누르면 함께 공유해요." : "메모는 그대로 남아요. 꼭 챙길 일만 ‘할 일로 남기기’를 선택해 주세요.")}</div>
+        <div className={styles.saveStatus} role="status">{notice || (saving ? "서버에 저장하고 있어요…" : quickText && draftsReady && !draftWarning ? "작성 중인 메모는 이 브라우저에 보관돼요. 남기기를 누르면 함께 공유해요." : "원문은 그대로 남기고, 연결한 결과는 이 자리에서 알려드려요.")}</div>
+        <IntakeInbox refreshKey={reflectionRefresh} savedSource={savedSource} onJournalChange={() => { void load(); void loadContext(); setReflectionRefresh(value => value + 1); }} />
         {Object.keys(editorDrafts).length > 0 && <details className={styles.draftRecovery}><summary>아직 저장하지 않은 수정 초안 · {Object.keys(editorDrafts).length}개</summary>{Object.entries(editorDrafts).map(([key, draft]) => <div key={key}><button type="button" disabled={saving} onClick={() => resumeEditor(draft)}><span>{draft.date ? formatDay(draft.date) : "날짜 미정"} · {draft.request ? "저장 결과 확인 필요" : "이어서 쓰기"}</span><p>{draft.text || "내용 없이 날짜를 수정한 기록"}</p></button>{!draft.request && <button type="button" className={styles.textButton} disabled={saving} onClick={() => discardEditorDraft(key)}>초안 지우기</button>}</div>)}</details>}
         {actionError && <div className={styles.errorBanner} role="alert"><span>{actionError}</span>{failedAction && <button type="button" disabled={saving} onClick={() => { const entry = entries.find(item => item.id === failedAction.id) || context?.open_tasks.entries.find(item => item.id === failedAction.id); if (entry) void changeEntry(entry, failedAction.patch); }}>다시 시도</button>}</div>}
 
@@ -456,10 +482,16 @@ export default function DiaryBoard({ today: initialToday, initialView = "morning
           {loadError && <div className={styles.errorBanner} role="alert"><span>{loadError}</span><button type="button" onClick={() => void load()}>다시 불러오기</button></div>}
           {!ready && !loadError && <p className={styles.loading} role="status">저장한 기록을 불러오고 있어요.</p>}
           {ready && <>
-            {mode === "week" ? <div className={styles.weekStrip}>{dates.map((date, index) => { const records = dayEntries(date); return <button key={date} type="button" className={`${styles.weekDate} ${date === selectedDate ? styles.selectedDate : ""} ${date === today ? styles.currentDate : ""}`} aria-pressed={date === selectedDate} aria-label={`${formatDay(date)}, 기록 ${records.length}개`} onClick={() => setSelectedDate(date)}><span>{["월", "화", "수", "목", "금", "토", "일"][index]}</span><strong>{Number(date.slice(8))}</strong><small>{date === today ? "오늘" : records.length ? `${records.length}개` : "·"}</small>{records.length > 0 && <span className={styles.weekDatePreview}>{records[0].text}</span>}</button>; })}</div> : <div><div className={styles.monthWeekdays}>{["월", "화", "수", "목", "금", "토", "일"].map(day => <span key={day}>{day}</span>)}</div><div className={styles.monthGrid}>{dates.map(date => { const records = dayEntries(date); return <button key={date} type="button" className={`${styles.monthDay} ${date.slice(0, 7) !== anchor.slice(0, 7) ? styles.outsideMonth : ""} ${date === selectedDate ? styles.selectedDay : ""} ${date === today ? styles.monthToday : ""}`} aria-label={`${formatDay(date)}, 기록 ${records.length}개. 눌러서 보기`} aria-pressed={date === selectedDate} onClick={() => setSelectedDate(date)}><span>{Number(date.slice(8))}</span>{records.length > 0 && <><span className={styles.monthPreview}>{records.slice(0, 2).map(entry => <span key={entry.id}>{entry.time ? `${entry.time} ` : ""}{entry.text}</span>)}{records.length > 2 && <small>외 {records.length - 2}개</small>}</span><small className={styles.monthCount}>{records.length}<span className={styles.countSuffix}>개</span></small></>}</button>; })}</div></div>}
-            <section className={styles.selectedDayList}><div className={styles.sectionHeading}><div><p className={styles.eyebrow}>{selectedDate === today ? "오늘의 페이지" : "선택한 날의 페이지"}</p><h3>{formatDay(selectedDate)}</h3></div><button type="button" className={styles.secondaryButton} onClick={() => openNew(selectedDate)}>＋ 이날에 쓰기</button></div>{dayEntries(selectedDate).length ? dayEntries(selectedDate).map(entry => renderEntry(entry)) : <p className={styles.emptyState}>아직 남긴 기록이 없어요.<br />업로드할 영상, 해야 할 일, 그날의 생각을 그대로 적어두세요.</p>}</section>
+            {mode === "week" ? <div className={styles.weekAgenda}>{dates.map((date, index) => {
+              const records = dayEntries(date);
+              return <section key={date} id={`diary-day-${date}`} className={`${styles.weekRow} ${date === today ? styles.weekRowToday : ""}`} aria-label={formatDay(date)}>
+                <div className={styles.weekDayHeading}><h3>{["월", "화", "수", "목", "금", "토", "일"][index]}요일<span>{Number(date.slice(5, 7))}.{Number(date.slice(8))}</span></h3>{date === today && <small>오늘</small>}<button type="button" className={styles.textButton} aria-label={`${formatDay(date)}에 쓰기`} onClick={() => openNew(date)}>＋ 쓰기</button></div>
+                <div className={styles.weekRecords}>{records.length ? records.map(entry => renderEntry(entry, true)) : <p className={styles.emptyState}>아직 적은 일정이 없어요.</p>}</div>
+              </section>;
+            })}</div> : <><div><div className={styles.monthWeekdays}>{["월", "화", "수", "목", "금", "토", "일"].map(day => <span key={day}>{day}</span>)}</div><div className={styles.monthGrid}>{dates.map(date => { const records = dayEntries(date); return <button key={date} type="button" className={`${styles.monthDay} ${date.slice(0, 7) !== anchor.slice(0, 7) ? styles.outsideMonth : ""} ${date === selectedDate ? styles.selectedDay : ""} ${date === today ? styles.monthToday : ""}`} aria-label={`${formatDay(date)}, 기록 ${records.length}개. 눌러서 보기`} aria-pressed={date === selectedDate} onClick={() => setSelectedDate(date)}><span>{Number(date.slice(8))}</span>{records.length > 0 && <><span className={styles.monthPreview}>{records.slice(0, 2).map(entry => <span key={entry.id}>{entry.time ? `${entry.time} ` : ""}{entry.text}</span>)}{records.length > 2 && <small>외 {records.length - 2}개</small>}</span><small className={styles.monthCount}>{records.length}<span className={styles.countSuffix}>개</span></small></>}</button>; })}</div></div>
+            <section className={styles.selectedDayList}><div className={styles.sectionHeading}><div><p className={styles.eyebrow}>{selectedDate === today ? "오늘의 페이지" : "선택한 날의 페이지"}</p><h3>{formatDay(selectedDate)}</h3></div><button type="button" className={styles.secondaryButton} onClick={() => openNew(selectedDate)}>＋ 이날에 쓰기</button></div>{dayEntries(selectedDate).length ? dayEntries(selectedDate).map(entry => renderEntry(entry)) : <p className={styles.emptyState}>아직 남긴 기록이 없어요.<br />업로드할 영상, 해야 할 일, 그날의 생각을 그대로 적어두세요.</p>}</section></>}
           </>}
-          <p className={styles.calendarHint}>날짜를 누르면 그날의 기록이 펼쳐져요. 빈 날은 아직 공유한 기록이 없는 날이에요.</p>
+          <p className={styles.calendarHint}>{mode === "week" ? "기록을 누르면 원문을 읽고 고칠 수 있어요. ＋ 쓰기로 해당 날짜에 바로 남겨요." : "날짜를 누르면 그날의 기록이 펼쳐져요. 빈 날은 아직 공유한 기록이 없는 날이에요."}</p>
           {ready && <details className={styles.undatedSection}><summary>날짜를 정하지 않은 기록 <span>{undated.length}개</span></summary><p className={styles.sectionDescription}>생각은 남겨두고, 날짜는 정해졌을 때 붙여요.</p>{undated.length ? undated.map(entry => renderEntry(entry)) : <p className={styles.emptyState}>날짜 없이 남긴 기록이 아직 없어요.</p>}<button type="button" className={styles.textButton} onClick={() => openNew("")}>＋ 날짜 없이 쓰기</button></details>}
           {ready && proposals.length > 0 && <section className={styles.proposalSection}><div className={styles.sectionHeading}><h2>확인하고 정할 제안</h2><span>아직 할 일로 확정되지 않았어요.</span></div>{proposals.map(entry => renderEntry(entry))}</section>}
         </section>}
@@ -471,7 +503,7 @@ export default function DiaryBoard({ today: initialToday, initialView = "morning
           <div className={styles.editorTextLabel}><label htmlFor="diary-editor-text">내용</label><textarea id="diary-editor-text" autoFocus rows={7} maxLength={10000} value={editor.text} disabled={saving || editorRetryPending} onChange={event => updateEditor({ text: event.target.value })} placeholder="오늘의 생각이나 할 일을 편하게 적어 주세요." /></div>
           <div className={styles.editorFields}><label>날짜<input type="date" value={editor.date} disabled={saving || editorRetryPending} onChange={event => updateEditor({ date: event.target.value, time: event.target.value ? editor.time : "" })} /></label><label>시간 · 선택<input type="time" value={editor.time} disabled={saving || editorRetryPending || !editor.date} onChange={event => updateEditor({ time: event.target.value })} /></label><label>종류<select value={editor.kind} disabled={saving || editorRetryPending || Boolean(editor.entry?.reply)} onChange={event => updateEditor({ kind: event.target.value as Kind })}><option value="task">할 일</option><option value="memo">메모</option></select></label></div>
           <button type="button" className={styles.textButton} disabled={saving || editorRetryPending || !editor.date} onClick={() => updateEditor({ date: "", time: "" })}>날짜 정하지 않기</button>
-          {editor.entry && <details className={styles.original}><summary>처음 남긴 원문과 출처</summary><p>{editor.entry.original_text}</p><small>{authorLabel(editor.entry)} · {editor.entry.source || "출처 기록 없음"}</small></details>}
+          {editor.entry && <details className={styles.original}><summary>처음 남긴 원문과 출처</summary><p>{editor.entry.original_text}</p><small>{authorLabel(editor.entry)} · {editor.entry.source || "출처 기록 없음"}</small>{editor.entry.derivation && <><small>정리의 근거가 된 문장</small><p>{editor.entry.derivation.source_quote}</p><Link href={`/dashboard/diary?entry=${encodeURIComponent(editor.entry.derivation.source_entry_id)}`}>한나가 남긴 메모 원문 ↗</Link></>}</details>}
           {editor.error && <p className={styles.errorText} role="alert">{editor.error}</p>}
           {editor.conflict && <div className={styles.conflict}><h3>현재 서버에 있는 기록</h3><p>{editor.conflict.text}</p><span>{editor.conflict.date ? formatDay(editor.conflict.date) : "날짜 미정"}{editor.conflict.time ? ` · ${editor.conflict.time}` : ""}</span><button type="button" className={styles.secondaryButton} onClick={() => updateEditor({ entry: editor.conflict, conflict: null, error: "최신 기록을 확인했어요. 위의 초안을 검토한 뒤 저장하면 반영돼요." })}>최신 변경 확인 · 내 초안 유지</button></div>}
           <div className={styles.editorActions}><span>{editor.entry?.confirmation === "proposed" ? "내용을 고쳐도 AI 제안 상태는 유지돼요." : "줄바꿈과 처음 남긴 원문을 보존해요."}</span><button type="submit" className={styles.primaryButton} disabled={saving || Boolean(editor.conflict)}>{saving ? "저장 중…" : editorRetryPending ? "같은 기록으로 저장 확인" : editor.error ? "다시 저장하기" : "저장하기"}</button></div>

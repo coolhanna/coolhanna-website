@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import type {
   FoodCalendarDay,
   FoodCalendarResponse,
@@ -694,8 +694,10 @@ function MealQuestion({
 
 export default function MealsCalendarClient({
   initial,
+  linkedDate,
 }: {
   initial: FoodCalendarResponse | ApiError;
+  linkedDate?: string;
 }) {
   const incoming: unknown = initial;
   const apiError = isObject(incoming) && typeof incoming.error === "string" && incoming.error
@@ -707,11 +709,15 @@ export default function MealsCalendarClient({
 
   const [data, setData] = useState<FoodCalendarResponse | null>(validInitial);
   const [month, setMonth] = useState(validInitial?.month || nowMonth);
-  const [selected, setSelected] = useState(todayString());
+  const [selected, setSelected] = useState(linkedDate || todayString());
   const [loading, setLoading] = useState(false);
   const [mutating, setMutating] = useState(false);
   const [error, setError] = useState(initialError);
   const requestSequence = useRef(0);
+  const linkedDayRef = useRef<HTMLDivElement>(null);
+  useEffect(() => {
+    if (linkedDate) { linkedDayRef.current?.focus({ preventScroll: true }); linkedDayRef.current?.scrollIntoView({ block: "start" }); }
+  }, [linkedDate]);
 
   const preparedDays = useMemo(
     () => data?.days.map((day) => prepareFoodDay(day, todayString())) || [],
@@ -1099,7 +1105,7 @@ export default function MealsCalendarClient({
           </section>
 
           {selectedDay && (
-            <aside className="space-y-3 lg:sticky lg:top-4">
+            <aside ref={linkedDayRef} tabIndex={-1} className="space-y-3 lg:sticky lg:top-4">
               <section
                 className="rounded-2xl border p-4"
                 style={{ borderColor: "var(--border)", background: "var(--bg-card)" }}

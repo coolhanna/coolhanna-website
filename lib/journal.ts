@@ -42,6 +42,12 @@ export interface JournalEntry {
   reflection?: JournalReflection;
   reply?: JournalReply;
   review_state?: JournalReviewState;
+  derivation?: {
+    source_entry_id: string;
+    source_version: number;
+    source_quote: string;
+    action_id: string;
+  };
 }
 
 export interface JournalReflectionItem {

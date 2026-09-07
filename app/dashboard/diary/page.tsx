@@ -10,6 +10,7 @@ export const metadata: Metadata = {
 
 export const dynamic = "force-dynamic";
 
-export default function DiaryPage() {
-  return <DiaryBoard today={journalToday()} initialView={initialHomeView()} />;
+export default async function DiaryPage({ searchParams }: { searchParams: Promise<{ entry?: string }> }) {
+  const { entry } = await searchParams;
+  return <DiaryBoard today={journalToday()} initialView={initialHomeView()} entryId={typeof entry === "string" && entry.length <= 256 ? entry : undefined} />;
 }

@@ -133,7 +133,7 @@ export default function PlanningBoard({ initialFeed, initialDecisions, initialSa
       const payload = await response.json();
       if (!response.ok) throw new Error(payload?.detail || payload?.error || `요청 실패 ${response.status}`);
       setFeed((current) => ({ ...current, requests: [...current.requests, payload] })); setRequestText("");
-      setNotice("AI 조사 요청 저장됨 · 처리 대기 중");
+      setNotice("조사 요청 접수");
     } catch (error) { setNotice(`요청하지 못했어 · ${(error as Error).message}`); }
     finally { setRequesting(false); }
   }

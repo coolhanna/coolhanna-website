@@ -1,0 +1,25 @@
+.page { max-width: 850px; margin: 0 auto; padding: 24px 30px 65px; color: #26382f; background: #f6f4ed; min-height: 100vh; font-size: 15px; line-height: 1.9; }
+.page p, .page h1, .page h2, .page h3 { margin: 0; word-break: keep-all; overflow-wrap: anywhere; }
+.page p { white-space: pre-wrap; }
+.page a { color: #3f6249; text-underline-offset: 4px; }
+.header { display: flex; justify-content: space-between; align-items: center; gap: 12px; margin-bottom: 24px; font-size: 12px; }
+.page button { font: inherit; cursor: pointer; font-size: 12px; color: #3f6249; border: 1px solid #d9ddcf; border-radius: 5px; background: #fffef9; padding: 7px 12px; min-height: 36px; }
+.page button:disabled { opacity: .6; }
+.page button:focus-visible, .page a:focus-visible { outline: 2px solid #3f6249; outline-offset: 4px; }
+.eyebrow, .date { font-size: 11px; color: #6a7367; }
+.page h1 { font-size: 26px; line-height: 1.65; font-weight: 500; letter-spacing: -.04em; margin: 6px 0; }
+.summary { font-size: 16px; line-height: 1.9; margin: 23px 0 !important; }
+.section { border-top: 1px solid #d9ddcf; padding-top: 20px; margin-top: 23px; }
+.page h2 { font-size: 18px; font-weight: 500; margin-bottom: 9px; }
+.application { padding: 17px 20px; border-left: 2px solid #5f7a55; background: #e7ecdf; margin-top: 23px; }
+.note { color: #6a7367; font-size: 12px; }
+.sources { padding-left: 22px; margin-top: 17px; }
+.sources li { padding: 0 0 20px 4px; }
+.sources li > span { font-size: 11px; color: #6a7367; }
+.sources h3 { font-size: 15px; font-weight: 500; margin: 3px 0; }
+.sources li > p { font-size: 14px; }
+.sourceLink { display: inline-block; margin-top: 14px; font-size: 13px; }
+.archived, .error { color: #795331; border-left: 2px solid #b79b76; padding: 12px 15px; background: #f4eadd; font-size: 13px; margin: 17px 0; }
+.archived p { margin-top: 5px; }
+.empty { padding: 25px 0; color: #6a7367; font-size: 13px; }
+@media (max-width: 600px) { .page { padding: 20px 18px 45px; } .page h1 { font-size: 24px; } .application { padding: 14px; } }

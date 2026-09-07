@@ -20,6 +20,7 @@ export interface QuickBody {
   author: "hanna";
   confirmation: "confirmed";
   source: "한나 다이어리";
+  processing?: "connect" | "record";
 }
 export interface QuickDraft {
   text: string;
@@ -27,6 +28,7 @@ export interface QuickDraft {
   followsToday: boolean;
   kind: "memo" | "task";
   attempt: { id: string; body: QuickBody } | null;
+  processing?: "connect" | "record";
 }
 export const QUICK_DRAFT_KEY = "hanna-diary-quick-draft-v1";
 export const EDITOR_DRAFT_KEY = "hanna-diary-editor-drafts-v1";
@@ -48,8 +50,7 @@ export function readEditorDrafts(raw: string | null): Record<string, SavedEditor
       typeof value.text === "string" && value.text.length <= 10000 && (value.date === "" || isDate(value.date)) &&
       (value.time === "" || /^(?:[01]\d|2[0-3]):[0-5]\d$/.test(value.time)) &&
       (value.kind === "memo" || value.kind === "task") && (value.entry === null ? key === "new" :
-        value.entry && value.entry.id === key && typeof value.entry.text === "string" && typeof value.entry.original_text === "string" &&
-        Number.isInteger(value.entry.version) && value.entry.version > 0 && (value.entry.author === "hanna" || value.entry.author === "ai")) &&
+        isJournalEntry(value.entry) && value.entry.id === key) &&
       (value.request === null || (typeof value.request?.fingerprint === "string" && typeof value.request?.id === "string" && value.request.id.length > 0))
     ).slice(0, 50));
   } catch { return {}; }
@@ -72,26 +73,29 @@ export function readQuickDraft(raw: string | null): QuickDraft | null {
     const value = JSON.parse(raw) as QuickDraft;
     if (!value || typeof value !== "object" || typeof value.text !== "string" || value.text.length > 10000 ||
       !(value.date === "" || isDate(value.date)) || typeof value.followsToday !== "boolean" ||
-      (value.kind !== "memo" && value.kind !== "task")) return null;
+      (value.kind !== "memo" && value.kind !== "task") || (value.processing !== undefined && value.processing !== "connect" && value.processing !== "record")) return null;
     if (value.attempt !== null) {
       const attempt = value.attempt;
       if (!attempt || typeof attempt.id !== "string" || !attempt.id || attempt.id.length > 160 || !attempt.body) return null;
       const body = attempt.body;
       if (typeof body.text !== "string" || !body.text.trim() || body.text.length > 10000 ||
         !(body.date === null || isDate(body.date)) || body.time !== null || (body.kind !== "memo" && body.kind !== "task") ||
-        body.author !== "hanna" || body.confirmation !== "confirmed" || body.source !== "한나 다이어리") return null;
+        body.author !== "hanna" || body.confirmation !== "confirmed" || body.source !== "한나 다이어리" || (body.processing !== undefined && body.processing !== "connect" && body.processing !== "record")) return null;
       // An uncertain request is recovered exactly as submitted, even after midnight.
-      return { text: body.text, date: body.date || "", followsToday: false, kind: body.kind, attempt };
+      return { text: body.text, date: body.date || "", followsToday: false, kind: body.kind, attempt, ...(body.processing ? { processing: body.processing } : {}) };
     }
-    return { text: value.text, date: value.date, followsToday: value.followsToday, kind: value.kind, attempt: null };
+    return { text: value.text, date: value.date, followsToday: value.followsToday, kind: value.kind, attempt: null, ...(value.processing ? { processing: value.processing } : {}) };
   } catch { return null; }
 }
 
-export function isJournalMutation(value: unknown): value is JournalMutationResponse {
+export function isJournalEntry(value: unknown): value is JournalEntry {
   if (!value || typeof value !== "object") return false;
-  const result = value as JournalMutationResponse;
-  const entry = result.entry;
-  return result.ok === true && Number.isInteger(result.revision) && result.revision >= 0 && Boolean(entry) &&
+  const entry = value as JournalEntry;
+  const derivation = entry.derivation;
+  return (derivation === undefined || (derivation !== null && typeof derivation === "object" &&
+      typeof derivation.source_entry_id === "string" && derivation.source_entry_id.length > 0 &&
+      Number.isSafeInteger(derivation.source_version) && derivation.source_version > 0 &&
+      typeof derivation.source_quote === "string" && typeof derivation.action_id === "string" && derivation.action_id.length > 0)) &&
     typeof entry.id === "string" && entry.id.length > 0 && typeof entry.text === "string" && typeof entry.original_text === "string" &&
     typeof entry.source === "string" && Number.isInteger(entry.version) && entry.version > 0 &&
     typeof entry.created_at === "string" && Number.isFinite(Date.parse(entry.created_at)) &&
@@ -100,6 +104,12 @@ export function isJournalMutation(value: unknown): value is JournalMutationRespo
     (entry.kind === "memo" || entry.kind === "task") && (entry.author === "hanna" || entry.author === "ai") &&
     (entry.confirmation === "confirmed" || entry.confirmation === "proposed") &&
     (entry.status === "open" || entry.status === "done" || entry.status === "archived");
+}
+
+export function isJournalMutation(value: unknown): value is JournalMutationResponse {
+  if (!value || typeof value !== "object") return false;
+  const result = value as JournalMutationResponse;
+  return result.ok === true && Number.isInteger(result.revision) && result.revision >= 0 && isJournalEntry(result.entry);
 }
 
 export function safeDashboardRoute(value: string | undefined, fallback: string): string {

@@ -5,9 +5,9 @@
   --reflection-green: #37634e;
   --reflection-paper: #fffdf8;
   color: var(--reflection-ink);
-  margin: 20px 0 32px;
+  margin: 17px 0 24px;
   border-top: 1px solid var(--reflection-line);
-  padding-top: 24px;
+  padding-top: 19px;
   min-width: 0;
 }
 .panel button, .panel input, .panel select, .panel textarea { font: inherit; }
@@ -22,13 +22,13 @@
 .selector { display: flex; flex-wrap: wrap; gap: 8px 12px; align-items: center; margin-top: 18px; }
 .selector label { font-size: 11px; color: var(--reflection-muted); }
 .selector select { max-width: 100%; min-width: 0; width: min(100%, 450px); background: var(--reflection-paper); border: 1px solid var(--reflection-line); border-radius: 5px; padding: 8px 10px; color: var(--reflection-ink); font-size: 13px; }
-.reflectionLayout { display: grid; grid-template-columns: minmax(0, 1fr); gap: 28px; margin-top: 24px; }
+.reflectionLayout { display: grid; grid-template-columns: minmax(0, 1fr); gap: 22px; margin-top: 19px; }
 .advice { min-width: 0; }
 .adviceMeta { display: flex; gap: 12px; align-items: baseline; flex-wrap: wrap; font-size: 11px; }
 .adviceMeta > span { color: var(--reflection-green); }
 .adviceMeta strong { color: #805230; font-weight: 500; }
-.advice > h3 { font-family: "Iowan Old Style", "AppleMyungjo", serif; font-size: clamp(23px, 2.8vw, 30px); font-weight: 500; line-height: 1.6; letter-spacing: -.04em; margin-top: 7px; }
-.adviceText { font-size: 14px; line-height: 1.9; margin-top: 13px !important; white-space: pre-wrap; }
+.advice > h3 { font-family: "Iowan Old Style", "AppleMyungjo", serif; font-size: 18px; font-weight: 500; line-height: 1.6; letter-spacing: -.04em; margin-top: 7px; }
+.adviceText { font-size: 15px; line-height: 1.9; margin-top: 11px !important; white-space: pre-wrap; }
 .staleNote { margin-top: 12px !important; padding-left: 11px; border-left: 2px solid #bd9a65; color: #805230; font-size: 12px; line-height: 1.8; }
 .whyNow { margin-top: 18px; display: grid; grid-template-columns: 115px minmax(0, 1fr); gap: 12px; font-size: 12px; line-height: 1.85; }
 .whyNow > span { color: var(--reflection-green); }
@@ -89,8 +89,8 @@
   .panelHeading { align-items: flex-start; gap: 10px; }
   .panelHeading h2 { font-size: 17px; }
   .quietButton { font-size: 11px !important; }
-  .advice > h3 { font-size: 24px; }
-  .adviceText { font-size: 13px; }
+  .advice > h3 { font-size: 18px; }
+  .adviceText { font-size: 15px; }
   .whyNow { grid-template-columns: minmax(0, 1fr); gap: 4px; }
   .replyForm textarea, .selector select { font-size: 16px; }
   .replyActions button { margin-left: auto; }

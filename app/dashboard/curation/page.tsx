@@ -6,7 +6,7 @@ export const metadata: Metadata = {
   robots: { index: false, follow: false },
 };
 
-// Phase 1: 프로토타입(목데이터). Phase 2에서 Vault/FastAPI 연결 시 server fetch로 교체.
-export default function CurationPage() {
-  return <CurationBoard />;
+export default async function CurationPage({ searchParams }: { searchParams: Promise<{ card?: string }> }) {
+  const { card } = await searchParams;
+  return <CurationBoard linkedCardId={typeof card === "string" && card.length <= 256 ? card : undefined} />;
 }

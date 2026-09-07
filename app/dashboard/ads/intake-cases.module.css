@@ -1,0 +1,39 @@
+.section { max-width: 1080px; margin: 0 auto; padding: 24px 32px; color: #26382f; font-size: 15px; line-height: 1.8; border-bottom: 1px solid #d9ddcf; }
+.section p, .section h2, .section h3, .section h4 { margin: 0; overflow-wrap: anywhere; word-break: keep-all; }
+.section a { color: #3f6249; text-underline-offset: 4px; }
+.section button { font: inherit; font-size: 12px; color: #3f6249; background: #fffef9; border: 1px solid #d9ddcf; padding: 7px 12px; min-height: 36px; border-radius: 5px; cursor: pointer; }
+.section button:focus-visible, .section summary:focus-visible, .section a:focus-visible { outline: 2px solid #3f6249; outline-offset: 3px; }
+.heading, .caseHeading { display: flex; align-items: center; justify-content: space-between; gap: 12px; flex-wrap: wrap; }
+.eyebrow { font-size: 11px; color: #6a7367; }
+.heading h2 { font-size: 18px; font-weight: 600; letter-spacing: -.035em; }
+.description { font-size: 13px; color: #6a7367; margin-top: 8px !important; }
+.caseList { display: flex; gap: 8px; flex-wrap: wrap; margin: 18px 0; }
+.caseList button { text-align: left; min-width: 130px; max-width: 100%; }
+.caseList button[aria-pressed="true"] { border-color: #647e59; background: #e7ecdf; }
+.caseList strong { display: block; font-size: 14px; font-weight: 500; }
+.caseList span { display: block; color: #6a7367; font-size: 11px; }
+.caseDetail { margin-top: 18px; padding: 19px 22px; border: 1px solid #d9ddcf; background: #fffef9; border-radius: 7px; min-width: 0; }
+.caseHeading { align-items: flex-start; }
+.caseHeading p, .caseHeading > span { font-size: 11px; color: #6a7367; }
+.caseHeading h3 { font-size: 18px; font-weight: 500; margin-top: 3px; }
+.fields { margin-top: 15px; }
+.fields > section { display: grid; grid-template-columns: 105px minmax(0,1fr); gap: 15px; padding: 14px 0; border-top: 1px solid #d9ddcf; }
+.fields h4 { color: #3f6249; font-size: 13px; font-weight: 500; padding-top: 3px; }
+.claim + .claim { border-top: 1px dashed #d9ddcf; margin-top: 12px; padding-top: 10px; }
+.claimState { font-size: 11px; color: #3f6249; }
+.claimState[data-state="proposed"], .claimState[data-state="unknown"] { color: #8a633b; }
+.claim > p { font-size: 15px; line-height: 1.85; white-space: pre-wrap; margin-top: 3px; }
+.source { color: #6a7367; font-size: 11px; margin-top: 5px; }
+.source summary, .timeline summary { cursor: pointer; padding: 5px 0; }
+.source p { white-space: pre-wrap; font-size: 13px; padding-left: 10px; border-left: 2px solid #d9ddcf; margin: 6px 0; }
+.source > span { display: block; margin-top: 3px; }
+.timeline { margin-top: 10px; border-top: 1px solid #d9ddcf; padding-top: 10px; font-size: 12px; color: #6a7367; }
+.timeline > section { padding: 12px 0; border-bottom: 1px solid #d9ddcf; }
+.timeline h4 { font-size: 12px; font-weight: 500; margin-bottom: 5px; }
+.addMemo { display: inline-block; margin-top: 16px; font-size: 12px; }
+.empty { padding: 15px 0; color: #6a7367; font-size: 13px; }
+.error { color: #873f29; padding: 10px 12px; border-left: 2px solid #b79b76; background: #f5ece1; font-size: 13px; margin-top: 10px !important; }
+.error button { margin-top: 7px; }
+.footnote { color: #6a7367; font-size: 11px; margin-top: 15px !important; }
+@media (max-width: 600px) { .section { padding: 20px 18px; } .caseDetail { padding: 15px; } .fields > section { grid-template-columns: minmax(0,1fr); gap: 5px; } .caseList button { min-width: 0; } }
+@media (pointer: coarse) { .section button, .section summary { min-height: 44px; } }

@@ -4,7 +4,7 @@
 // 데이터는 대시보드 백엔드(FastAPI, Vault .md)에서. 폴더에 던지거나 여기 붙여넣으면
 // 워처가 claude -p(0원)로 분석해 카드로 저장 → 여기 뜸.
 
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { callApi } from "@/lib/dashboard-client";
 
 type Source = "video" | "photo" | "voice" | "memo";
@@ -94,7 +94,7 @@ interface CurationResponse {
   total: number;
 }
 
-export default function CurationBoard() {
+export default function CurationBoard({ linkedCardId }: { linkedCardId?: string }) {
   const [cards, setCards] = useState<Card[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -108,6 +108,7 @@ export default function CurationBoard() {
 
   const [platFilter, setPlatFilter] = useState<string>("all");
   const [statusFilter, setStatusFilter] = useState<Status | "all">("all");
+  const openedLink = useRef<string | undefined>(undefined);
 
   const refresh = useCallback(async () => {
     try {
@@ -122,8 +123,16 @@ export default function CurationBoard() {
   }, []);
 
   useEffect(() => {
-    refresh();
+    let active = true;
+    queueMicrotask(() => { if (active) void refresh(); });
+    return () => { active = false; };
   }, [refresh]);
+
+  useEffect(() => {
+    if (!linkedCardId || openedLink.current === linkedCardId || !cards.some(card => card.id === linkedCardId)) return;
+    openedLink.current = linkedCardId;
+    queueMicrotask(() => { setPlatFilter("all"); setStatusFilter("all"); setExpandedId(linkedCardId); setShowRawId(linkedCardId); });
+  }, [cards, linkedCardId]);
 
   const filtered = useMemo(
     () =>
@@ -311,6 +320,7 @@ export default function CurationBoard() {
                   first={i === 0}
                   expanded={expandedId === card.id}
                   showRaw={showRawId === card.id}
+                  linkedFocus={linkedCardId === card.id}
                   onToggle={() => setExpandedId(expandedId === card.id ? null : card.id)}
                   onToggleRaw={() => setShowRawId(showRawId === card.id ? null : card.id)}
                   onPromote={(idx) => promoteBranch(card.id, idx)}
@@ -362,6 +372,7 @@ interface RowProps {
   card: Card;
   first: boolean;
   expanded: boolean;
+  linkedFocus?: boolean;
   showRaw: boolean;
   onToggle: () => void;
   onToggleRaw: () => void;
@@ -370,7 +381,11 @@ interface RowProps {
   onSaveEdit: (patch: Record<string, string>) => Promise<void>;
 }
 
-function Row({ card, first, expanded, showRaw, onToggle, onToggleRaw, onPromote, onArchive, onSaveEdit }: RowProps) {
+function Row({ card, first, expanded, showRaw, linkedFocus, onToggle, onToggleRaw, onPromote, onArchive, onSaveEdit }: RowProps) {
+  const rowRef = useRef<HTMLDivElement>(null);
+  useEffect(() => {
+    if (linkedFocus) { rowRef.current?.focus({ preventScroll: true }); rowRef.current?.scrollIntoView({ block: "center" }); }
+  }, [linkedFocus]);
   const kindMeta = KIND_META[card.kind] || KIND_META["생각 흐름"];
   const [copied, setCopied] = useState(false);
   const isRecord = card.branches.length === 0 && !card.application; // 그대로 기록한 메모
@@ -417,6 +432,9 @@ function Row({ card, first, expanded, showRaw, onToggle, onToggleRaw, onPromote,
   }
   return (
     <div
+      ref={rowRef}
+      tabIndex={-1}
+      id={`curation-card-${card.id}`}
       style={{
         borderTop: first ? "none" : "1px solid var(--border)",
         backgroundColor: isNew ? "var(--bg-card)" : "var(--bg-page)",

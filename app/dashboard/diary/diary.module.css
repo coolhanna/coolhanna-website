@@ -24,25 +24,25 @@
 .page textarea::placeholder { color: #737d70; opacity: 1; }
 .page input[type="checkbox"] { accent-color: var(--green); padding: 0; width: 18px; height: 18px; flex: 0 0 auto; }
 .page button:focus-visible, .page input:focus-visible, .page textarea:focus-visible, .page select:focus-visible, .page a:focus-visible, .page summary:focus-visible { outline: 2px solid var(--green); outline-offset: 4px; }
-.shell { width: min(100%, 1000px); margin: 0 auto; padding: 32px 38px 70px; }
-.header { display: flex; align-items: center; justify-content: space-between; gap: 24px; padding-bottom: 24px; }
+.shell { width: min(100%, 1000px); margin: 0 auto; padding: 23px 32px 56px; }
+.header { display: flex; align-items: center; justify-content: space-between; gap: 20px; padding-bottom: 17px; }
 .eyebrow { font-size: 11px; color: var(--muted); letter-spacing: .055em; }
-.header > div > .eyebrow { letter-spacing: .15em; font-size: 10px; font-weight: 600; }
-.header h1 { font-family: "Iowan Old Style", "AppleMyungjo", serif; font-weight: 500; font-size: clamp(30px, 4vw, 42px); letter-spacing: -.055em; line-height: 1.5; margin-top: 7px; }
+.header > div > .eyebrow { letter-spacing: .15em; font-size: 11px; font-weight: 600; }
+.header h1 { font-family: "Iowan Old Style", "AppleMyungjo", serif; font-weight: 500; font-size: 28px; letter-spacing: -.055em; line-height: 1.5; margin-top: 3px; }
 .headerDescription { color: var(--muted); font-size: 13px; margin-top: 5px !important; }
-.todayMark { display: flex; flex-direction: column; align-items: center; color: var(--green); min-width: 65px; border-left: 1px solid var(--line); padding-left: 26px; }
+.todayMark { display: flex; flex-direction: column; align-items: center; color: var(--green); min-width: 56px; border-left: 1px solid var(--line); padding-left: 18px; }
 .todayMark span { font-size: 11px; }
-.todayMark strong { font-family: "Iowan Old Style", Georgia, serif; font-size: 48px; line-height: 1.1; font-weight: 400; }
+.todayMark strong { font-family: "Iowan Old Style", Georgia, serif; font-size: 30px; line-height: 1.1; font-weight: 400; }
 .focusLine { border-block: 1px solid var(--line); display: flex; align-items: baseline; gap: 12px; padding: 12px 0; font-size: 12px; flex-wrap: wrap; }
 .focusLine > span { color: var(--muted); font-size: 11px; }
 .focusLine p { flex: 1; }
 .focusLine strong { font-weight: 600; }
 .focusLine a { text-decoration: none; white-space: nowrap; font-size: 11px; }
-.homeTabs { display: grid; grid-template-columns: repeat(4, minmax(0,1fr)); gap: 3px; margin: 25px 0 22px; border-bottom: 1px solid var(--line); }
+.homeTabs { display: grid; grid-template-columns: repeat(4, minmax(0,1fr)); gap: 3px; margin: 17px 0 17px; border-bottom: 1px solid var(--line); }
 .homeTabs button { text-align: left; border: 0; border-bottom: 2px solid transparent; background: transparent; color: var(--muted); padding: 9px 9px 14px; font-size: 16px; }
-.homeTabs button span { display: block; font-size: 10px; font-weight: 400; margin-top: 3px; }
+.homeTabs button span { display: block; font-size: 11px; font-weight: 400; margin-top: 3px; }
 .homeTabs button[aria-pressed="true"] { color: var(--green); border-bottom-color: var(--green); font-weight: 600; }
-.quickSection { border: 1px solid #cdd6c4; background: var(--surface); padding: 19px 22px 13px; border-radius: 10px; box-shadow: 0 3px 12px #30412504; }
+.quickSection { border: 1px solid #cdd6c4; background: var(--surface); padding: 15px 18px 11px; border-radius: 8px; box-shadow: 0 3px 12px #30412504; }
 .sectionHeading { display: flex; justify-content: space-between; align-items: center; gap: 12px; flex-wrap: wrap; }
 .sectionHeading h2, .sectionHeading h3 { font-size: 18px; font-weight: 600; letter-spacing: -.04em; }
 .sectionHeading > span { color: var(--muted); font-size: 11px; }
@@ -55,6 +55,7 @@
 .composerOptions label > span { color: var(--muted); font-size: 11px; }
 .composerOptions input[type="date"] { padding: 5px 8px; font-size: 12px; }
 .taskChoice { white-space: nowrap; }
+.recordChoice { display: flex; align-items: center; gap: 8px; font-size: 11px; color: var(--muted); margin-top: 10px; }
 .primaryButton { color: #fffdf8; background: #35563e; border: 1px solid #35563e; border-radius: 6px; min-height: 40px; padding: 8px 17px; font-size: 13px !important; }
 .secondaryButton { color: var(--green); background: var(--surface); border: 1px solid var(--line); border-radius: 5px; min-height: 38px; padding: 7px 12px; font-size: 12px !important; }
 .textButton { color: var(--green); background: transparent; border: 0; padding: 7px 0; min-height: 35px; font-size: 12px !important; }
@@ -68,18 +69,18 @@
 .errorText { color: #873f29; font-size: 13px; margin-top: 10px !important; white-space: pre-wrap; }
 .errorBanner { display: flex; gap: 15px; align-items: center; justify-content: space-between; flex-wrap: wrap; background: #f8e9df; border-left: 3px solid #b26d46; color: #703e28; padding: 12px 16px; margin: 12px 0; font-size: 13px; }
 .errorBanner button { background: transparent; border: 1px solid #ba977d; border-radius: 5px; padding: 6px 10px; color: inherit; white-space: nowrap; }
-.rhythmHeading { display: flex; align-items: flex-start; gap: 15px; margin: 38px 0 25px; }
+.rhythmHeading { display: flex; align-items: flex-start; gap: 13px; margin: 26px 0 18px; }
 .rhythmHeading > span:first-child { font-family: "Iowan Old Style", Georgia, serif; font-size: 19px; color: var(--green); border-top: 2px solid var(--green); padding-top: 5px; line-height: 1.3; }
-.rhythmHeading h2 { font-family: "Iowan Old Style", "AppleMyungjo", serif; font-size: 24px; font-weight: 500; letter-spacing: -.045em; line-height: 1.5; }
+.rhythmHeading h2 { font-family: "Iowan Old Style", "AppleMyungjo", serif; font-size: 18px; font-weight: 500; letter-spacing: -.045em; line-height: 1.5; }
 .rhythmHeading p { margin-top: 6px; font-size: 12px; color: var(--muted); }
 .timeHint { margin-left: auto; white-space: nowrap; padding-top: 4px; color: var(--muted); font-size: 11px; }
-.briefingSection { border-top: 1px solid var(--line); padding: 25px 0 0; }
-.briefingText { margin-top: 24px; font-size: 15px; line-height: 2; }
+.briefingSection { border-top: 1px solid var(--line); padding: 19px 0 0; }
+.briefingText { margin-top: 17px; font-size: 15px; line-height: 1.9; }
 .briefingText h3 { margin: 23px 0 11px; font-size: 18px; line-height: 1.8; font-weight: 600; letter-spacing: -.03em; }
 .briefingText p { margin-top: 17px; white-space: pre-wrap; }
 .sourceNote { border-left: 2px solid #b9a17d; color: #775a38; font-size: 12px; padding-left: 11px; margin-top: 16px !important; }
 .readMore { display: inline-block; margin-top: 20px; color: var(--green); font-size: 12px; text-decoration: none; border-bottom: 1px solid #9bab90; padding: 2px 0; }
-.openTasksSection, .questionSection, .todayRecords, .proposalSection { border-top: 1px solid var(--line); margin-top: 32px; padding-top: 24px; }
+.openTasksSection, .questionSection, .todayRecords, .proposalSection { border-top: 1px solid var(--line); margin-top: 24px; padding-top: 19px; }
 .openTasks { margin-top: 14px; }
 .openTaskRow { display: grid; grid-template-columns: 106px minmax(0,1fr); align-items: baseline; border-bottom: 1px solid var(--line); gap: 15px; }
 .openTaskRow:last-child { border-bottom: 0; }
@@ -87,36 +88,40 @@
 .taskDate { color: var(--green); font-size: 11px; }
 .questionSection { padding-bottom: 5px; }
 .questionSection h2 { font-size: 17px; font-weight: 600; margin-top: 6px; }
-.questionText { font-family: "Iowan Old Style", "AppleMyungjo", serif; font-size: 21px; line-height: 1.8; margin-top: 17px !important; }
+.questionText { font-family: "Iowan Old Style", "AppleMyungjo", serif; font-size: 17px; line-height: 1.8; margin-top: 13px !important; }
 .sectionFootnote { display: block; font-size: 11px; color: var(--muted); line-height: 1.9; margin-top: 12px !important; }
 .emptyState { color: var(--muted); font-size: 13px; line-height: 2; padding: 25px 0 12px; }
 .eveningPrompts { border-left: 2px solid #9cab8f; padding: 3px 0 3px 15px; margin: 0 0 23px; }
 .eveningPrompts p { font-size: 13px; color: var(--green); line-height: 1.9; }
 .eveningPrompts span { display: block; font-size: 11px; color: var(--muted); margin-top: 5px; }
-.reflectionAnchor { scroll-margin-top: 20px; margin-top: 36px; }
+.reflectionAnchor { scroll-margin-top: 20px; margin-top: 25px; }
 .dayLinks { margin-top: 32px; border-top: 1px solid var(--line); padding-top: 19px; display: flex; flex-wrap: wrap; gap: 12px 24px; font-size: 12px; }
 .dayLinks a { text-decoration: none; }
 .dayLinks button { background: none; padding: 0; border: 0; color: var(--green); margin-left: auto; font-size: 12px; }
-.diarySection { margin-top: 33px; scroll-margin-top: 20px; }
+.diarySection { margin-top: 24px; scroll-margin-top: 20px; }
 .diaryToolbar { display: flex; align-items: center; justify-content: space-between; gap: 20px; }
-.diaryToolbar h2 { font-family: "Iowan Old Style", "AppleMyungjo", serif; font-size: clamp(21px, 2.4vw, 26px); font-weight: 500; letter-spacing: -.04em; margin-top: 5px; }
+.diaryToolbar h2 { font-family: "Iowan Old Style", "AppleMyungjo", serif; font-size: 18px; font-weight: 500; letter-spacing: -.04em; margin-top: 4px; }
 .periodControls { display: flex; justify-content: space-between; gap: 12px; flex-wrap: wrap; align-items: center; margin: 17px 0 21px; }
 .navigationButtons, .jumpControls { display: flex; gap: 7px; flex-wrap: wrap; align-items: center; }
 .navigationButtons button { color: var(--ink); background: transparent; border: 1px solid var(--line); border-radius: 5px; font-size: 11px; padding: 6px 10px; min-height: 34px; }
 .jumpControls input { font-size: 12px; padding: 5px 8px; }
 .loading { padding: 36px 16px; color: var(--muted); font-size: 13px; text-align: center; border-top: 1px solid var(--line); }
-.weekStrip { display: grid; grid-template-columns: repeat(7,minmax(0,1fr)); gap: 6px; border-top: 2px solid var(--green); padding-top: 12px; }
-.weekDate { min-width: 0; border: 1px solid transparent; border-radius: 6px; padding: 12px 5px 9px; color: var(--ink); background: transparent; display: flex; align-items: center; flex-direction: column; }
-.weekDate > span:first-child { font-size: 11px; color: var(--muted); }
-.weekDate strong { font-family: "Iowan Old Style", Georgia, serif; font-size: 29px; font-weight: 400; line-height: 1.55; }
-.weekDate small { color: var(--muted); font-size: 10px; }
-.weekDatePreview { display: block; min-width: 0; max-width: 100%; font-size: 10px; line-height: 1.8; margin-top: 6px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-.currentDate strong { text-decoration: underline; text-underline-offset: 4px; text-decoration-thickness: 1px; }
-.selectedDate { border-color: #a0b091; background: var(--wash); }
-.selectedDate strong, .selectedDate small { color: var(--green); }
+.weekAgenda { border-top: 2px solid var(--green); }
+.weekRow { display: grid; grid-template-columns: 83px minmax(0,1fr); border-bottom: 1px solid var(--line); gap: 19px; padding: 16px 10px; scroll-margin-top: 18px; }
+.weekRowToday { background: #e7ecdf66; }
+.weekDayHeading { border-right: 1px solid var(--line); padding-right: 10px; }
+.weekDayHeading h3 { font-size: 15px; font-weight: 600; line-height: 1.5; }
+.weekDayHeading h3 span { display: block; color: var(--muted); font-size: 12px; font-weight: 400; margin-top: 3px; }
+.weekDayHeading small { display: block; font-size: 11px; color: var(--green); margin-top: 4px; }
+.weekDayHeading button { font-size: 12px !important; margin-top: 6px; padding: 4px 0; }
+.weekRecords { min-width: 0; }
+.weekRecords > .entry { padding: 9px 0 13px; }
+.weekRecords > .entry:first-child { padding-top: 0; }
+.weekRecords > .entry:last-child { padding-bottom: 0; }
+.weekRecords > .emptyState { font-size: 13px; padding: 6px 0; }
 .entry { padding: 17px 0; border-bottom: 1px solid var(--line); min-width: 0; }
 .entry:last-child { border-bottom: 0; }
-.entryMeta { display: flex; justify-content: space-between; flex-wrap: wrap; gap: 2px 8px; color: var(--muted); font-size: 10px; line-height: 1.7; }
+.entryMeta { display: flex; justify-content: space-between; flex-wrap: wrap; gap: 2px 8px; color: var(--muted); font-size: 11px; line-height: 1.7; }
 .entryMeta > span:first-child { color: var(--green); }
 .entryBody { display: flex; gap: 10px; align-items: flex-start; margin-top: 7px; }
 .entryBody input { margin-top: 6px; }
@@ -140,7 +145,7 @@
 .selectedDay { background: var(--wash); box-shadow: inset 0 0 0 1px var(--green); }
 .monthToday > span:first-child { text-decoration: underline; text-underline-offset: 5px; text-decoration-color: var(--green); }
 .selectedDayList { margin-top: 23px; border: 1px solid var(--line); border-radius: 8px; padding: 22px 24px 15px; background: var(--surface); }
-.selectedDayList .sectionHeading h3 { font-size: 20px; font-weight: 500; }
+.selectedDayList .sectionHeading h3 { font-size: 18px; font-weight: 500; }
 .undatedSection { border-top: 1px solid var(--line); margin-top: 28px; padding-top: 18px; }
 .undatedSection summary { color: var(--green); font-size: 13px; }
 .undatedSection summary span { color: var(--muted); font-size: 11px; margin-left: 9px; }
@@ -167,37 +172,32 @@
 .conflict button { margin-top: 11px; }
 .srOnly { position: absolute; width: 1px; height: 1px; padding: 0; margin: -1px; overflow: hidden; clip: rect(0,0,0,0); white-space: nowrap; border-width: 0; }
 @media (max-width: 900px) {
-  .shell { padding: 28px 26px 55px; }
-  .header h1 { font-size: 35px; }
+  .shell { padding: 22px 24px 48px; }
   .monthDay { min-height: 88px; }
 }
 @media (max-width: 600px) {
-  .shell { padding: 23px 18px 45px; }
-  .header { gap: 14px; padding-bottom: 19px; }
-  .header h1 { font-size: 31px; }
+  .shell { padding: 18px 16px 40px; }
+  .header { gap: 14px; padding-bottom: 15px; }
+  .header h1 { font-size: 26px; }
   .headerDescription { font-size: 11px; }
   .todayMark { min-width: 48px; padding-left: 16px; }
-  .todayMark strong { font-size: 40px; }
+  .todayMark strong { font-size: 28px; }
   .focusLine { gap: 5px 11px; }
   .focusLine p { flex-basis: calc(100% - 85px); }
   .focusLine a { margin-left: auto; }
   .homeTabs { margin-top: 18px; }
   .homeTabs button { padding: 9px 5px 12px; font-size: 15px; }
-  .homeTabs button span { font-size: 9px; }
+  .homeTabs button span { font-size: 11px; }
   .quickSection { padding: 16px 15px 12px; }
   .quickSection .sectionHeading > span { font-size: 10px; }
-  .rhythmHeading { gap: 11px; margin-top: 31px; }
-  .rhythmHeading h2 { font-size: 21px; }
+  .rhythmHeading { gap: 11px; margin-top: 24px; }
   .timeHint { display: none; }
-  .briefingText { font-size: 14px; }
+  .briefingText { font-size: 15px; }
   .openTaskRow { grid-template-columns: 80px minmax(0,1fr); gap: 9px; }
   .taskDate { font-size: 10px; }
-  .entryText { font-size: 14px !important; }
-  .questionText { font-size: 19px; }
-  .weekStrip { gap: 2px; }
-  .weekDate { padding-inline: 3px; }
-  .weekDate strong { font-size: 25px; }
-  .weekDatePreview { display: none; }
+  .entryText { font-size: 15px !important; }
+  .weekRow { grid-template-columns: 58px minmax(0,1fr); gap: 12px; padding: 13px 4px; }
+  .weekDayHeading { padding-right: 6px; }
   .monthPreview { display: none; }
   .monthCount { display: block; }
   .monthDay { min-height: 63px; padding: 7px; }

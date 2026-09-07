@@ -20,8 +20,10 @@ async function forward(req: NextRequest, path: string[]) {
   // v6.5.3 — query string(?limit=50 등)도 같이 forward
   const url = `${API_URL}/api/dashboard/${sub}${req.nextUrl.search}`;
   const isJournal = path[0] === "journal";
+  const isIntake = path[0] === "intake";
+  const isConnectedMemo = isJournal || isIntake;
   let body = req.method === "GET" ? undefined : await req.text();
-  if (isJournal && req.method !== "GET") {
+  if (isConnectedMemo && req.method !== "GET") {
     const origin = req.headers.get("origin");
     // Next may normalize its internal URL to localhost. Host retains the browser's
     // actual destination, including the port; forwarded protocol is set by hosting.
@@ -44,11 +46,11 @@ async function forward(req: NextRequest, path: string[]) {
       const fields: unknown = JSON.parse(body);
       if (!fields || typeof fields !== "object" || Array.isArray(fields)) throw new Error("invalid body");
       // Browser writes always belong to Hanna. AI writes use the authenticated backend directly.
-      body = JSON.stringify({
+      body = JSON.stringify(isJournal ? {
         ...fields,
         ...(req.method === "POST" ? { author: "hanna", confirmation: "confirmed" } : {}),
         actor: "hanna",
-      });
+      } : fields);
     } catch {
       return NextResponse.json({ error: "입력 형식을 확인해 주세요." }, { status: 400 });
     }
@@ -64,17 +66,17 @@ async function forward(req: NextRequest, path: string[]) {
     },
     body,
     cache: "no-store",
-    ...(isJournal ? { signal: AbortSignal.timeout(12_000) } : {}),
+    ...(isConnectedMemo ? { signal: AbortSignal.timeout(12_000) } : {}),
     });
     buf = await r.arrayBuffer();
   } catch (error) {
-    if (!isJournal) throw error;
+    if (!isConnectedMemo) throw error;
     return NextResponse.json({ error: "다이어리 저장소에 연결하지 못했어요. 잠시 후 다시 시도해 주세요." }, { status: 503 });
   }
   // arrayBuffer로 읽어 바이너리(이미지 프레임 등)도 안 깨지게 그대로 통과
   const contentType = r.headers.get("content-type") || "application/json";
   const headers: Record<string, string> = { "Content-Type": contentType };
-  if (isJournal) headers["Cache-Control"] = "no-store";
+  if (isConnectedMemo) headers["Cache-Control"] = "no-store";
   // 프레임 이미지는 브라우저 캐시 허용(같은 프레임 재요청 방지)
   if (contentType.startsWith("image/")) {
     headers["Cache-Control"] = "public, max-age=86400, immutable";
