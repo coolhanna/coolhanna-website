@@ -15,6 +15,7 @@ import IntakeInbox from "./IntakeInbox";
 import type { SavedIntakeSource } from "./IntakeInbox";
 import { EDITOR_DRAFT_KEY, initialHomeView, isJournalEntry, isJournalMutation, QUICK_DRAFT_KEY, readEditorDrafts, readQuickDraft } from "./home-model";
 import type { HomeView, JournalContext, QuickDraft, SavedEditorDraft } from "./home-model";
+import { calendarTasks, scheduleAccounts, scheduleRow } from "./schedule-model";
 
 type Kind = "memo" | "task";
 type Editor = {
@@ -417,23 +418,33 @@ export default function DiaryBoard({ today: initialToday, initialView = "morning
     setSelectedDate(offset === 0 ? current : date);
   }
 
-  function renderEntry(entry: JournalEntry, compact = false) {
+  function renderEntry(entry: JournalEntry) {
+    if (entry.kind === "task") {
+      const row = scheduleRow(entry);
+      return <article key={entry.id} className={`${styles.scheduleEntry} ${entry.status === "done" ? styles.done : ""} ${entry.confirmation === "proposed" ? styles.proposed : ""}`} data-account={row.account}>
+        {entry.confirmation === "confirmed" && <input type="checkbox" checked={entry.status === "done"} disabled={saving} aria-label={`${row.label} 완료`} onChange={() => void changeEntry(entry, { status: entry.status === "done" ? "open" : "done" })} />}
+        <span className={styles.accountBadge} data-account={row.account}>{row.accountLabel}</span>
+        {entry.time && <time className={styles.entryTime}>{entry.time}</time>}
+        <button type="button" className={styles.scheduleText} onClick={() => openEntry(entry)} aria-label={`일정 상세: ${row.label}`}><span>{row.label}</span>{row.cues.length > 0 && <small>{row.cues.join(" · ")}</small>}</button>
+        {entry.confirmation === "proposed" && <button type="button" className={styles.confirmButton} disabled={saving} onClick={() => void changeEntry(entry, { confirmation: "confirmed" })}>확정하기</button>}
+      </article>;
+    }
     return (
       <article key={entry.id} className={`${styles.entry} ${entry.status === "done" ? styles.done : ""} ${entry.confirmation === "proposed" ? styles.proposed : ""}`}>
         <div className={styles.entryMeta}>
           <span>{authorLabel(entry)}</span><span>{entry.kind === "memo" ? "메모" : "할 일"}{entry.time ? ` · ${entry.time}` : ""}</span>
         </div>
         <div className={styles.entryBody}>
-          {entry.kind === "task" && entry.confirmation === "confirmed" && <input type="checkbox" checked={entry.status === "done"} disabled={saving} aria-label={`${entry.text.slice(0, 60)} 완료`} onChange={() => void changeEntry(entry, { status: entry.status === "done" ? "open" : "done" })} />}
-          <button type="button" className={`${styles.entryText} ${compact ? styles.compactText : ""}`} onClick={() => openEntry(entry)} aria-label={`기록 수정: ${entry.text.slice(0, 80)}`}>{entry.text}</button>
+          <button type="button" className={`${styles.entryText} ${styles.compactText}`} onClick={() => openEntry(entry)} aria-label={`메모 원문 읽기: ${entry.text.slice(0, 80)}`}>{entry.text}</button>
         </div>
+        <button type="button" className={styles.memoReadMore} onClick={() => openEntry(entry)}>원문 읽기 · 수정 ↗</button>
         {entry.confirmation === "proposed" && <button type="button" className={styles.confirmButton} disabled={saving} onClick={() => void changeEntry(entry, { confirmation: "confirmed" })}>한나가 확인 · 확정하기</button>}
       </article>
     );
   }
 
   return (
-    <div className={styles.page}>
+    <div className={`${styles.page} ${calendarMode ? styles.calendarPage : ""}`}>
       <div className={styles.shell}>
         <header className={styles.header}>
           <div><p className={styles.eyebrow}>HANNA’S NOTEBOOK</p><h1>오늘, 한나</h1><p className={styles.headerDescription}>{formatDay(today)} · 생각을 맞추고, 내 속도로 하루를.</p></div>
@@ -444,6 +455,10 @@ export default function DiaryBoard({ today: initialToday, initialView = "morning
 
         <nav className={styles.homeTabs} aria-label="오늘과 다이어리 보기">{([["morning", "아침"], ["evening", "저녁"], ["week", "주간"], ["month", "월간"]] as const).map(([value, label]) => <button key={value} type="button" aria-pressed={mode === value} onClick={() => { setMode(value); if (value === "week" || value === "month") { const nextDate = calendarMode ? selectedDate : today; setAnchor(nextDate); setSelectedDate(nextDate); } }}>{label}<span>{value === "morning" ? "하루 열기" : value === "evening" ? "하루 돌아보기" : value === "week" ? "이번 주와 다음 주" : "한 달 보기"}</span></button>)}</nav>
 
+        <IntakeInbox refreshKey={reflectionRefresh} savedSource={savedSource} entries={entries} onJournalChange={() => { void load(); void loadContext(); setReflectionRefresh(value => value + 1); }} />
+
+        <details className={styles.composerDisclosure} open={!calendarMode || Boolean(quickText || quickAttempt)}>
+        <summary>＋ 일정·메모 남기기 <span>말하듯 적으면 함께 정리해요</span></summary>
         <section className={styles.quickSection} aria-labelledby="diary-quick-title">
           <form onSubmit={saveQuick}>
             <div className={styles.sectionHeading}><h2 id="diary-quick-title">지금 남기고 싶은 것</h2><span>일정, 생각, 링크를 한 번에.</span></div>
@@ -459,20 +474,20 @@ export default function DiaryBoard({ today: initialToday, initialView = "morning
             {draftWarning && <p className={styles.errorText} role="status">{draftWarning}</p>}
           </form>
         </section>
-        <div className={styles.saveStatus} role="status">{notice || (saving ? "서버에 저장하고 있어요…" : quickText && draftsReady && !draftWarning ? "작성 중인 메모는 이 브라우저에 보관돼요. 남기기를 누르면 함께 공유해요." : "원문은 그대로 남기고, 연결한 결과는 이 자리에서 알려드려요.")}</div>
-        <IntakeInbox refreshKey={reflectionRefresh} savedSource={savedSource} onJournalChange={() => { void load(); void loadContext(); setReflectionRefresh(value => value + 1); }} />
+        </details>
+        {(!calendarMode || notice || saving || quickText) && <div className={styles.saveStatus} role="status">{notice || (saving ? "서버에 저장하고 있어요…" : quickText && draftsReady && !draftWarning ? "작성 중인 메모는 이 브라우저에 보관돼요. 남기기를 누르면 함께 공유해요." : "원문은 그대로 남기고, 연결한 결과는 이 자리에서 알려드려요.")}</div>}
         {Object.keys(editorDrafts).length > 0 && <details className={styles.draftRecovery}><summary>아직 저장하지 않은 수정 초안 · {Object.keys(editorDrafts).length}개</summary>{Object.entries(editorDrafts).map(([key, draft]) => <div key={key}><button type="button" disabled={saving} onClick={() => resumeEditor(draft)}><span>{draft.date ? formatDay(draft.date) : "날짜 미정"} · {draft.request ? "저장 결과 확인 필요" : "이어서 쓰기"}</span><p>{draft.text || "내용 없이 날짜를 수정한 기록"}</p></button>{!draft.request && <button type="button" className={styles.textButton} disabled={saving} onClick={() => discardEditorDraft(key)}>초안 지우기</button>}</div>)}</details>}
         {actionError && <div className={styles.errorBanner} role="alert"><span>{actionError}</span>{failedAction && <button type="button" disabled={saving} onClick={() => { const entry = entries.find(item => item.id === failedAction.id) || context?.open_tasks.entries.find(item => item.id === failedAction.id); if (entry) void changeEntry(entry, failedAction.patch); }}>다시 시도</button>}</div>}
 
         {!calendarMode && <>
           <div className={styles.rhythmHeading}><span>{mode === "morning" ? "AM" : "PM"}</span><div><h2>{mode === "morning" ? "오늘은 어디에 마음을 쓸까" : "오늘은 어떻게 흘러갔을까"}</h2><p>{mode === "morning" ? "읽고, 바로잡고, 오늘의 방향을 정하는 시간." : "완성한 것과 달라진 생각만 편하게 돌아봐요."}</p></div><span className={styles.timeHint}>약 20분</span></div>
+          <DayContext context={context} loading={contextLoading} error={contextError} today={today} evening={mode === "evening"} renderEntry={renderEntry} onReload={() => void loadContext()} onCalendar={() => goWeek(0)} />
           {mode === "evening" && <>
             <div className={styles.eveningPrompts}><p>무엇을 끝냈는지 · 계획이 왜 달라졌는지 · 몸과 마음은 어땠는지</p><span>오늘 녹음은 밤에 정리돼요. 지금 기억나는 내용을 먼저 남겨 주세요.</span></div>
-            <section className={styles.todayRecords} aria-labelledby="today-records-title"><div className={styles.sectionHeading}><h2 id="today-records-title">오늘 함께 남긴 기록</h2><button type="button" className={styles.textButton} onClick={() => openNew(today)}>＋ 더 쓰기</button></div>{loadError ? <p className={styles.errorText} role="alert">{loadError}</p> : !ready ? <p className={styles.emptyState}>오늘 기록을 불러오고 있어요.</p> : dayEntries(today).length ? dayEntries(today).map(entry => renderEntry(entry)) : <p className={styles.emptyState}>아직 오늘 공유한 기록이 없어요. 짧게 남겨도 괜찮아요.</p>}<p className={styles.sectionFootnote}>당일에 만든 영상은 결과만 적어도 돼요. 편집 완료와 게시 완료는 구분해서 남겨 주세요.</p></section>
+            <section className={styles.todayRecords} aria-labelledby="today-records-title"><div className={styles.sectionHeading}><h2 id="today-records-title">완료한 일과 오늘의 메모</h2><button type="button" className={styles.textButton} onClick={() => openNew(today)}>＋ 더 쓰기</button></div>{loadError ? <p className={styles.errorText} role="alert">{loadError}</p> : !ready ? <p className={styles.emptyState}>오늘 기록을 불러오고 있어요.</p> : dayEntries(today).filter(entry => entry.kind === "memo" || entry.status === "done").length ? dayEntries(today).filter(entry => entry.kind === "memo" || entry.status === "done").map(entry => renderEntry(entry)) : <p className={styles.emptyState}>아직 완료한 일이나 남긴 메모가 없어요.</p>}<p className={styles.sectionFootnote}>당일에 만든 영상은 결과만 적어도 돼요. 편집 완료와 게시 완료는 구분해서 남겨 주세요.</p></section>
           </>}
-          <DayContext context={context} loading={contextLoading} error={contextError} today={today} evening={mode === "evening"} renderEntry={renderEntry} onReload={() => void loadContext()} />
           {mode === "morning" && <div id="diary-reflections" className={styles.reflectionAnchor}><ReflectionPanel onJournalChange={() => { void load(); void loadContext(); }} refreshKey={reflectionRefresh} /></div>}
-          {mode === "morning" && ready && dayEntries(today).length > 0 && <section className={styles.todayRecords}><div className={styles.sectionHeading}><h2>오늘 남긴 기록</h2><button type="button" className={styles.textButton} onClick={() => setMode("evening")}>저녁에서 돌아보기 ↗</button></div>{dayEntries(today).map(entry => renderEntry(entry))}</section>}
+          {mode === "morning" && ready && dayEntries(today).filter(entry => entry.kind === "memo" || entry.status === "done").length > 0 && <section className={styles.todayRecords}><div className={styles.sectionHeading}><h2>오늘 남긴 기록</h2><button type="button" className={styles.textButton} onClick={() => setMode("evening")}>저녁에서 돌아보기 ↗</button></div>{dayEntries(today).filter(entry => entry.kind === "memo" || entry.status === "done").map(entry => renderEntry(entry))}</section>}
           <div className={styles.dayLinks}><Link href="/dashboard/day">하루 기록 읽기 ↗</Link><Link href="/dashboard/thoughts">생각의 흐름 ↗</Link><Link href="/dashboard/health">건강 살펴보기 ↗</Link><button type="button" onClick={() => goWeek(0)}>이번 주 일정 →</button></div>
         </>}
 
@@ -482,17 +497,20 @@ export default function DiaryBoard({ today: initialToday, initialView = "morning
           {loadError && <div className={styles.errorBanner} role="alert"><span>{loadError}</span><button type="button" onClick={() => void load()}>다시 불러오기</button></div>}
           {!ready && !loadError && <p className={styles.loading} role="status">저장한 기록을 불러오고 있어요.</p>}
           {ready && <>
+            <div className={styles.accountLegend} aria-label="계정 구분">{Object.entries(scheduleAccounts).map(([key, label]) => <span key={key} className={styles.accountBadge} data-account={key}>{label}</span>)}<span>체크하면 완료 · 제목을 누르면 상세</span></div>
             {mode === "week" ? <div className={styles.weekAgenda}>{dates.map((date, index) => {
               const records = dayEntries(date);
+              const tasks = calendarTasks(records);
+              const notes = records.filter(entry => entry.kind === "memo");
               return <section key={date} id={`diary-day-${date}`} className={`${styles.weekRow} ${date === today ? styles.weekRowToday : ""}`} aria-label={formatDay(date)}>
                 <div className={styles.weekDayHeading}><h3>{["월", "화", "수", "목", "금", "토", "일"][index]}요일<span>{Number(date.slice(5, 7))}.{Number(date.slice(8))}</span></h3>{date === today && <small>오늘</small>}<button type="button" className={styles.textButton} aria-label={`${formatDay(date)}에 쓰기`} onClick={() => openNew(date)}>＋ 쓰기</button></div>
-                <div className={styles.weekRecords}>{records.length ? records.map(entry => renderEntry(entry, true)) : <p className={styles.emptyState}>아직 적은 일정이 없어요.</p>}</div>
+                <div className={styles.weekRecords}>{tasks.length ? tasks.map(entry => renderEntry(entry)) : <p className={styles.emptyState}>정해진 일정 없음</p>}{notes.length > 0 && <details className={styles.dayNotes}><summary>메모 {notes.length}개 · 원문 보기</summary>{notes.map(entry => <button key={entry.id} type="button" onClick={() => openEntry(entry)}>메모 읽기 · {new Date(entry.created_at).toLocaleTimeString("ko-KR", { timeZone: "Asia/Seoul", hour: "2-digit", minute: "2-digit" })}</button>)}</details>}</div>
               </section>;
-            })}</div> : <><div><div className={styles.monthWeekdays}>{["월", "화", "수", "목", "금", "토", "일"].map(day => <span key={day}>{day}</span>)}</div><div className={styles.monthGrid}>{dates.map(date => { const records = dayEntries(date); return <button key={date} type="button" className={`${styles.monthDay} ${date.slice(0, 7) !== anchor.slice(0, 7) ? styles.outsideMonth : ""} ${date === selectedDate ? styles.selectedDay : ""} ${date === today ? styles.monthToday : ""}`} aria-label={`${formatDay(date)}, 기록 ${records.length}개. 눌러서 보기`} aria-pressed={date === selectedDate} onClick={() => setSelectedDate(date)}><span>{Number(date.slice(8))}</span>{records.length > 0 && <><span className={styles.monthPreview}>{records.slice(0, 2).map(entry => <span key={entry.id}>{entry.time ? `${entry.time} ` : ""}{entry.text}</span>)}{records.length > 2 && <small>외 {records.length - 2}개</small>}</span><small className={styles.monthCount}>{records.length}<span className={styles.countSuffix}>개</span></small></>}</button>; })}</div></div>
-            <section className={styles.selectedDayList}><div className={styles.sectionHeading}><div><p className={styles.eyebrow}>{selectedDate === today ? "오늘의 페이지" : "선택한 날의 페이지"}</p><h3>{formatDay(selectedDate)}</h3></div><button type="button" className={styles.secondaryButton} onClick={() => openNew(selectedDate)}>＋ 이날에 쓰기</button></div>{dayEntries(selectedDate).length ? dayEntries(selectedDate).map(entry => renderEntry(entry)) : <p className={styles.emptyState}>아직 남긴 기록이 없어요.<br />업로드할 영상, 해야 할 일, 그날의 생각을 그대로 적어두세요.</p>}</section></>}
+            })}</div> : <><div><div className={styles.monthWeekdays}>{["월", "화", "수", "목", "금", "토", "일"].map(day => <span key={day}>{day}</span>)}</div><div className={styles.monthGrid}>{dates.map(date => { const records = calendarTasks(dayEntries(date)); return <button key={date} type="button" className={`${styles.monthDay} ${date.slice(0, 7) !== anchor.slice(0, 7) ? styles.outsideMonth : ""} ${date === selectedDate ? styles.selectedDay : ""} ${date === today ? styles.monthToday : ""}`} aria-label={`${formatDay(date)}, 기록 ${records.length}개. 눌러서 보기`} aria-pressed={date === selectedDate} onClick={() => setSelectedDate(date)}><span>{Number(date.slice(8))}</span>{records.length > 0 && <><span className={styles.monthPreview}>{records.slice(0, 2).map(entry => <span key={entry.id} data-account={scheduleRow(entry).account} data-status={entry.status}>{entry.time ? `${entry.time} ` : ""}{scheduleRow(entry).accountLabel} · {scheduleRow(entry).label}</span>)}{records.length > 2 && <small>외 {records.length - 2}개</small>}</span><small className={styles.monthCount}>{records.length}<span className={styles.countSuffix}>개</span></small></>}</button>; })}</div></div>
+            <section className={styles.selectedDayList}><div className={styles.sectionHeading}><div><p className={styles.eyebrow}>{selectedDate === today ? "오늘의 페이지" : "선택한 날의 페이지"}</p><h3>{formatDay(selectedDate)}</h3></div><button type="button" className={styles.secondaryButton} onClick={() => openNew(selectedDate)}>＋ 이날에 쓰기</button></div>{calendarTasks(dayEntries(selectedDate)).length ? calendarTasks(dayEntries(selectedDate)).map(entry => renderEntry(entry)) : <p className={styles.emptyState}>정해진 일정이 없어요.</p>}{dayEntries(selectedDate).some(entry => entry.kind === "memo") && <details className={styles.dayNotes}><summary>이날의 메모 원문 보기</summary>{dayEntries(selectedDate).filter(entry => entry.kind === "memo").map(entry => <button type="button" key={entry.id} onClick={() => openEntry(entry)}>메모 읽기</button>)}</details>}</section></>}
           </>}
-          <p className={styles.calendarHint}>{mode === "week" ? "기록을 누르면 원문을 읽고 고칠 수 있어요. ＋ 쓰기로 해당 날짜에 바로 남겨요." : "날짜를 누르면 그날의 기록이 펼쳐져요. 빈 날은 아직 공유한 기록이 없는 날이에요."}</p>
-          {ready && <details className={styles.undatedSection}><summary>날짜를 정하지 않은 기록 <span>{undated.length}개</span></summary><p className={styles.sectionDescription}>생각은 남겨두고, 날짜는 정해졌을 때 붙여요.</p>{undated.length ? undated.map(entry => renderEntry(entry)) : <p className={styles.emptyState}>날짜 없이 남긴 기록이 아직 없어요.</p>}<button type="button" className={styles.textButton} onClick={() => openNew("")}>＋ 날짜 없이 쓰기</button></details>}
+          <p className={styles.calendarHint}>메모 원문은 접어두었어요. 일정의 제목을 누르면 세부 내용과 날짜를 고칠 수 있어요.</p>
+          {ready && <details open className={styles.undatedSection}><summary>날짜 미정 · 남겨둔 계획 <span>{calendarTasks(undated).length}개</span></summary>{calendarTasks(undated).length ? calendarTasks(undated).map(entry => renderEntry(entry)) : <p className={styles.emptyState}>날짜를 정하지 않은 할 일이 없어요.</p>}{undated.some(entry => entry.kind === "memo") && <details className={styles.dayNotes}><summary>날짜 없는 메모 원문 보기</summary>{undated.filter(entry => entry.kind === "memo").map(entry => <button type="button" key={entry.id} onClick={() => openEntry(entry)}>메모 읽기</button>)}</details>}<button type="button" className={styles.textButton} onClick={() => openNew("")}>＋ 날짜 없이 쓰기</button></details>}
           {ready && proposals.length > 0 && <section className={styles.proposalSection}><div className={styles.sectionHeading}><h2>확인하고 정할 제안</h2><span>아직 할 일로 확정되지 않았어요.</span></div>{proposals.map(entry => renderEntry(entry))}</section>}
         </section>}
       </div>

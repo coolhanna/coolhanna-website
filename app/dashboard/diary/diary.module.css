@@ -139,6 +139,11 @@
 .monthDay small { color: var(--green); font-size: 10px; }
 .monthPreview { display: block; width: 100%; margin-top: 6px; }
 .monthPreview > span { display: block; font-size: 10px; line-height: 1.8; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.monthPreview > span { border-left: 2px solid #859888; padding-left: 4px; }
+.monthPreview > span[data-account="hyerin"] { border-left-color: #ba8880; }
+.monthPreview > span[data-account="food"] { border-left-color: #c3a351; }
+.monthPreview > span[data-account="life"] { border-left-color: #8398b6; }
+.monthPreview > span[data-status="done"] { text-decoration: line-through; opacity: .65; }
 .monthCount { display: none; }
 .countSuffix { margin-left: 2px; }
 .outsideMonth > span:first-child { color: #8e9788; }
@@ -171,6 +176,47 @@
 .conflict > span { display: block; font-size: 11px; color: var(--muted); }
 .conflict button { margin-top: 11px; }
 .srOnly { position: absolute; width: 1px; height: 1px; padding: 0; margin: -1px; overflow: hidden; clip: rect(0,0,0,0); white-space: nowrap; border-width: 0; }
+.scheduleEntry { display: flex; align-items: center; gap: 8px; padding: 8px 0; min-width: 0; border-bottom: 1px solid #d9ddcf88; font-size: 13px; }
+.scheduleEntry:last-child { border-bottom: 0; }
+.scheduleEntry > input[type="checkbox"] { margin: 0; width: 17px; height: 17px; }
+.accountBadge { display: inline-flex; align-items: center; justify-content: center; flex: 0 0 auto; min-width: 45px; padding: 2px 6px; border-radius: 4px; font-size: 10px; font-weight: 600; line-height: 1.7; background: #e5e9e2; color: #415345; white-space: nowrap; }
+.accountBadge[data-account="main"] { color: #315b49; background: #e2ece5; }
+.accountBadge[data-account="hyerin"] { color: #70514d; background: #f1e4df; }
+.accountBadge[data-account="food"] { color: #735a28; background: #f2ecd6; }
+.accountBadge[data-account="life"] { color: #4e6078; background: #e5eaf1; }
+.entryTime { font-size: 12px; font-variant-numeric: tabular-nums; font-weight: 600; color: var(--green); }
+.scheduleText { flex: 1; min-width: 0; border: 0; background: transparent; text-align: left; padding: 1px 0; color: var(--ink); font-size: 13px !important; line-height: 1.65; overflow-wrap: anywhere; }
+.scheduleText > span { display: block; }
+.scheduleText small { display: block; font-size: 11px; color: #846036; line-height: 1.6; margin-top: 2px; }
+.done .scheduleText > span { text-decoration: line-through; color: var(--muted); }
+.done .accountBadge { opacity: .65; }
+.accountLegend { display: flex; align-items: center; gap: 6px; flex-wrap: wrap; margin: 0 0 10px; }
+.accountLegend > span:last-child { margin-left: auto; font-size: 10px; color: var(--muted); }
+.dayNotes { font-size: 11px; color: var(--muted); margin-top: 5px; }
+.dayNotes summary { padding: 3px 0; }
+.dayNotes button { display: block; border: 0; color: var(--green); background: transparent; font-size: 12px; padding: 5px 0; }
+.weekRow { grid-template-columns: 62px minmax(0,1fr); padding: 9px 8px; gap: 12px; }
+.weekDayHeading h3 { font-size: 13px; }
+.weekDayHeading h3 span { font-size: 11px; margin-top: 1px; }
+.weekDayHeading small { display: inline; font-size: 10px; }
+.weekDayHeading button { margin-top: 0; min-height: 25px; font-size: 10px !important; }
+.weekRecords > .emptyState { padding: 8px 0; font-size: 12px; }
+.openTaskRow > .scheduleEntry { border: 0; }
+.compactText { -webkit-line-clamp: 2; }
+.memoReadMore { border: 0; background: transparent; color: var(--green); padding: 4px 0; font-size: 11px !important; }
+.openTaskRow { grid-template-columns: 75px minmax(0,1fr); gap: 10px; }
+.composerDisclosure > summary { display: none; color: var(--green); padding: 8px 11px; font-size: 12px; border: 1px solid var(--line); border-radius: 5px; }
+.composerDisclosure > summary span { float: right; font-size: 10px; color: var(--muted); }
+.calendarPage .header, .calendarPage .focusLine { display: none; }
+.calendarPage .homeTabs { margin: 0 0 12px; }
+.calendarPage .homeTabs button { padding: 4px 8px 8px; font-size: 14px; }
+.calendarPage .homeTabs button span { display: none; }
+.calendarPage .shell { padding-top: 8px; }
+.calendarPage .composerDisclosure > summary { display: list-item; list-style-position: inside; }
+.calendarPage .composerDisclosure[open] > summary { margin-bottom: 7px; }
+.calendarPage .diarySection { margin-top: 17px; }
+.calendarPage .diaryToolbar .eyebrow { display: none; }
+.calendarPage .periodControls { margin: 8px 0 12px; }
 @media (max-width: 900px) {
   .shell { padding: 22px 24px 48px; }
   .monthDay { min-height: 88px; }

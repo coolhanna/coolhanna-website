@@ -12,6 +12,7 @@ export interface IntakeAction {
   question: string | null;
   target: { route: string; id: string } | null;
   error: string | null;
+  context_evidence?: { quote: string; title: string; role: "user" | "assistant" | null; at: string | null }[];
 }
 
 export interface IntakeJob {
@@ -63,6 +64,7 @@ export function isIntakeJob(value: unknown): value is IntakeJob {
       && ["pending", "applying", "applied", "needs_input", "failed", "skipped", "undone"].includes(String(action.status))
       && string(action.title) && string(action.source_quote) && string(action.message)
       && nullableString(action.question) && nullableString(action.error)
+      && (action.context_evidence === undefined || (Array.isArray(action.context_evidence) && action.context_evidence.length <= 3 && action.context_evidence.every(evidence => object(evidence) && string(evidence.quote) && string(evidence.title) && ["user", "assistant", null].includes(evidence.role as string | null) && (evidence.at === null || timestamp(evidence.at)))))
       && (action.target === null || (object(action.target) && string(action.target.route) && id(action.target.id))));
 }
 

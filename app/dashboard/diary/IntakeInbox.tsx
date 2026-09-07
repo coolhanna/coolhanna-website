@@ -6,9 +6,11 @@ import { applyIntakeAttempt, getIntakeJobs, intakeErrorMessage } from "@/lib/int
 import { intakeNeedsPolling, intakeTargetRoute, isIntakeAttempt, keepNewestVersion, pinSavedIntake } from "@/lib/intake-types";
 import type { IntakeAction, IntakeAttempt, IntakeJob, IntakeJobsResponse } from "@/lib/intake-types";
 import styles from "./intake.module.css";
+import { pendingIntakeQuestions, scheduleRow } from "./schedule-model";
+import type { JournalEntry } from "@/lib/journal";
 
 export interface SavedIntakeSource { id: string; version: number; text: string; processing: "connect" | "record" }
-interface Props { refreshKey: number; savedSource: SavedIntakeSource | null; onJournalChange: () => void }
+interface Props { refreshKey: number; savedSource: SavedIntakeSource | null; onJournalChange: () => void; entries: JournalEntry[] }
 const statusLabels = { queued: "접수했어요", interpreting: "내용을 읽고 있어요", applying: "연결하고 있어요", needs_input: "이 부분만 알려 주세요", completed: "정리했어요", partial: "일부는 이어서 처리해요", failed: "정리를 마치지 못했어요", superseded: "원문이 바뀌어 새로 정리해요", undone: "반영을 되돌렸어요" } as const;
 const actionLabels = { pending: "처리 대기", applying: "처리 중", applied: "반영 완료", needs_input: "확인 필요", failed: "처리 실패", skipped: "적용하지 않음", undone: "되돌림" } as const;
 const kindLabels = { task: "일정·할 일", reference: "참고자료", research: "이어갈 조사", health: "건강", campaign: "협업", feedback: "바로잡기", answer: "답변" } as const;
@@ -75,7 +77,7 @@ function IntakeQuestion({ job, action, onUpdated, onReload }: { job: IntakeJob; 
   return <form className={styles.question} onSubmit={event => { event.preventDefault(); void submit(); }}>
     <label htmlFor={`intake-answer-${action.id}`}>{attempt || (text && changed) ? basis.question : action.question}</label>
     {changed && text && !attempt && <div className={styles.changed}><p>답변을 쓰는 동안 처리 내용이 바뀌었어요. 현재 질문: {action.question || "새 결과를 확인해 주세요."}</p><button type="button" onClick={() => { const next = { version: job.version, question: action.question || "" }; setBasis(next); persist(text, next, null); setError(""); }}>바뀐 내용 확인 · 내 답변 유지</button></div>}
-    <textarea id={`intake-answer-${action.id}`} rows={2} maxLength={10000} value={text} disabled={!ready || saving || Boolean(attempt)} onChange={event => { const nextBasis = text ? basis : { version: job.version, question: action.question || "" }; setText(event.target.value); setBasis(nextBasis); setError(""); persist(event.target.value, nextBasis, null); }} placeholder="이 부분만 편하게 알려 주세요." />
+    <textarea id={`intake-answer-${action.id}`} rows={1} maxLength={10000} value={text} disabled={!ready || saving || Boolean(attempt)} onChange={event => { const nextBasis = text ? basis : { version: job.version, question: action.question || "" }; setText(event.target.value); setBasis(nextBasis); setError(""); persist(event.target.value, nextBasis, null); }} placeholder="이 부분만 편하게 알려 주세요." />
     <div className={styles.questionFooter}><span>다른 내용은 그대로 이어서 처리해요.</span><button type="submit" disabled={!ready || saving || (!attempt && Boolean(text) && changed)}>{saving ? "반영 확인 중…" : attempt ? "같은 답변으로 다시 확인" : "답변 남기기"}</button></div>
     {error && <p className={styles.error} role="alert">{error}</p>}{notice && <p className={styles.muted} role="status">{notice}</p>}
   </form>;
@@ -127,7 +129,7 @@ function IntakeControls({ job, onUpdated, onReload }: { job: IntakeJob; onUpdate
   </div>;
 }
 
-function IntakeJobCard({ job, onUpdated, onReload }: { job: IntakeJob; onUpdated: (job: IntakeJob) => void; onReload: () => void }) {
+function IntakeJobCard({ job, onUpdated, onReload, entries }: { job: IntakeJob; onUpdated: (job: IntakeJob) => void; onReload: () => void; entries: JournalEntry[] }) {
   return <article className={styles.job}>
     <div className={styles.jobHeading}><span className={styles.status} data-state={job.status}>{statusLabels[job.status]}</span><span>{new Date(job.created_at).toLocaleString("ko-KR", { timeZone: "Asia/Seoul", month: "numeric", day: "numeric", hour: "2-digit", minute: "2-digit" })}</span></div>
     {job.summary && <p className={styles.summary}>{job.summary}</p>}
@@ -137,20 +139,22 @@ function IntakeJobCard({ job, onUpdated, onReload }: { job: IntakeJob; onUpdated
     {job.error && <p className={styles.error} role="alert">{job.error}</p>}
     <div className={styles.actions}>{job.actions.map(action => {
       const route = intakeTargetRoute(action.target?.route);
+      const linked = action.kind === "task" ? entries.find(entry => entry.id === action.target?.id) : undefined;
+      const title = linked ? `${scheduleRow(linked).accountLabel} · ${scheduleRow(linked).label}` : action.title;
       return <section key={action.id} className={styles.action}>
         <div className={styles.actionMeta}><span>{kindLabels[action.kind]}</span><span data-state={action.status}>{actionLabels[action.status]}</span></div>
-        <h3>{action.title}</h3>{action.message && <p>{action.message}</p>}
+        <h3>{title}</h3>{action.message && <p>{action.message}</p>}
         {action.error && <p className={styles.error}>{action.error}</p>}
         {route && <Link className={styles.target} href={route}>연결된 내용 보기 ↗</Link>}
         {action.source_quote && <details className={styles.quote}><summary>이렇게 이해한 문장</summary><p>{action.source_quote}</p></details>}
-        <IntakeQuestion job={job} action={action} onUpdated={onUpdated} onReload={onReload} />
+        {Boolean(action.context_evidence?.length) && <details className={styles.quote}><summary>대화에서 확인한 근거</summary>{action.context_evidence?.map((evidence, index) => <div key={index}><small>{evidence.title} · {evidence.role === "user" ? "한나의 발언" : evidence.role === "assistant" ? "AI 제안·보고" : "대화 발췌"}{evidence.at ? ` · ${new Date(evidence.at).toLocaleDateString("ko-KR", { timeZone: "Asia/Seoul" })}` : ""}</small><p>{evidence.quote}</p></div>)}</details>}
       </section>;
     })}</div>
     <IntakeControls job={job} onUpdated={onUpdated} onReload={onReload} />
   </article>;
 }
 
-export default function IntakeInbox({ refreshKey, savedSource, onJournalChange }: Props) {
+export default function IntakeInbox({ refreshKey, savedSource, onJournalChange, entries }: Props) {
   const [data, setData] = useState<IntakeJobsResponse | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
@@ -189,7 +193,7 @@ export default function IntakeInbox({ refreshKey, savedSource, onJournalChange }
     let mounted = true;
     queueMicrotask(() => { if (mounted) void load(); });
     const refreshWhenVisible = () => { if (document.visibilityState === "visible") void load(); };
-    const timer = window.setInterval(refreshWhenVisible, active ? 5_000 : 20_000);
+    const timer = window.setInterval(refreshWhenVisible, active ? 5_000 : 10_000);
     window.addEventListener("focus", refreshWhenVisible);
     document.addEventListener("visibilitychange", refreshWhenVisible);
     return () => { mounted = false; window.clearInterval(timer); window.removeEventListener("focus", refreshWhenVisible); document.removeEventListener("visibilitychange", refreshWhenVisible); };
@@ -204,19 +208,26 @@ export default function IntakeInbox({ refreshKey, savedSource, onJournalChange }
   }, [load]);
   const jobs = data?.jobs || [];
   const visible = showAll ? jobs : jobs.filter((job, index) => index < 3 || job.status === "needs_input" || intakeNeedsPolling(job));
+  const questions = pendingIntakeQuestions(jobs);
 
   return <section className={styles.inbox} aria-labelledby="intake-title">
-    <div className={styles.heading}><h2 id="intake-title">남긴 내용, 이렇게 이어져요</h2><button type="button" onClick={() => void load()}>처리 상태 새로고침</button></div>
+    <div className={styles.questionDesk}>
+      <div className={styles.heading}><h2 id="intake-title">한나에게 확인할 것 <span>{!data ? "확인 중" : questions.length}</span></h2><button type="button" onClick={() => void load()}>새로고침</button></div>
+      {questions.length > 0 ? questions.map(({job, action}) => <div key={`${job.id}:${action.id}`} className={styles.questionItem}><p className={styles.questionContext}>{action.title}</p><IntakeQuestion job={job} action={action} onUpdated={updated} onReload={() => void load()} /></div>) : !loading && !error && <p className={styles.muted}>지금 답할 질문은 없어요. 확인이 필요한 내용이 생기면 여기에 모아둘게요.</p>}
+    </div>
     {savedSource && <div className={styles.received} role="status"><strong>원문을 저장했어요.</strong> {savedSource.processing === "record" ? "이 메모는 정리하지 않고 기록만 남겨요." : awaitingJob ? "정리 접수를 확인하고 있어요." : "아래에서 연결된 내용을 확인할 수 있어요."}</div>}
     {data?.worker.status !== undefined && data.worker.status !== "running" && <p className={styles.workerNote} role="status">{data.worker.status === "offline" ? "정리 작업의 연결을 확인하지 못했어요. 저장된 메모는 남아 있고, 연결이 돌아오면 이어서 처리해요." : "정리 작업이 평소보다 늦어지고 있어요. 저장된 메모는 남아 있어요."}{data.worker.last_heartbeat && <span>마지막 확인 {new Date(data.worker.last_heartbeat).toLocaleTimeString("ko-KR", { timeZone: "Asia/Seoul", hour: "2-digit", minute: "2-digit" })}</span>}</p>}
     {error && <div className={styles.loadError} role="alert"><p>{error}</p><button type="button" onClick={() => void load()}>다시 불러오기</button></div>}
     {loading && !data && <p className={styles.muted}>접수한 메모와 처리 결과를 확인하고 있어요.</p>}
     {active && !error && <p className={styles.muted}>첫 정리는 1~3분을 목표로 해요. 영상 확인이나 추가 조사는 더 걸릴 수 있어요.</p>}
-    {!loading && !error && jobs.length === 0 && !awaitingJob && <p className={styles.muted}>아직 정리할 메모가 없어요. 위에 일정, 생각, 링크를 함께 남겨 주세요.</p>}
-    {visible.map(job => <IntakeJobCard key={job.id} job={job} onUpdated={updated} onReload={() => void load()} />)}
+    {!loading && !error && jobs.length === 0 && !awaitingJob && <p className={styles.muted}>일정, 생각, 링크를 메모에 함께 남겨 주세요.</p>}
+    {jobs.some(job => job.status === "failed" || job.status === "partial") && <p className={styles.error} role="status">정리를 마치지 못한 메모가 있어요. 아래 처리 기록에서 다시 이어갈 수 있어요.</p>}
+    <details className={styles.receiptHistory}><summary>메모 처리 기록 <span>{jobs.length}건{active ? " · 정리 중" : ""}</span></summary>
+    {visible.map(job => <IntakeJobCard key={job.id} job={job} onUpdated={updated} onReload={() => void load()} entries={entries} />)}
     {jobs.length > visible.length && <button type="button" className={styles.more} onClick={() => setShowAll(true)}>이전 처리 결과 {jobs.length - visible.length}개 더 보기</button>}
     {showAll && jobs.length > 3 && <button type="button" className={styles.more} onClick={() => setShowAll(false)}>최근 결과 위주로 보기</button>}
     {limit < 100 && jobs.length >= limit && <button type="button" className={styles.more} onClick={() => { setLimit(100); setShowAll(true); }}>더 오래된 처리 결과 불러오기 · 최대 100개</button>}
     {limit === 100 && jobs.length >= 100 && <p className={styles.muted}>확인이 필요한 내용을 먼저, 최대 100개까지 보여드려요.</p>}
+    </details>
   </section>;
 }
