@@ -9,6 +9,8 @@ const AREAS = [
     { label: "함께 쓰는 하루", href: "/dashboard/diary" },
     { label: "브리핑", href: "/dashboard/briefing" },
     { label: "한나 데스크", href: "/dashboard/desk" },
+    { label: "고민 DM", href: "/dashboard/concerns" },
+    { label: "협업·일반 DM", href: "/dashboard/dm-requests" },
   ] },
   { label: "콘텐츠", links: [
     { label: "기획 · 보관함", href: "/dashboard/planning" },

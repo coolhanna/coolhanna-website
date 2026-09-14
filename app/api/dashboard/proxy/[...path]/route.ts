@@ -21,7 +21,8 @@ async function forward(req: NextRequest, path: string[]) {
   const url = `${API_URL}/api/dashboard/${sub}${req.nextUrl.search}`;
   const isJournal = path[0] === "journal";
   const isIntake = path[0] === "intake";
-  const isConnectedMemo = isJournal || isIntake;
+  const isPrivateDm = path[0] === "concerns" || path[0] === "dm-requests";
+  const isConnectedMemo = isJournal || isIntake || isPrivateDm;
   let body = req.method === "GET" ? undefined : await req.text();
   if (isConnectedMemo && req.method !== "GET") {
     const origin = req.headers.get("origin");
@@ -78,8 +79,12 @@ async function forward(req: NextRequest, path: string[]) {
   const headers: Record<string, string> = { "Content-Type": contentType };
   if (isConnectedMemo) headers["Cache-Control"] = "no-store";
   // 프레임 이미지는 브라우저 캐시 허용(같은 프레임 재요청 방지)
-  if (contentType.startsWith("image/")) {
+  if (contentType.startsWith("image/") && !isPrivateDm) {
     headers["Cache-Control"] = "public, max-age=86400, immutable";
+  }
+  if (isPrivateDm) {
+    headers["Cache-Control"] = "private, no-store";
+    headers["X-Content-Type-Options"] = "nosniff";
   }
   return new NextResponse(buf, { status: r.status, headers });
 }
